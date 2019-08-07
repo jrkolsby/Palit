@@ -1,6 +1,12 @@
+extern crate cursive;
+extern crate musical_keyboard;
+
 use std::fs::File;
 use std::io::BufReader;
 use std::io::prelude::*;
+
+use cursive::Cursive;
+use cursive::views::{Dialog, TextView};
 
 use std::collections::HashMap;
 
@@ -36,6 +42,14 @@ fn main() -> std::io::Result<()> {
 
     println!("{}", contents);
     println!("{:?}", anonymous_proj.save());
+
+    let mut siv = Cursive::default();
+
+    siv.add_layer(Dialog::around(TextView::new("Hey There!"))
+                         .title("Palit")
+                         .button("Cool!", |s| s.quit()));
+
+    siv.run();
 
     Ok(())
 }
