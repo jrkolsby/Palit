@@ -14,12 +14,7 @@ use cursive::traits::{Identifiable, Boxable};
 
 use std::collections::HashMap;
 
-use itertools::Itertools;
 
-use wavefile::WaveFile;
-
-const WAVEFORM_WIDTH: usize = 20;
-const BRAILLE_HEIGHT: usize = 4;
 
 #[derive(Debug)]
 struct Region<'a, 'b> {
@@ -38,7 +33,66 @@ impl<'a> Project<'a> {
     fn save(&self) -> i32 { self.x }
 }
 
-mod render_audio {
+mod daw_server {
+
+}
+
+mod client {
+
+    use wavefile::WaveFile;
+    use itertools::Itertools;
+
+    const WAVEFORM_WIDTH: usize = 20;
+    const BRAILLE_HEIGHT: usize = 4;
+
+    // Cursive Functions
+    // pub fn step(&mut self) -> bool
+    // index.add_global_callback('l', |s| s.quit());
+    // pub fn print<S: Into<Vec2>>(&self, start: S, text: &str)
+
+    pub fn timeline() {}
+    
+    pub fn waveform(input: &str) -> String {
+        let wav = match WaveFile::open(input) {
+            Ok(f)  => f,
+            Err(e) => panic!("{}",  e)
+        };
+
+        let chunk_size = wav.len() / WAVEFORM_WIDTH;
+        let chunks = &wav.iter().chunks(chunk_size);
+
+        let values = chunks.into_iter().map( |chunk| {
+            let max = chunk.into_iter().map( |frame| {
+                frame.iter().map(|sample| sample.abs()).max().unwrap()
+            }).max().unwrap();
+            max
+        }).take(WAVEFORM_WIDTH).collect::<Vec<i32>>();
+
+        let global_max = *values.iter().max().unwrap();
+        let scale: f64 = BRAILLE_HEIGHT as f64 / global_max as f64;
+
+        //println!("GLOBAL_MAX: {}", global_max);
+        //println!("SCALE: {}", scale);
+
+        let mut base: String = "".to_string();
+        for (i, value) in values.iter().enumerate() {
+            if i % 2 > 0 {
+                continue;
+            }
+            //println!("{:?} , {:?}", *value, values[i+1]);
+            let tick: (i32, i32) = (((*value as f64) * scale).round() as i32, 
+                                    ((values[i+1] as f64) * scale).round() as i32);
+
+            //println!("TICK: {}, {}", tick.0, tick.1);
+
+            let unit = pair_to_char(tick);
+
+            //println!("CHAR: {}", unit);
+
+            base = format!("{}{}", base, unit);
+        }
+        base
+    }
 
     pub fn pair_to_char(pair: (i32, i32)) -> char {
 
@@ -56,8 +110,6 @@ mod render_audio {
                         [c][g]
                         [b][f]
                         [a][e]
-
-
     }
 }
 
@@ -100,51 +152,14 @@ fn add_name(s: &mut Cursive) {
                 }).unwrap();
             ok(s, &name);
         })
+
         .button("Cancel", |s| {
             s.pop_layer();
         }));
 }
 
 fn on_submit(s: &mut Cursive, name: &String) {
-
-    let wav = match WaveFile::open("examples/test.wav") {
-        Ok(f)  => f,
-        Err(e) => panic!("{}",  e)
-    };
-
-    alert(s, format!("{} Hz, {} channel(s), {} total samples", wav.sample_rate(), wav.channels(), wav.len()));
-
-    let chunk_size = wav.len() / WAVEFORM_WIDTH;
-    let chunks = &wav.iter().chunks(chunk_size);
-
-    let values = chunks.into_iter().map( |chunk| {
-        let max = chunk.into_iter().map( |frame| {
-            frame.iter().map(|sample| sample.abs()).max().unwrap()
-        }).max().unwrap();
-        max
-    }).take(WAVEFORM_WIDTH).collect::<Vec<i32>>();
-
-    let global_max = *values.iter().max().unwrap();
-    let mid        = BRAILLE_HEIGHT / 2;
-    let scale      = mid as f32 / global_max as f32;
-
-    alert(s, format!("{:?}", global_max));
-
-    let waveform = {
-        let mut base: String = ">".to_string();
-        for (i, value) in values.iter().enumerate() {
-            if i % 2 > 0 {
-                continue;
-            }
-            let tick: (i32, i32) = (*value * scale as i32, 
-                                    values[i+1] * scale as i32);
-            base = format!("{:?}{:?}", base, 
-                render_audio::pair_to_char(tick).to_string());
-        }
-        base
-    };
-
-    alert(s, format!("{:?}", waveform))
+    alert(s, client::waveform("examples/test.wav"));
 }
 
 fn main() -> std::io::Result<()> {
@@ -165,11 +180,11 @@ fn main() -> std::io::Result<()> {
         regions: &HashMap::new()
     };
 
-    println!("{}", contents);
-    println!("{:?}", anonymous_proj.save());
+    //println!("{}", contents);
+    //println!("{:?}", anonymous_proj.save());
 
     // Instantiate UI
-    let mut siv = Cursive::default();
+    let mut index = Cursive::default();
 
     let select = SelectView::<String>::new()
         .on_submit(on_submit)
@@ -182,15 +197,20 @@ fn main() -> std::io::Result<()> {
         .child(DummyView)
         .child(Button::new("Shutdown", Cursive::quit));
 
-    siv.add_layer(Dialog::around(LinearLayout::horizontal()
+    index.add_layer(Dialog::around(LinearLayout::horizontal()
             .child(select)
             .child(DummyView)
             .child(buttons))
-            .title("Select a profile"));
+            .title("Select a Project"));
 
-    siv.run();
+    index.add_global_callback('q', |s| s.quit());
+    index.add_global_callback('~', |s| s.toggle_debug_console());
 
-    siv.add_global_callback('q', |s| s.quit());
+    if let Err(_) = index.load_theme_file("examples/theme.toml") {
+        let _ = index.load_theme_file("examples/theme.toml");
+    }
+
+    index.run();
 
     Ok(())
 }
