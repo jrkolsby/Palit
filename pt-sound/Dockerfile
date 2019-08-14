@@ -30,7 +30,7 @@ RUN sudo apt-get install -y clang-3.8 lldb-3.8
 RUN mkdir /usr/local/src/faust/
 WORKDIR /usr/local/src/faust/
 RUN git clone https://github.com/grame-cncm/faustinstaller.git .
-RUN ./install.docker.sh
+RUN echo "2\n" > ./install.docker.sh
 
 # Clean up APT when done.
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
