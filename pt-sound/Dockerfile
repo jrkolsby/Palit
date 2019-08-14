@@ -9,6 +9,8 @@ FROM phusion/baseimage:0.11
 # Use baseimage-docker's init system.
 CMD ["/sbin/my_init"]
 
+RUN mkdir /usr/local/src/pt-sound/
+
 WORKDIR /usr/local/src/
 
 RUN apt-get update && apt-get upgrade -y
@@ -31,6 +33,11 @@ RUN mkdir /usr/local/src/faust/
 WORKDIR /usr/local/src/faust/
 RUN git clone https://github.com/grame-cncm/faustinstaller.git .
 RUN echo "2\n" > ./install.docker.sh
+RUN ./install.compiler.sh
+
+RUN ls /usr/local/src/pt-sound/
+RUN ls /usr/local/src/faust/
+RUN faust2api -alsa /usr/local/src/pt-sound/midisynth.dsp
 
 # Clean up APT when done.
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
