@@ -1,0 +1,10 @@
+version: "3"
+services:
+  pt-sound-dev:
+    build: 
+      context: ./pt-sound
+      dockerfile: Dockerfile
+    volumes:
+        - ./pt-sound/:/usr/local/src/pt-sound/
+    ports:
+      - 3000:3000

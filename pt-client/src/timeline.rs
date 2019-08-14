@@ -9,8 +9,6 @@ const BRAILLE_HEIGHT: usize = 4;
 // index.add_global_callback('l', |s| s.quit());
 // pub fn print<S: Into<Vec2>>(&self, start: S, text: &str)
 
-pub fn timeline() {}
-
 pub fn waveform(input: &str) -> String {
     let wav = match WaveFile::open(input) {
         Ok(f)  => f,

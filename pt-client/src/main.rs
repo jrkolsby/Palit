@@ -14,7 +14,7 @@ use cursive::traits::{Identifiable, Boxable};
 
 use std::collections::HashMap;
 
-mod client;
+mod timeline;
 
 #[derive(Debug)]
 struct Region<'a, 'b> {
@@ -79,7 +79,7 @@ fn add_name(s: &mut Cursive) {
 }
 
 fn on_submit(s: &mut Cursive, name: &String) {
-    alert(s, client::waveform("examples/test.wav"));
+    alert(s, timeline::waveform("examples/test.wav"));
 }
 
 fn main() -> std::io::Result<()> {
