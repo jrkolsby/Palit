@@ -9,12 +9,17 @@ use std::io::BufReader;
 use std::io::prelude::*;
 
 use cursive::Cursive;
-use cursive::views::{Dialog, TextView, SelectView, DummyView, LinearLayout, EditView, Button};
+use cursive::views::{TextView, SelectView, DummyView, LinearLayout, EditView, Button};
 use cursive::traits::{Identifiable, Boxable};
 
 use std::collections::HashMap;
 
-mod timeline;
+mod views;
+mod core;
+
+mod components;
+use components::alert;
+use components::waveform;
 
 #[derive(Debug)]
 struct Region<'a, 'b> {
@@ -50,16 +55,7 @@ fn ok(s: &mut Cursive, name: &str) {
     s.pop_layer();
 }
 
-fn alert(s: &mut Cursive, text: String) {
-    s.add_layer(Dialog::text(format!("{:?}", text))
-        .title("Alert")
-        .button("Ok", |s| {
-            s.pop_layer();
-        }));
-}
-
 fn add_name(s: &mut Cursive) {
-
     s.add_layer(Dialog::around(EditView::new()
             .on_submit(ok)
             .with_id("name")
@@ -79,7 +75,7 @@ fn add_name(s: &mut Cursive) {
 }
 
 fn on_submit(s: &mut Cursive, name: &String) {
-    alert(s, timeline::waveform("examples/test.wav"));
+    components::alert::render(s, &waveform::render("examples/test.wav"));
 }
 
 fn main() -> std::io::Result<()> {

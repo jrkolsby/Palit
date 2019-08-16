@@ -2,14 +2,14 @@ use wavefile::WaveFile;
 use itertools::Itertools;
 
 const WAVEFORM_WIDTH: usize = 20;
-const BRAILLE_HEIGHT: usize = 4;
+const WAVEFORM_HEIGHT: usize = 4;
 
 // Cursive Functions
 // pub fn step(&mut self) -> bool
 // index.add_global_callback('l', |s| s.quit());
 // pub fn print<S: Into<Vec2>>(&self, start: S, text: &str)
 
-pub fn waveform(input: &str) -> String {
+pub fn render(input: &str) -> String {
     let wav = match WaveFile::open(input) {
         Ok(f)  => f,
         Err(e) => panic!("{}",  e)
@@ -26,7 +26,7 @@ pub fn waveform(input: &str) -> String {
     }).take(WAVEFORM_WIDTH).collect::<Vec<i32>>();
 
     let global_max = *values.iter().max().unwrap();
-    let scale: f64 = BRAILLE_HEIGHT as f64 / global_max as f64;
+    let scale: f64 = WAVEFORM_HEIGHT as f64 / global_max as f64;
 
     //println!("GLOBAL_MAX: {}", global_max);
     //println!("SCALE: {}", scale);
