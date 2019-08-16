@@ -5,6 +5,6 @@ services:
       context: ./pt-sound/
       dockerfile: Dockerfile
     volumes:
-        - ./pt-sound/:/usr/local/src/pt-sound/
+        - ./pt-sound:/usr/local/pt-sound
     ports:
       - 3000:3000

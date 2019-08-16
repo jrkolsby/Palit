@@ -9,9 +9,7 @@ FROM phusion/baseimage:0.11
 # Use baseimage-docker's init system.
 CMD ["/sbin/my_init"]
 
-RUN mkdir /usr/local/src/pt-sound/
-
-WORKDIR /usr/local/src/
+WORKDIR /usr/local/
 
 RUN apt-get update && apt-get upgrade -y
 RUN apt-get install -y \
@@ -28,16 +26,16 @@ RUN sudo apt-add-repository "deb https://apt.llvm.org/xenial/ llvm-toolchain-xen
 RUN sudo apt-get update
 RUN sudo apt-get install -y clang-3.8 lldb-3.8
 
+RUN mkdir faust
+WORKDIR /usr/local/faust/
+
 # Install faust
-RUN mkdir /usr/local/src/faust/
-WORKDIR /usr/local/src/faust/
 RUN git clone https://github.com/grame-cncm/faustinstaller.git .
 RUN echo "2\n" > ./install.docker.sh
 RUN ./install.compiler.sh
 
-RUN ls /usr/local/src/pt-sound/
-RUN ls /usr/local/src/faust/
-RUN faust2api -alsa /usr/local/src/pt-sound/midisynth.dsp
+WORKDIR /usr/local/pt-sound/
+#RUN faust2api -alsa midisynth.dsp
 
 # Clean up APT when done.
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
