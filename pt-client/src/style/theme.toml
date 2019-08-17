@@ -1,0 +1,16 @@
+# Colors
+#    "bright-black"
+[colors]
+    background = "black"
+    shadow     = "#1b3d64" 
+    view       = "#f8fafd"
+ 
+    primary   = ["#111111"]
+    secondary = "#EEEEEE"
+    tertiary  = "#444444"
+   
+    title_primary = "#f94a32" 
+    title_secondary = "#000"
+
+    highlight          = "#f94a32"
+    highlight_inactive = "#295e99"

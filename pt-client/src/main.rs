@@ -9,7 +9,7 @@ use std::io::BufReader;
 use std::io::prelude::*;
 
 use cursive::Cursive;
-use cursive::views::{TextView, SelectView, DummyView, LinearLayout, EditView, Button};
+use cursive::views::{Dialog, TextView, SelectView, DummyView, LinearLayout, EditView, Button};
 use cursive::traits::{Identifiable, Boxable};
 
 use std::collections::HashMap;
@@ -122,8 +122,8 @@ fn main() -> std::io::Result<()> {
     index.add_global_callback('q', |s| s.quit());
     index.add_global_callback('~', |s| s.toggle_debug_console());
 
-    if let Err(_) = index.load_theme_file("examples/theme.toml") {
-        let _ = index.load_theme_file("examples/theme.toml");
+    if let Err(_) = index.load_theme_file("src/style/theme.toml") {
+        let _ = index.load_theme_file("src/style/theme.toml");
     }
 
     index.run();
