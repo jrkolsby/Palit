@@ -7,12 +7,11 @@ extern crate itertools;
 use std::fs::File;
 use std::io::BufReader;
 use std::io::prelude::*;
+use std::collections::HashMap;
 
 use cursive::Cursive;
 use cursive::views::{Dialog, TextView, SelectView, DummyView, LinearLayout, EditView, Button};
 use cursive::traits::{Identifiable, Boxable};
-
-use std::collections::HashMap;
 
 mod views;
 mod core;
@@ -21,22 +20,6 @@ mod components;
 use components::alert;
 use components::waveform;
 
-#[derive(Debug)]
-struct Region<'a, 'b> {
-    file: &'a str,
-    sample: &'b Vec<Vec<i32>>,
-    size: u32
-}
-
-struct Project<'a> {
-    x: i32,
-    name: String,
-    regions: &'a HashMap<i32, String>
-}
-
-impl<'a> Project<'a> {
-    fn save(&self) -> i32 { self.x }
-}
 
 fn delete_name(s: &mut Cursive) {
     let mut select = s.find_id::<SelectView<String>>("select").unwrap();
@@ -75,7 +58,17 @@ fn add_name(s: &mut Cursive) {
 }
 
 fn on_submit(s: &mut Cursive, name: &String) {
-    components::alert::render(s, &waveform::render("examples/test.wav"));
+    components::alert::render(s, &"OK!".to_string());
+}
+
+struct Project<'a> {
+    x: i32,
+    name: String,
+    regions: &'a HashMap<i32, String>
+}
+
+impl<'a> Project<'a> {
+    fn save(&self) -> i32 { self.x }
 }
 
 fn main() -> std::io::Result<()> {

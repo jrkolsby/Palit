@@ -1,49 +1,16 @@
-use wavefile::WaveFile;
-use itertools::Itertools;
+use std::fs::File;
 
+use cursive::{Cursive, Printer};
 use cursive::theme::{BaseColor, Color, ColorStyle};
+use cursive::event::{Event, EventResult};
+use cursive::direction::Direction;
+use cursive::vec::Vec2;
 
-const WAVEFORM_WIDTH: usize = 20;
-const WAVEFORM_HEIGHT: usize = 4;
+//use core::Buffer;
 
-// scale degree
-struct time (
-    i32, i32
-);// (bars, beats)
+// TODO Vec::with_capacity()
 
-struct Waveform {
-    sound_file: &str,
-    color: Color,
-    chars: Vec<(i32, i32)> , 
-    time_in: time,
-    time_out: time,
-    length: time,
-}
-
-impl cursive::view::View for Waveform {
-    fn draw(&self, printer: &printer) {
-        for (i, pair) in self.pairs.iter().enumerate() {
-            text = pair_to_char(pair);
-            printer.with_color(
-                ColorStyle::new(Color::Dark(BaseColor::White), color),
-                |printer| printer.print((i, 0), text),
-            )
-        }
-    }
-
-    fn take_focus(&mut self, _: Direction) -> bool {
-        true
-    }
-
-    fn on_event(&mut self, event: Event) -> EventResult {
-        EventResult::Ignored
-    }
-
-    fn required_size(&mut self, _: Vec2) -> Vec2 {
-        Vec2(self.pairs.size, 1)
-    }
-    
-    fn pair_to_char(pair: (i32, i32)) -> char {
+fn pair_to_char(pair: (i32, i32)) -> char {
 
     // MAX IS 65,536
     let a: usize = (pair.0 >= 1) as usize;
@@ -60,50 +27,35 @@ impl cursive::view::View for Waveform {
                     [b][f]
                     [a][e]
 }
+
+struct Waveform {
+    //sound_file: File,
+    //buffer: &'a Buffer,
+    color: Color,
+    chars: Vec<(i32, i32)>, 
 }
-// Cursive Functions
-// pub fn step(&mut self) -> bool
-// index.add_global_callback('l', |s| s.quit());
-// pub fn print<S: Into<Vec2>>(&self, start: S, text: &str)
 
-pub fn render(input: &str) -> String {
-    let wav = match WaveFile::open(input) {
-        Ok(f)  => f,
-        Err(e) => panic!("{}",  e)
-    };
-
-    let chunk_size = wav.len() / WAVEFORM_WIDTH;
-    let chunks = &wav.iter().chunks(chunk_size);
-
-    let values = chunks.into_iter().map( |chunk| {
-        let max = chunk.into_iter().map( |frame| {
-            frame.iter().map(|sample| sample.abs()).max().unwrap()
-        }).max().unwrap();
-        max
-    }).take(WAVEFORM_WIDTH).collect::<Vec<i32>>();
-
-    let global_max = *values.iter().max().unwrap();
-    let scale: f64 = WAVEFORM_HEIGHT as f64 / global_max as f64;
-
-    //println!("GLOBAL_MAX: {}", global_max);
-    //println!("SCALE: {}", scale);
-
-    let mut base: String = "".to_string(;
-    for (i, value) in values.iter().enumerate() {
-        if i % 2 > 0 {
-            continue;
+impl cursive::view::View for Waveform {
+    fn draw(&self, printer: &Printer) {
+        for (i, pair) in self.chars.iter().enumerate() {
+            let text = pair_to_char(*pair);
+            printer.with_color(
+                ColorStyle::new(Color::Dark(BaseColor::White), self.color),
+                |printer| printer.print((i, 0), &text.to_string()),
+            )
         }
-        //println!("{:?} , {:?}", *value, values[i+1]);
-        let tick: (i32, i32) = (((*value as f64) * scale).round() as i32, 
-                                ((values[i+1] as f64) * scale).round() as i32);
-
-        //println!("TICK: {}, {}", tick.0, tick.1);
-
-        let unit = pair_to_char(tick);
-
-        //println!("CHAR: {}", unit);
-
-        base = format!("{}{}", base, unit);
     }
-    base
+
+    fn take_focus(&mut self, _: Direction) -> bool {
+        true
+    }
+
+    fn on_event(&mut self, event: Event) -> EventResult {
+        EventResult::Ignored
+    }
+
+    fn required_size(&mut self, _: Vec2) -> Vec2 {
+        Vec2::new(self.chars.len(), 1)
+    }
+    
 }
