@@ -1,5 +1,3 @@
-mod waveform;
-
 fn render(
         muted: bool,
         armed: bool,
@@ -14,8 +12,8 @@ struct Track {
     solo: bool,
 }
 
-impl Track {
-    pub fn new() -> Self {
-        let 
+impl cursive::view::View for Track {
+    pub draw() -> Self {
+        for (i, pair)
     }
 }

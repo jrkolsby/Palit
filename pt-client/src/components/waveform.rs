@@ -6,10 +6,18 @@ use cursive::theme::{BaseColor, Color, ColorStyle};
 const WAVEFORM_WIDTH: usize = 20;
 const WAVEFORM_HEIGHT: usize = 4;
 
+// scale degree
+struct time (
+    i32, i32
+);// (bars, beats)
+
 struct Waveform {
     sound_file: &str,
     color: Color,
-    Vec<(i32, i32)> pairs,
+    chars: Vec<(i32, i32)> , 
+    time_in: time,
+    time_out: time,
+    length: time,
 }
 
 impl cursive::view::View for Waveform {
