@@ -12,13 +12,13 @@ use std::collections::HashMap;
 use cursive::Cursive;
 use cursive::views::{Dialog, TextView, SelectView, DummyView, LinearLayout, EditView, Button};
 use cursive::traits::{Identifiable, Boxable};
+use cursive::theme::{Theme, BorderStyle, Palette};
 
 mod views;
 mod core;
-
 mod components;
-use components::alert;
-use components::waveform;
+
+use components::{alert, waveform, splash};
 
 
 fn delete_name(s: &mut Cursive) {
@@ -106,18 +106,30 @@ fn main() -> std::io::Result<()> {
         .child(DummyView)
         .child(Button::new("Shutdown", Cursive::quit));
 
+    index.add_layer(splash::Splash::new("Tell your friends!"));
+
+    /*
     index.add_layer(Dialog::around(LinearLayout::horizontal()
             .child(select)
             .child(DummyView)
             .child(buttons))
             .title("Select a Project"));
 
+    */
     index.add_global_callback('q', |s| s.quit());
     index.add_global_callback('~', |s| s.toggle_debug_console());
 
+    index.set_theme(Theme {
+        shadow: false,
+        borders: BorderStyle::None,
+        palette: Palette::default(),
+    });
+
+    /*
     if let Err(_) = index.load_theme_file("src/style/theme.toml") {
         let _ = index.load_theme_file("src/style/theme.toml");
     }
+    */
 
     index.run();
 
