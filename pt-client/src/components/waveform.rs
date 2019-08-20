@@ -56,6 +56,5 @@ impl cursive::view::View for Waveform {
 
     fn required_size(&mut self, _: Vec2) -> Vec2 {
         Vec2::new(self.chars.len(), 1)
-    }
-    
+    }    
 }

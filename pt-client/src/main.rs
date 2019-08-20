@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use cursive::Cursive;
 use cursive::views::{Dialog, TextView, SelectView, DummyView, LinearLayout, EditView, Button};
 use cursive::traits::{Identifiable, Boxable};
-use cursive::theme::{Theme, BorderStyle, Palette};
+use cursive::theme::{Theme, BorderStyle};
 
 mod views;
 mod core;
@@ -106,7 +106,19 @@ fn main() -> std::io::Result<()> {
         .child(DummyView)
         .child(Button::new("Shutdown", Cursive::quit));
 
-    index.add_layer(splash::Splash::new("Tell your friends!"));
+    /*
+    index.add_layer(splash::Splash::new("Tell your friends!")
+        .with_id("splash"));
+       */
+
+    index.add_layer(LinearLayout::vertical()
+        .child(splash::Splash::new(""))
+        .child(DummyView)
+        .child(splash::Splash::new("It's Fun!"))
+        .child(DummyView)
+        .child(DummyView)
+        .child(Button::new("Shutdown", Cursive::quit))
+        );
 
     /*
     index.add_layer(Dialog::around(LinearLayout::horizontal()
@@ -119,16 +131,16 @@ fn main() -> std::io::Result<()> {
     index.add_global_callback('q', |s| s.quit());
     index.add_global_callback('~', |s| s.toggle_debug_console());
 
-    index.set_theme(Theme {
-        shadow: false,
-        borders: BorderStyle::None,
-        palette: Palette::default(),
-    });
-
-    /*
     if let Err(_) = index.load_theme_file("src/style/theme.toml") {
         let _ = index.load_theme_file("src/style/theme.toml");
     }
+
+/*
+    index.set_theme(Theme {
+        shadow: false,
+        borders: BorderStyle::None,
+        palette: index.current_theme().palette
+    });
     */
 
     index.run();
