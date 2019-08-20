@@ -1,4 +1,0 @@
-SOUND-1: pt-client/src/audioengine.rs
-SOUND-2: implement control of faust synth from audioengine
-FRONT-1: pt-client/src/timeline.rs
-INF-1: build a dsp file
