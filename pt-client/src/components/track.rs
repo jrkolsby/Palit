@@ -1,13 +1,11 @@
-use std::fs::File;
-
 use itertools::Itertools;
 
-use cursive::{Cursive, Printer};
+use cursive::Printer;
 
 use wavefile::WaveFile;
 
  // (bars, beats)
-struct time ( i32, i32 );
+struct Time ( i32, i32 );
 
 
 const TRACK_WIDTH: usize = 20;
@@ -17,13 +15,13 @@ const TRACK_HEIGHT: usize = 4;
 struct Region {
     // buffer: Vec<Vec<i32>>, TODO: Implement buffers
     sound_file: WaveFile,    
-    time_in: time,
-    time_out: time,
-    length: time,
+    time_in: Time,
+    time_out: Time,
+    length: Time,
 }
 //impl Copy for Region {} TODO: Allow duplicating a region
 
-fn time_to_offset(width: i32, l: time, t: time) -> i32 {
+fn time_to_offset(width: i32, l: Time, t: Time) -> i32 {
     (t.0 / l.0) / width
 }
 
@@ -65,7 +63,7 @@ pub struct Track {
     armed: bool,
     solo: bool,
     regions: Vec<Region>,
-    length: time,
+    length: Time,
     width: i32
 }
 

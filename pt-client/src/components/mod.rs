@@ -1,5 +1,8 @@
-pub mod splash;
-pub mod alert;
-pub mod tempo;
-pub mod track;
-pub mod waveform;
+mod splash;
+mod alert;
+mod tempo;
+mod track;
+mod waveform;
+
+pub use splash::Splash;
+pub use alert::alert;

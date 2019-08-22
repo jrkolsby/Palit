@@ -1,19 +1,14 @@
 use std::fs::File;
-use std::io::BufReader;
-use std::io::prelude::*;
 
-use cursive::{Cursive, Printer};
-
-use crate::components::track::Track;
-use crate::components::tempo::Tempo;
+use cursive::Cursive;
 
 //#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
 
 // state
 struct Timeline<> {
     name: String,
-    tracks: Vec<Track>,
-    metronome: Tempo,
+    //tracks: Vec<Track>,
+    //metronome: Tempo,
 }
 
 // props
@@ -27,13 +22,13 @@ struct TimelineProps {
 
 impl Timeline {
     pub fn new(props: TimelineProps) -> Self {
-        let mut defaultState = Timeline {
+        let mut default_state = Timeline {
             name: "Verse".to_string(),
-            tracks: Vec::new(),
-            metronome: Tempo::new()
+            //tracks: Vec::new(),
+            //metronome: Tempo::new()
         };
 
-        defaultState
+        default_state
     }
 
     pub fn render(&self, screen: &mut Cursive) {

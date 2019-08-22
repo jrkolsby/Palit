@@ -1,6 +1,4 @@
-use std::fs::File;
-
-use cursive::{Cursive, Printer};
+use cursive::{Printer};
 use cursive::theme::{BaseColor, Color, ColorStyle};
 use cursive::event::{Event, EventResult};
 use cursive::direction::Direction;

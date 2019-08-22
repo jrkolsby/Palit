@@ -3,12 +3,12 @@
     shadow     = "black" 
     view       = "black"
     
-    primary   = ["#111111"]
-    secondary = "#EEEEEE"
-    tertiary  = "#444444"
+    primary   = "white"
+    secondary = "white"
+    tertiary  = "white"
    
-    title_primary = "#f94a32" 
-    title_secondary = "#000"
+    title_primary = "white" 
+    title_secondary = "blue"
 
     highlight          = "#f94a32"
     highlight_inactive = "#295e99"

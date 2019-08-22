@@ -23,6 +23,8 @@ HARD-6: Determine a set of keys which require redundant connections to unused ke
 DG-3: Paint four function keys
 DG-4: Paint bottom keybed
 DG-5: Paint laptop casing and general keys CLASSIC BEIGE
+INF-1: Implement testing suite which takes keyboard input and project files and outputs UI sequences and stored audio files
+INF-2: Design project filetype around .xml or .json (Hopefully compatible with android)
 
 # Complete
 SOUND-1: build a dsp file

@@ -2,11 +2,12 @@ use std::fs::File;
 use std::io::BufReader;
 use std::io::prelude::*;
 
-use cursive::{Cursive, Printer};
-use cursive::theme::{BaseColor, Color, ColorStyle, Effect, Theme, BorderStyle, Palette};
+use cursive::Printer;
+use cursive::theme::{BaseColor, Color, ColorStyle};
+use cursive::direction::Direction;
+use cursive::event::{EventResult, Event, Key};
 use cursive::vec::Vec2;
 
-#[derive(Debug)]
 pub struct Splash {
     message: String,
     selected: bool,
@@ -26,7 +27,10 @@ impl Splash {
 
         let mut buf_reader = BufReader::new(logo_file);
         let mut logo = String::new();
-        buf_reader.read_to_string(&mut logo);
+        match buf_reader.read_to_string(&mut logo) {
+            Ok(f)  => f,
+            Err(e) => panic!("{}",  e)
+        };
 
         Splash {
             message: message.to_string(),
@@ -39,10 +43,12 @@ impl Splash {
 impl cursive::view::View for Splash {
     fn draw(&self, printer: &Printer) {
 
-        let style = ColorStyle::new(
-            Color::Dark(BaseColor::Red), 
-            Color::Dark(BaseColor::Black)
-        );
+        let fg: Color = match printer.focused {
+            true => Color::Dark(BaseColor::Red),
+            false => Color::Light(BaseColor::White)
+        };
+
+        let style = ColorStyle::new(fg, Color::Dark(BaseColor::Black));
 
         for (i, line) in self.text.lines().enumerate() {
             printer.with_color(style, 
@@ -50,11 +56,35 @@ impl cursive::view::View for Splash {
             )
         }
 
-        let splashY: usize = self.text.lines().count() + 1;
+        let splash_y: usize = self.text.lines().count() + 1;
         printer.with_color(style, 
-            |printer| printer.print((0, splashY), &self.message),
+            |printer| printer.print((0, splash_y), &self.message),
         )
 
+    }
+
+    fn on_event(&mut self, e: Event) -> EventResult {
+        /*
+        if !self.selected {
+            return EventResult::Ignored;
+        }
+
+        match e {
+            Event::Key(Key::Up) => {
+                self.selected = !self.selected;
+            },
+            Event::Key(Key::Down) => {
+                self.selected = !self.selected;
+            },
+            _ => return EventResult::Consumed(None),
+        }
+
+        */
+        EventResult::Ignored
+    }
+
+    fn take_focus(&mut self, _: Direction) -> bool {
+        true
     }
 
     fn required_size(&mut self, _: Vec2) -> Vec2 {

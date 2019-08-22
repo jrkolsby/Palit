@@ -10,16 +10,14 @@ use std::io::prelude::*;
 use std::collections::HashMap;
 
 use cursive::Cursive;
-use cursive::views::{Dialog, TextView, SelectView, DummyView, LinearLayout, EditView, Button};
+use cursive::views::{Dialog, SelectView, DummyView, LinearLayout, EditView, Button};
 use cursive::traits::{Identifiable, Boxable};
-use cursive::theme::{Theme, BorderStyle};
 
+mod components;
 mod views;
 mod core;
-mod components;
 
-use components::{alert, waveform, splash};
-
+use components::{Splash, alert};
 
 fn delete_name(s: &mut Cursive) {
     let mut select = s.find_id::<SelectView<String>>("select").unwrap();
@@ -58,7 +56,7 @@ fn add_name(s: &mut Cursive) {
 }
 
 fn on_submit(s: &mut Cursive, name: &String) {
-    components::alert::render(s, &"OK!".to_string());
+    alert(s, "YUM YUM TUM");
 }
 
 struct Project<'a> {
@@ -106,19 +104,14 @@ fn main() -> std::io::Result<()> {
         .child(DummyView)
         .child(Button::new("Shutdown", Cursive::quit));
 
-    /*
-    index.add_layer(splash::Splash::new("Tell your friends!")
-        .with_id("splash"));
-       */
-
     index.add_layer(LinearLayout::vertical()
-        .child(splash::Splash::new(""))
+        .child(Splash::new(""))
         .child(DummyView)
-        .child(splash::Splash::new("It's Fun!"))
+        .child(Splash::new("It's Fun!"))
         .child(DummyView)
         .child(DummyView)
         .child(Button::new("Shutdown", Cursive::quit))
-        );
+    );
 
     /*
     index.add_layer(Dialog::around(LinearLayout::horizontal()
@@ -126,22 +119,14 @@ fn main() -> std::io::Result<()> {
             .child(DummyView)
             .child(buttons))
             .title("Select a Project"));
-
     */
+
     index.add_global_callback('q', |s| s.quit());
     index.add_global_callback('~', |s| s.toggle_debug_console());
 
     if let Err(_) = index.load_theme_file("src/style/theme.toml") {
         let _ = index.load_theme_file("src/style/theme.toml");
     }
-
-/*
-    index.set_theme(Theme {
-        shadow: false,
-        borders: BorderStyle::None,
-        palette: index.current_theme().palette
-    });
-    */
 
     index.run();
 
