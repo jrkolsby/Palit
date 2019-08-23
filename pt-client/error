@@ -1,1 +1,4 @@
-    Finished dev [unoptimized + debuginfo] target(s) in 0.05s
+    Finished dev [unoptimized + debuginfo] target(s) in 0.04s
+     Running `target/debug/DAW`
+thread 'main' panicked at 'Parse Error: Not a Wavefile', src/components/waveform.rs:81:23
+note: Run with `RUST_BACKTRACE=1` environment variable to display a backtrace.

@@ -25,39 +25,6 @@ fn time_to_offset(width: i32, l: Time, t: Time) -> i32 {
     (t.0 / l.0) / width
 }
 
-fn file_to_pairs(file: WaveFile) -> Vec<(i32, i32)> {
-
-    let chunk_size = file.len() / TRACK_WIDTH;
-    let chunks = &file.iter().chunks(chunk_size);
-
-    let values = chunks.into_iter().map( |chunk| {
-        let max = chunk.into_iter().map( |frame| {
-            frame.iter().map(|sample| sample.abs()).max().unwrap()
-        }).max().unwrap();
-        max
-    }).take(TRACK_WIDTH).collect::<Vec<i32>>();
-
-    let global_max = *values.iter().max().unwrap();
-    let scale: f64 = TRACK_HEIGHT as f64 / global_max as f64;
-
-    //println!("GLOBAL_MAX: {}", global_max);
-    //println!("SCALE: {}", scale);
-
-    let mut pairs = vec![];
-    for (i, value) in values.iter().enumerate() {
-        if i % 2 > 0 {
-            continue;
-        }
-        //println!("{:?} , {:?}", *value, values[i+1]);
-        let tick: (i32, i32) = (((*value as f64) * scale).round() as i32, 
-                                ((values[i+1] as f64) * scale).round() as i32);
-
-        pairs.push(tick);
-    }
-
-    pairs
-}
-
 pub struct Track {
     muted: bool,
     armed: bool,

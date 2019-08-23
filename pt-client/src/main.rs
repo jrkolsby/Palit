@@ -124,10 +124,12 @@ fn main() -> std::io::Result<()> {
     });
 
     index.add_fullscreen_layer(Dialog::around(LinearLayout::vertical()
+            .child(Splash::new(SplashAsset::Logo, "It's Fun!"))
+            .child(DummyView)
             .child(select)
             .child(DummyView)
             .child(buttons))
-            .title("Are you Sure?"));
+            .title("Palit OS Alpha"));
 
     index.run();
 

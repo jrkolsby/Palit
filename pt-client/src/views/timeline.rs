@@ -2,8 +2,9 @@ use std::fs::File;
 
 use cursive::Cursive;
 use cursive::views::{Dialog, SelectView, BoxView, DummyView, LinearLayout, EditView, Button};
+use cursive::theme::{Color, BaseColor};
 
-use crate::components::{Splash, SplashAsset, alert};
+use crate::components::{Splash, SplashAsset, Waveform, alert};
 
 //#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
 
@@ -28,12 +29,13 @@ impl Timeline {
     pub fn new(props: TimelineProps) -> cursive::views::BoxView<LinearLayout> {
         BoxView::with_full_screen(
             LinearLayout::vertical()
-                .child(Splash::new(SplashAsset::Logo, ""))
-                .child(DummyView)
-                .child(Splash::new(SplashAsset::Keyboard, "It's Fun!"))
+                .child(Splash::new(SplashAsset::Keyboard, "C#m"))
                 .child(DummyView)
                 .child(DummyView)
-                .child(Button::new("Shutdown", Cursive::quit))
+                .child(Waveform::new(Color::Light(BaseColor::Magenta)))
+                .child(Button::new("Save and quit", |s| {
+                    s.pop_layer();
+                }))
             
         )
     }
