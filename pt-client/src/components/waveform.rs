@@ -33,7 +33,17 @@ struct Waveform {
     chars: Vec<(i32, i32)>, 
 }
 
+impl Waveform {
+    pub fn new(color: Color) -> Self {
+        Waveform {
+            color: color,
+            chars: Vec::new()
+        }
+    }
+}
+
 impl cursive::view::View for Waveform {
+
     fn draw(&self, printer: &Printer) {
         for (i, pair) in self.chars.iter().enumerate() {
             let text = pair_to_char(*pair);

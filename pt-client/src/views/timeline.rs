@@ -1,39 +1,41 @@
 use std::fs::File;
 
 use cursive::Cursive;
+use cursive::views::{Dialog, SelectView, BoxView, DummyView, LinearLayout, EditView, Button};
+
+use crate::components::{Splash, SplashAsset, alert};
 
 //#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
 
 // state
-struct Timeline<> {
+pub struct Timeline<> {
     name: String,
+    props: TimelineProps,
     //tracks: Vec<Track>,
     //metronome: Tempo,
 }
 
 // props
-struct TimelineProps {
-    origin_x: i32,
-    origin_y: i32,
-    size_x: i32,
-    size_y: i32,
-    xml_file: File,
+pub struct TimelineProps {
+    pub origin_x: i32,
+    pub origin_y: i32,
+    pub size_x: i32,
+    pub size_y: i32,
+    //xml_file: File,
 }
 
 impl Timeline {
-    pub fn new(props: TimelineProps) -> Self {
-        let mut default_state = Timeline {
-            name: "Verse".to_string(),
-            //tracks: Vec::new(),
-            //metronome: Tempo::new()
-        };
-
-        default_state
-    }
-
-    pub fn render(&self, screen: &mut Cursive) {
-        // screen.add_layer(Tempo::new())
-        // screen.add_layer(Track::new())
+    pub fn new(props: TimelineProps) -> cursive::views::BoxView<LinearLayout> {
+        BoxView::with_full_screen(
+            LinearLayout::vertical()
+                .child(Splash::new(SplashAsset::Logo, ""))
+                .child(DummyView)
+                .child(Splash::new(SplashAsset::Keyboard, "It's Fun!"))
+                .child(DummyView)
+                .child(DummyView)
+                .child(Button::new("Shutdown", Cursive::quit))
+            
+        )
     }
 
     pub fn destroy() {

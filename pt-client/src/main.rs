@@ -10,14 +10,16 @@ use std::io::prelude::*;
 use std::collections::HashMap;
 
 use cursive::Cursive;
-use cursive::views::{Dialog, SelectView, DummyView, LinearLayout, EditView, Button};
+use cursive::views::{Dialog, SelectView, DummyView, LinearLayout, EditView, Button, ShadowView};
 use cursive::traits::{Identifiable, Boxable};
+use cursive::theme::{BorderStyle, Palette, PaletteColor, Theme};
 
 mod components;
 mod views;
 mod core;
 
-use components::{Splash, alert};
+use components::{Splash, SplashAsset, alert};
+use views::{Timeline, TimelineProps};
 
 fn delete_name(s: &mut Cursive) {
     let mut select = s.find_id::<SelectView<String>>("select").unwrap();
@@ -56,7 +58,15 @@ fn add_name(s: &mut Cursive) {
 }
 
 fn on_submit(s: &mut Cursive, name: &String) {
-    alert(s, "YUM YUM TUM");
+    s.add_layer(
+        Timeline::new(TimelineProps {
+            origin_x: 0,
+            origin_y: 0,
+            size_x: 20,
+            size_y: 20,
+            // xml_file: secret,
+        }
+    ));
 }
 
 struct Project<'a> {
@@ -87,9 +97,6 @@ fn main() -> std::io::Result<()> {
         regions: &HashMap::new()
     };
 
-    //println!("{}", contents);
-    //println!("{:?}", anonymous_proj.save());
-
     // Instantiate UI
     let mut index = Cursive::default();
 
@@ -98,37 +105,32 @@ fn main() -> std::io::Result<()> {
         .with_id("select")
         .fixed_size((10, 5));
 
-    let buttons = LinearLayout::vertical()
+    let buttons = LinearLayout::horizontal()
         .child(Button::new("Delete Project", delete_name))
         .child(Button::new("New Project", add_name))
         .child(DummyView)
-        .child(Button::new("Shutdown", Cursive::quit));
-
-    index.add_layer(LinearLayout::vertical()
-        .child(Splash::new(""))
-        .child(DummyView)
-        .child(Splash::new("It's Fun!"))
-        .child(DummyView)
-        .child(DummyView)
         .child(Button::new("Shutdown", Cursive::quit))
-    );
-
-    /*
-    index.add_layer(Dialog::around(LinearLayout::horizontal()
-            .child(select)
-            .child(DummyView)
-            .child(buttons))
-            .title("Select a Project"));
-    */
+        .child(Button::new("Exit", |s| { 
+            s.pop_layer();
+        }));
 
     index.add_global_callback('q', |s| s.quit());
     index.add_global_callback('~', |s| s.toggle_debug_console());
 
-    if let Err(_) = index.load_theme_file("src/style/theme.toml") {
-        let _ = index.load_theme_file("src/style/theme.toml");
-    }
+    index.set_theme(Theme {
+        shadow: true,
+        borders: BorderStyle::Simple,
+        palette: Palette::default(),
+    });
+
+    index.add_fullscreen_layer(Dialog::around(LinearLayout::vertical()
+            .child(select)
+            .child(DummyView)
+            .child(buttons))
+            .title("Are you Sure?"));
 
     index.run();
+
 
     Ok(())
 }

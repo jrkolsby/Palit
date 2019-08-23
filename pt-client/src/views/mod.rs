@@ -1,2 +1,6 @@
-pub mod nav;
-pub mod timeline;
+mod nav;
+mod timeline;
+
+pub use timeline::Timeline;
+pub use timeline::TimelineProps;
+

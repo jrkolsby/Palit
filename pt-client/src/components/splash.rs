@@ -8,26 +8,39 @@ use cursive::direction::Direction;
 use cursive::event::{EventResult, Event, Key};
 use cursive::vec::Vec2;
 
+// A splash is a static ASCII component
 pub struct Splash {
     message: String,
     selected: bool,
     text: String
 }
 
+pub enum SplashAsset {
+    Logo,
+    Keyboard,
+    Guitar,
+}
+
 // (x, y)
 const MARGIN: (usize, usize) = (0, 0);
 
 impl Splash {
-    pub fn new(message: &str) -> Self {
+    pub fn new(splash_type: SplashAsset, message: &str) -> Self {
 
-        let logo_file = match File::open("src/assets/logo.txt") {
+        let asset = match splash_type {
+            SplashAsset::Logo => "src/assets/logo.txt",
+            SplashAsset::Keyboard => "src/assets/keyboard.txt",
+            _ => "src/assets/error.txt"
+        };
+
+        let asset_file = match File::open(asset) {
             Ok(f)  => f,
             Err(e) => panic!("{}",  e)
         };
 
-        let mut buf_reader = BufReader::new(logo_file);
-        let mut logo = String::new();
-        match buf_reader.read_to_string(&mut logo) {
+        let mut buf_reader = BufReader::new(asset_file);
+        let mut asset_str = String::new();
+        match buf_reader.read_to_string(&mut asset_str) {
             Ok(f)  => f,
             Err(e) => panic!("{}",  e)
         };
@@ -35,7 +48,7 @@ impl Splash {
         Splash {
             message: message.to_string(),
             selected: false,
-            text: logo,
+            text: asset_str,
         }
     }
 }
