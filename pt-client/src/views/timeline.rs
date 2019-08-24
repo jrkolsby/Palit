@@ -1,20 +1,20 @@
 use std::fs::File;
 
-use cursive::{Printer};
+use cursive::view::{View, ViewWrapper};
 use cursive::views::{DummyView, LinearLayout, Button, Dialog};
 use cursive::event::{Event, EventResult};
 use cursive::theme::{Color, BaseColor};
-use cursive::direction::Direction;
-use cursive::vec::Vec2;
+
+use cursive::wrap_impl;
 
 use crate::components::{Splash, SplashAsset, Waveform, alert};
 
 //#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
 
 // state
-pub struct Timeline {
+pub struct Timeline<T: View> {
     state: TimelineState,
-    pub layout: LinearLayout
+    layout: T
 }
 
 // props
@@ -27,7 +27,7 @@ pub struct TimelineState {
     //xml_file: File,
 }
 
-impl Timeline {
+impl Timeline<LinearLayout> {
     pub fn new(default_state: TimelineState) -> Self {
         Timeline {
             state: default_state,
@@ -40,4 +40,8 @@ impl Timeline {
                 }))
         }
     }
+}
+
+impl <T: View> ViewWrapper for Timeline<T> {
+    wrap_impl!(self.layout: T);
 }

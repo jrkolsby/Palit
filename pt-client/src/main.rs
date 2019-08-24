@@ -66,7 +66,7 @@ fn on_submit(s: &mut Cursive, name: &String) {
             size_x: 20,
             size_y: 20,
             // xml_file: secret,
-        }).layout);
+        }));
 }
 
 struct Project<'a> {

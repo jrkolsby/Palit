@@ -23,7 +23,6 @@ struct ViewState {
 fn root(state: &ViewState, action: Event) -> &ViewState {
     match action {
         Action::Add_Event,
-        Action::
     }
     View
 }
