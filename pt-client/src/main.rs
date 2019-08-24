@@ -19,7 +19,7 @@ mod views;
 mod core;
 
 use components::{Splash, SplashAsset, alert};
-use views::{Timeline, TimelineProps};
+use views::{Timeline, TimelineState};
 
 fn delete_name(s: &mut Cursive) {
     let mut select = s.find_id::<SelectView<String>>("select").unwrap();
@@ -59,7 +59,7 @@ fn add_name(s: &mut Cursive) {
 
 fn on_submit(s: &mut Cursive, name: &String) {
     s.add_layer(
-        Timeline::new(TimelineProps {
+        Timeline::new(TimelineState {
             origin_x: 0,
             origin_y: 0,
             size_x: 20,
