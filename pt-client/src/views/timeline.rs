@@ -24,7 +24,6 @@ pub struct TimelineState {
     pub size_x: i32,
     pub size_y: i32,
     pub name: String,
-    //xml_file: File,
 }
 
 impl Timeline<LinearLayout> {

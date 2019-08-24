@@ -12,7 +12,7 @@ use std::collections::HashMap;
 use cursive::Cursive;
 use cursive::views::{Dialog, SelectView, DummyView, LinearLayout, EditView, Button, ShadowView};
 use cursive::traits::{Identifiable, Boxable};
-use cursive::theme::{BorderStyle, Palette, PaletteColor, Theme};
+use cursive::theme::{BorderStyle, Color, BaseColor, Palette, PaletteColor, Theme};
 
 mod components;
 mod views;
@@ -117,10 +117,15 @@ fn main() -> std::io::Result<()> {
     index.add_global_callback('q', |s| s.quit());
     index.add_global_callback('~', |s| s.toggle_debug_console());
 
+    let mut palette: Palette = Palette::default();
+
+    palette[PaletteColor::Background] = Color::TerminalDefault;
+    palette[PaletteColor::View] = Color::Dark(BaseColor::Black);
+
     index.set_theme(Theme {
         shadow: true,
         borders: BorderStyle::Simple,
-        palette: Palette::default(),
+        palette: palette,
     });
 
     index.add_fullscreen_layer(Dialog::around(LinearLayout::vertical()
