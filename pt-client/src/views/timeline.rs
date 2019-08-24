@@ -1,17 +1,21 @@
 use std::fs::File;
 
-use cursive::Cursive;
-use cursive::views::{Dialog, SelectView, BoxView, DummyView, LinearLayout, EditView, Button};
+use cursive::{Printer};
+use cursive::views::{DummyView, LinearLayout, Button, Dialog};
+use cursive::event::{Event, EventResult};
 use cursive::theme::{Color, BaseColor};
+use cursive::direction::Direction;
+use cursive::vec::Vec2;
 
 use crate::components::{Splash, SplashAsset, Waveform, alert};
 
 //#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
 
 // state
-pub struct Timeline<> {
-    state: TimelineState
-
+pub struct Timeline {
+    state: TimelineState,
+    pub layout: LinearLayout
+}
 
 // props
 pub struct TimelineState {
@@ -19,25 +23,21 @@ pub struct TimelineState {
     pub origin_y: i32,
     pub size_x: i32,
     pub size_y: i32,
-    name: String,
+    pub name: String,
     //xml_file: File,
 }
 
 impl Timeline {
-    pub fn new(props: TimelineState) -> cursive::views::BoxView<LinearLayout> {
-        BoxView::with_full_screen(
-            LinearLayout::vertical()
+    pub fn new(default_state: TimelineState) -> Self {
+        Timeline {
+            state: default_state,
+            layout: LinearLayout::vertical()
                 .child(Splash::new(SplashAsset::Keyboard, "C#m"))
                 .child(DummyView)
                 .child(Waveform::new(Color::Light(BaseColor::Magenta)))
                 .child(Button::new("Save and quit", |s| {
                     s.pop_layer();
                 }))
-            
-        )
-    }
-
-    pub fn destroy() {
-        // screen.pop_layer()
+        }
     }
 }

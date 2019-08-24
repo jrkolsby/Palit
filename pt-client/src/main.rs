@@ -60,13 +60,13 @@ fn add_name(s: &mut Cursive) {
 fn on_submit(s: &mut Cursive, name: &String) {
     s.add_layer(
         Timeline::new(TimelineState {
+            name: name.to_string(),
             origin_x: 0,
             origin_y: 0,
             size_x: 20,
             size_y: 20,
             // xml_file: secret,
-        }
-    ));
+        }).layout);
 }
 
 struct Project<'a> {
