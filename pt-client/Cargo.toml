@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 musical_keyboard = "0.6.0"
+quick-xml = "0.16.0"
 itertools = "0.8.0"
 wavefile = "0.2.0"
 cursive = "0.12.0"

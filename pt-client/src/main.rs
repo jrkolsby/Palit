@@ -45,6 +45,7 @@ fn main() -> std::io::Result<()> {
     };
 
     index.add_layer(Home::new(HomeState {
+        openProject: 0,
         projects: home_projects,
         motd: "Heyo!!".to_string()
     }));

@@ -24,25 +24,8 @@ impl<'a> Home<LinearLayout> {
             layout: LinearLayout::vertical()
         };
 
-        let mut projects_view = LinearLayout::vertical();
-        
-        let colors: Vec<Color> = vec![
-            Color::Light(BaseColor::Yellow),
-            Color::Light(BaseColor::Green),
-            Color::Light(BaseColor::Blue),
-            Color::Light(BaseColor::Magenta),
-        ];
-
-        for (i, project) in home.state.projects.iter().enumerate() {
-            let color = colors[i % colors.len()];
-            projects_view = projects_view
-                .child(ColorButton::new(color, project.to_string(), false))
-                .child(DummyView);
-        };
-
         home.layout = home.layout
             .child(Splash::new(SplashAsset::Logo, &home.state.motd))
-            .child(ColorButton::new(Color::Light(BaseColor::Red), "+ NEW".to_string(), true))
             .child(DummyView)
             .child(projects_view.scrollable());
 
