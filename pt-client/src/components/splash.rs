@@ -61,7 +61,7 @@ impl cursive::view::View for Splash {
             false => Color::Light(BaseColor::Black)
         };
 
-        let style = ColorStyle::new(fg, Color::Dark(BaseColor::White));
+        let style = ColorStyle::new(fg, Color::Dark(BaseColor::Black));
 
         for (i, line) in self.text.lines().enumerate() {
             printer.with_color(style, 

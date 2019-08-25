@@ -1,26 +1,46 @@
-impl cursive::view::View for Waveform {
+use std::fs::File;
 
-    fn draw(&self, printer: &Printer) {
-        printer.with_color(
-            ColorStyle::new(Color::Dark(BaseColor::White), {
-                match printer.focused {
-                    true => Color::Dark(BaseColor::Red),
-                    _ => Color::Dark(BaseColor::Black)
-                }
-            }),
-            |printer| printer.print((i, 0), &text.to_string()),
-        )
+use cursive::view::{View, ViewWrapper};
+use cursive::views::{DummyView, LinearLayout, Button, Dialog};
+use cursive::event::{Event, EventResult};
+use cursive::theme::{Color, BaseColor};
+
+use cursive::wrap_impl;
+
+use crate::components::{Splash, SplashAsset, Waveform, alert};
+
+//#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
+
+// state
+pub struct Timeline<T: View> {
+    state: TimelineState,
+    layout: T
+}
+
+// props
+pub struct TimelineState {
+    pub origin_x: i32,
+    pub origin_y: i32,
+    pub size_x: i32,
+    pub size_y: i32,
+    pub name: String,
+}
+
+impl Timeline<LinearLayout> {
+    pub fn new(default_state: TimelineState) -> Self {
+        Timeline {
+            state: default_state,
+            layout: LinearLayout::vertical()
+                .child(Splash::new(SplashAsset::Keyboard, "C#m"))
+                .child(DummyView)
+                .child(Waveform::new(Color::Light(BaseColor::Magenta)))
+                .child(Button::new("Save and quit", |s| {
+                    s.pop_layer();
+                }))
+        }
     }
+}
 
-    fn take_focus(&mut self, _: Direction) -> bool {
-        true
-    }
-
-    fn on_event(&mut self, event: Event) -> EventResult {
-        EventResult::Ignored
-    }
-
-    fn required_size(&mut self, _: Vec2) -> Vec2 {
-        Vec2::new(1, 3)
-    }    
+impl <T: View> ViewWrapper for Timeline<T> {
+    wrap_impl!(self.layout: T);
 }
