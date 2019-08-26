@@ -5,16 +5,11 @@ use cursive::theme::{Color, BaseColor};
 
 use crate::components::{Splash, SplashAsset, ColorButton};
 
+use crate::utils::HomeState;
+
 pub struct Home<T: View> {
     state: HomeState,
     layout: T
-}
-
-#[derive(Clone)]
-pub struct HomeState {
-    pub openProject: i32, 
-    pub projects: Vec<String>,
-    pub motd: String,
 }
 
 impl<'a> Home<LinearLayout> {

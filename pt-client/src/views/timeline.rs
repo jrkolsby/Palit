@@ -9,21 +9,30 @@ use cursive::wrap_impl;
 
 use crate::components::{Splash, SplashAsset, Waveform, alert};
 
+use crate::utils::{TimelineState};
+
 //#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
 
-// state
 pub struct Timeline<T: View> {
     state: TimelineState,
     layout: T
 }
 
-// props
-pub struct TimelineState {
-    pub origin_x: i32,
-    pub origin_y: i32,
-    pub size_x: i32,
-    pub size_y: i32,
-    pub name: String,
+pub enum Action {
+    Add_Note,
+    Arm,
+    Edit_Mode,
+    Loop_Mode,
+    Pitch,
+    Volume,
+    Select_Y, // Yellow
+    Select_G, // Green
+    Select_P, // Pink
+    Select_B, // Blue
+}
+
+fn reducer(state: &TimelineState, action: Action) -> &TimelineState {
+    state
 }
 
 impl Timeline<LinearLayout> {

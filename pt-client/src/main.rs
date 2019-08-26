@@ -7,11 +7,13 @@ use std::fs;
 use cursive::Cursive;
 use cursive::theme::{BorderStyle, Color, BaseColor, Palette, PaletteColor, Theme};
 
+mod utils;
 mod components;
 mod views;
 mod core;
 
-use views::{Home, HomeState};
+use views::{Home};
+use utils::{HomeState, read_document, write_document};
 
 // const HOME_DIR = "/usr/local/palit/" // PROD
 const HOME_DIR: &str = "storage/";
