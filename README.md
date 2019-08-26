@@ -1,4 +1,4 @@
-###PALIT
+### PALIT
 
 Palit is a music hardware project which seeks to upcycle outdated laptop models into audio workstations for collaborative music production over IP. 
 
@@ -12,7 +12,6 @@ Infrastructure (INF) - All things relating to the structure of this codebase inc
 # Incomplete
 SOUND-2: pt-client/src/audioengine.rs
 SOUND-3: implement control of faust synth from audioengine
-UI-2: Splash screen with project listings
 UI-3: Keyboard display with feedback for keypress events
 UI-4: Display empty timeline for new project
 HARD-2: Rewire Green function key (Fn) to a keyboard-event producing key
@@ -24,7 +23,7 @@ DG-3: Paint four function keys
 DG-4: Paint bottom keybed
 DG-5: Paint laptop casing and general keys CLASSIC BEIGE
 INF-1: Implement testing suite which takes keyboard input and project files and outputs UI sequences and stored audio files
-INF-2: Design project filetype around .xml or .json (Hopefully compatible with android)
+INF-3: Implement redux-rs for view state
 
 # Complete
 SOUND-1: build a dsp file
@@ -33,3 +32,5 @@ DG-1: First iteration mockup for user flow
 HARD-1: Acquire Lenovo Thinkpad T400
 DG-1: Acquire vinyl paints in four-function colors and SELECT RED
 DG-2: Paint top keybed using glossy white and black nail polish
+UI-2: Splash screen with project listings
+INF-2: Design project filetype around .xml or .json (Hopefully compatible with android)
