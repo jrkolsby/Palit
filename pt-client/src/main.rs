@@ -1,12 +1,16 @@
-extern crate cursive;
-extern crate wavefile;
-extern crate itertools;
+extern crate termion;
 
-use std::fs;
+use std::{time, thread};
 
-use cursive::Cursive;
-use cursive::theme::{BorderStyle, Color, BaseColor, Palette, PaletteColor, Theme};
+use termion::{clear, color, cursor};
+use termion::event::Key;
+use termion::input::TermRead;
+use termion::raw::IntoRawMode;
+use std::io::{Write, stdout, stdin, BufReader};
+use std::io::prelude::*;
+use std::fs::{File};
 
+/*
 mod utils;
 mod components;
 mod views;
@@ -14,45 +18,76 @@ mod core;
 
 use views::{Home};
 use utils::{HomeState, read_document, write_document};
+*/
 
 // const HOME_DIR = "/usr/local/palit/" // PROD
 const HOME_DIR: &str = "storage/";
 
+struct MenuState<'a> {
+    motd: &'a str,
+    projects: Vec<&'a str>,
+}
 
 fn main() -> std::io::Result<()> {
 
-    let mut index = Cursive::default();
+    let stdin = stdin();
+    let mut stdout = stdout().into_raw_mode().unwrap();
 
-    index.add_global_callback('q', |s| s.quit());
-    index.add_global_callback('~', |s| s.toggle_debug_console());
+    let asset_file = File::open("src/assets/logo.txt").unwrap();
 
-    let mut palette: Palette = Palette::default();
+    let mut buf_reader = BufReader::new(asset_file);
+    let mut asset_str = String::new();
 
-    palette[PaletteColor::Background] = Color::TerminalDefault;
-    palette[PaletteColor::View] = Color::Dark(BaseColor::Black);
-    palette[PaletteColor::TitlePrimary] = Color::Light(BaseColor::White);
-    palette[PaletteColor::TitleSecondary] = Color::Light(BaseColor::White);
+    buf_reader.read_to_string(&mut asset_str).unwrap();
 
-    index.set_theme(Theme {
-        shadow: true,
-        borders: BorderStyle::Simple,
-        palette: palette,
-    });
+    let state: MenuState = MenuState {
+        motd: "It's Fun!",
+        projects: vec![
+            "tinytoes.xml",
+            "heyo!!.xml",
+            "tinytoes.xml",
+            "heyo!!.xml",
+        ],
+    };    
 
-    let mut home_projects: Vec<String> = Vec::new();
+    write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
 
-    let home_paths = fs::read_dir(HOME_DIR).unwrap();
-    for path in home_paths {
-        home_projects.push(path.unwrap().path().display().to_string());
-    };
+    stdout.flush().unwrap();
 
-    index.add_layer(Home::new(HomeState {
-        openProject: 0,
-        projects: home_projects,
-        motd: "Heyo!!".to_string()
-    }));
+    for (i, line) in asset_str.lines().enumerate() {
+        write!(stdout,
+            "{}{}{}{}",
+            cursor::Goto(1, (i as u16)+1),
+            color::Fg(color::Red),
+            color::Bg(color::Black),
+            line).unwrap();
+    }
 
-    index.run();
+    stdout.flush().unwrap();
+
+    for c in stdin.keys() {
+
+        match c.unwrap() {
+            Key::Char('q') => break,
+            Key::Char(c) => println!("{}", c),
+            Key::Alt(c) => println!("^{}", c),
+            Key::Ctrl(c) => println!("*{}", c),
+            Key::Esc => println!("ESC"),
+            Key::Left => println!("←"),
+            Key::Right => println!("→"),
+            Key::Up => println!("↑"),
+            Key::Down => println!("↓"),
+            Key::Backspace => println!("×"),
+            _ => {}
+        }
+
+        stdout.flush().unwrap();
+    }
+
+    write!(stdout, "{}{}{}", 
+        clear::All, 
+        cursor::Goto(1,1), 
+        cursor::Show).unwrap();
 
     Ok(())
 }
