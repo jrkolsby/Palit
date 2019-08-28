@@ -18,9 +18,6 @@ use views::{Home};
 use utils::{HomeState, read_document, write_document};
 */
 
-// const HOME_DIR = "/usr/local/palit/" // PROD
-const HOME_DIR: &str = "storage/";
-
 #[derive(Clone, Debug)]
 struct MenuState {
     motd: String,
@@ -39,8 +36,8 @@ fn reducer(state: MenuState, action: Action) -> MenuState {
     MenuState {
         motd: state.motd,
         focus: match action {
-            Action::Up => state.focus+1,
-            Action::Down => state.focus-1,
+            Action::Up => state.focus-1,
+            Action::Down => state.focus+1,
             _ => state.focus,
         },
         projects: state.projects,
@@ -51,7 +48,6 @@ fn render(state: MenuState, x: u16, y: u16, mut out: RawTerminal<Stdout>, asset_
 
     // Clear Screen
     write!(out, "{}{}", clear::All, cursor::Hide).unwrap();
-    out.flush().unwrap();
 
     for (i, line) in asset_str.lines().enumerate() {
         write!(out, "{}{}{}",
@@ -59,13 +55,28 @@ fn render(state: MenuState, x: u16, y: u16, mut out: RawTerminal<Stdout>, asset_
             color::Fg(color::White),
             line).unwrap();
     }
-    out.flush().unwrap();
 
-    write!(out, "{}{}",
+    for (i, project) in state.projects.iter().enumerate() {
+        if (state.focus % state.projects.len()) == i {
+            write!(out, "{}{}{}",
+                cursor::Goto(x,y+10+(i*2 ) as u16),
+                color::Bg(color::Red),
+                project).unwrap();
+        } else {
+            write!(out, "{}{}{}",
+                cursor::Goto(x,y+10+(i*2 ) as u16),
+                color::Bg(color::Reset),
+                project).unwrap();
+        }
+    }
+
+    write!(out, "{:}{}{}",
         cursor::Goto(1,1),
+        color::Bg(color::Reset),
         state.focus).unwrap();
-    out.flush().unwrap();
 
+    // flush stdout and return it
+    out.flush().unwrap();
     out
 }
 
@@ -109,8 +120,6 @@ fn main() -> std::io::Result<()> {
     // Loops until break
     for c in stdin.keys() {
 
-        stdout = render(state.clone(), asset_x, 3, stdout, asset_str.clone());
-
         let action: Action = match c.unwrap() {
             Key::Char('q') => break,
             Key::Up => Action::Up,
@@ -120,6 +129,8 @@ fn main() -> std::io::Result<()> {
         };
 
         state = reducer(state.clone(), action);
+        stdout = render(state.clone(), asset_x, 3, stdout, asset_str.clone());
+
     }
 
     write!(stdout, "{}{}{}", 
