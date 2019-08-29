@@ -35,7 +35,7 @@ RUN echo "2\n" > ./install.docker.sh
 RUN ./install.compiler.sh
 
 WORKDIR /usr/local/pt-sound/
-#RUN faust2api -alsa midisynth.dsp
+# RUN faust2api -alsa midisynth.dsp
 
 # Clean up APT when done.
 RUN apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/*
