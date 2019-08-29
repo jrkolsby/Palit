@@ -10,6 +10,7 @@ use termion::raw::{IntoRawMode};
 mod views;
 use views::{Home, HomeAction, Timeline, TimelineAction};
 
+mod components; // NEED THIS IN MAIN FOR OTHER MODULES TO FIND IT!!!
 mod common;
 use common::{Region, Asset, Track};
 

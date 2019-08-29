@@ -1,12 +1,15 @@
-use std::fs::File;
+extern crate wavefile;
 
-use std::io::{stdout, stdin, Write, Stdout, BufReader};
-use std::io::prelude::*;
+use wavefile::WaveFile;
 
 use termion::{clear, color, cursor, terminal_size};
 use termion::raw::{RawTerminal};
 
-use crate::common::{Asset, Track, Region};
+use std::fs::File;
+use std::io::{stdout, stdin, Write, Stdout, BufReader};
+
+use crate::components::{waveform};
+use crate::common::{Asset, Track, Region, file_to_pairs};
 
 //#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
 
@@ -18,6 +21,7 @@ pub struct Timeline {
     height: u16,
     width: u16,
     project: File,
+    pairs_example: Vec<(i32, i32)>,
     state: TimelineState,
 }
 
@@ -48,17 +52,9 @@ fn reduce(state: TimelineState, action: TimelineAction) -> TimelineState {
     state.clone()
 }
 
+
 impl Timeline {
     pub fn new() -> Self {
-        // Load logo asset
-        let project_file = File::open("storage/project.xml").unwrap();
-
-        /*
-        let asset_file = File::open("storage/test.wav").unwrap();
-        */
-
-        // Calculate center position
-        let size: (u16, u16) = terminal_size().unwrap();
 
         // Initialize State
         let initial_state: TimelineState = TimelineState {
@@ -69,7 +65,6 @@ impl Timeline {
             sequence: vec![
                 Track {
                     id: 0,
-                    color: 1,
                     regions: vec![
                         Region {
                             id: 0,
@@ -94,9 +89,19 @@ impl Timeline {
             ] // FILES
         };
 
+        // Load logo asset
+        let project_file = File::open("storage/project.xml").unwrap();
+
+        let asset_file = WaveFile::open("storage/test.wav").unwrap();
+        let pairs: Vec<(i32, i32)> = file_to_pairs(asset_file, 10, 4);
+
+        // Calculate center position
+        let size: (u16, u16) = terminal_size().unwrap();
+
         Timeline {
             x: MARGIN.0,
             y: MARGIN.1,
+            pairs_example: pairs,
             width: size.0 - (MARGIN.0*2),
             height: size.1 - (MARGIN.1*2),
             state: initial_state,
@@ -113,6 +118,7 @@ impl Timeline {
             "Hello".to_string(),
             self.state.name).unwrap();
 
+        out = waveform::render(out, &self.pairs_example, self.x + 12, self.y);
 
         write!(out, "{}", color::Bg(color::Reset)).unwrap();
         out.flush().unwrap();

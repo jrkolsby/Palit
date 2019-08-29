@@ -1,5 +1,8 @@
-use std::fs::File;
-use termion::color::Color;
+extern crate wavefile;
+
+use wavefile::WaveFile;
+
+use itertools::Itertools;
 
 #[derive(Debug, Clone)]
 pub struct Asset {
@@ -22,8 +25,37 @@ pub struct Region {
 #[derive(Clone, Debug)]
 pub struct Track {
     pub id: u32,
-    pub color: usize,
-    pub regions: Vec<Region>
+    pub regions: Vec<Region>,
+}
+
+pub fn file_to_pairs(file: WaveFile, width: usize, height: usize) -> Vec<(i32, i32)> {
+
+    let chunk_size = (file.len()) / (width*2);
+    let chunks = &file.iter().chunks(chunk_size);
+
+    let values = chunks.into_iter().map( |chunk| {
+        let max = chunk.into_iter().map( |frame| {
+            frame.iter().map(|sample| sample.abs()).max().unwrap()
+        }).max().unwrap();
+        max
+    }).take(width*2).collect::<Vec<i32>>();
+
+    let global_max = *values.iter().max().unwrap();
+    let scale: f64 = height as f64 / global_max as f64;
+
+    let mut pairs = vec![];
+    for (i, value) in values.iter().enumerate() {
+        if i % 2 > 0 {
+            continue;
+        }
+
+        let tick: (i32, i32) = (((*value as f64) * scale).round() as i32, 
+                                ((values[i+1] as f64) * scale).round() as i32);
+
+        pairs.push(tick);
+    }
+
+    pairs
 }
 
 /*
