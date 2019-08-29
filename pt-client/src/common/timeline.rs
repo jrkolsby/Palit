@@ -1,27 +1,19 @@
-// extern crate quick-xml;
+extern crate wavefile;
 
-use std::fs::File;
+use wavefile::WaveFile;
 
-use cursive::theme::{Color, BaseColor};
+use itertools::Itertools;
 
-pub struct TimelineState {
-    pub name: String,
-    pub tempo: u16,
-    pub time_beat: usize, // TOP 
-    pub time_frac: usize, // BOTTOM
-    pub sequence: Vec<Track>, // TRACKS
-    pub assets: Vec<Asset> // FILES
-}
-
+#[derive(Debug, Clone)]
 pub struct Asset {
     pub id: u32,
-    pub name: String,
-    pub src: File,
+    pub src: String,
     pub sample_rate: u32,
     pub duration: u32,
     pub channels: usize
 }
 
+#[derive(Clone, Debug)]
 pub struct Region {
     pub id: u32,
     pub asset_id: u32,
@@ -30,10 +22,40 @@ pub struct Region {
     pub offset: i32,
 }
 
+#[derive(Clone, Debug)]
 pub struct Track {
     pub id: u32,
-    pub color: Color,
-    pub regions: Vec<Region>
+    pub regions: Vec<Region>,
+}
+
+pub fn file_to_pairs(file: WaveFile, width: usize, height: usize) -> Vec<(i32, i32)> {
+
+    let chunk_size = (file.len()) / (width*2);
+    let chunks = &file.iter().chunks(chunk_size);
+
+    let values = chunks.into_iter().map( |chunk| {
+        let max = chunk.into_iter().map( |frame| {
+            frame.iter().map(|sample| sample.abs()).max().unwrap()
+        }).max().unwrap();
+        max
+    }).take(width*2).collect::<Vec<i32>>();
+
+    let global_max = *values.iter().max().unwrap();
+    let scale: f64 = height as f64 / global_max as f64;
+
+    let mut pairs = vec![];
+    for (i, value) in values.iter().enumerate() {
+        if i % 2 > 0 {
+            continue;
+        }
+
+        let tick: (i32, i32) = (((*value as f64) * scale).round() as i32, 
+                                ((values[i+1] as f64) * scale).round() as i32);
+
+        pairs.push(tick);
+    }
+
+    pairs
 }
 
 /*
@@ -47,6 +69,7 @@ struct Route {
 }
 */
 
+/*
 pub fn write_document(out_file: File, state: TimelineState) {
     println!("WRITING");
 }
@@ -92,3 +115,4 @@ pub fn read_document(in_file: File) -> TimelineState {
         ] // FILES
     }
 }
+*/
