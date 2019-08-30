@@ -76,9 +76,9 @@ impl Timeline {
         };
 
         // Load logo asset
-        let project_file = File::open("storage/project.xml").unwrap();
+        let project_file = File::open("examples/assets/project.xml").unwrap();
 
-        let asset_file = WaveFile::open("storage/test.wav").unwrap();
+        let asset_file = WaveFile::open("examples/assets/test.wav").unwrap();
         let pairs: Vec<(i32, i32)> = file_to_pairs(asset_file, 10, 4);
 
         // Calculate center position

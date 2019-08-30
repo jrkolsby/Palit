@@ -1,0 +1,31 @@
+#!/bin/bash
+
+HOME="$1"
+TESTS="./examples/*.in"
+PALIT="./dist/palit"
+
+for TEST in $TESTS 
+do
+
+
+    OUTFILE="${TEST%.*}.out"
+    TEMPFILE="${TEST%.*}.temp"
+
+    script -q $TEMPFILE $( echo "q" | cargo run -q )
+
+    if [ ! -f $OUTFILE ]; then
+        echo "NO OUT" && mv $TEMPFILE $OUTFILE
+    else
+        if [ diff $TEMPFILE $OUTFILE ]; then
+            echo "PASS $OUTFILE";
+        else
+            echo "FAIL $TEST";
+	        sed 's/$/\\n/;s/\t/\\t/g;s/ \{4\}/\\t/g' $TEMPFILE;
+	    fi
+        rm $TEMPFILE
+    fi
+
+
+done
+exit
+
