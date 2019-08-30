@@ -15,6 +15,8 @@ use crate::common::{Action, Asset, Track, Region, file_to_pairs};
 //#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
 
 const MARGIN: (u16, u16) = (3, 3);
+const EXTRAS_W: u16 = 7;
+const EXTRAS_H: u16 = 3;
 const ASSET_PREFIX: &str = "storage/";
 
 // STATIC PROPERTIES THROUGHOUT VIEW'S LIFETIME
@@ -42,18 +44,19 @@ pub struct TimelineState {
 }
 
 fn reduce(state: TimelineState, action: Action) -> TimelineState {
-    match action {
-        Action::Up => TimelineState {
-            name: state.name.clone(),
-            tempo: state.tempo.clone(),
-            time_beat: (state.time_beat + 1),
-            time_note: state.time_note.clone(),
-            zoom: state.zoom.clone(),
-            assets: state.assets.clone(),
-            sequence: state.sequence.clone(),
-            loop_mode: state.loop_mode.clone(),
+    TimelineState {
+        name: state.name.clone(),
+        tempo: state.tempo.clone(),
+        time_beat: match action {
+            Action::Up => (state.time_beat + 1),
+            Action::Down => (state.time_beat - 1),
+            _ => state.time_beat,
         },
-        _ => state
+        time_note: state.time_note.clone(),
+        zoom: state.zoom.clone(),
+        assets: state.assets.clone(),
+        sequence: state.sequence.clone(),
+        loop_mode: state.loop_mode.clone(),
     }
 }
 
@@ -99,7 +102,7 @@ impl Timeline {
                     regions: vec![
                         Region {
                             id: 0,
-                            asset_id: 1,
+                            asset_id: 2,
                             asset_in: 0,
                             asset_out: 48000,
                             offset: 0,
@@ -121,7 +124,15 @@ impl Timeline {
                     sample_rate: 44800,
                     duration: 480000,
                     channels: 2
-                }
+                },
+                Asset {
+                    id: 2,
+                    src: "Who.wav".to_string(),
+                    sample_rate: 44800,
+                    duration: 480000,
+                    channels: 2
+                },
+
             ] // FILES
         };
 
@@ -168,6 +179,8 @@ impl Timeline {
             cursor::Goto(name_x,self.y),
             self.state.name).unwrap();
 
+        let content_x = self.x + EXTRAS_W;
+
         // PRINT TEMPO
         let mut measure: String = ".".to_string();
         for i in 0..self.state.time_beat-1 {
@@ -177,24 +190,24 @@ impl Timeline {
         let n: u16 = self.width / tempo_len;
         for j in 0..n {
             write!(out, "{}{}",
-                cursor::Goto(self.x+(j*tempo_len), 2+self.y),
+                cursor::Goto(content_x+(j*tempo_len), EXTRAS_H+self.y),
                 measure).unwrap()
         }
 
         // PRINT TRACKS
         for (i, track) in self.state.sequence.iter().enumerate() {
-            let track_y: u16 = 5 + self.y + (i as u16)*2;
+            let track_y: u16 = self.y + EXTRAS_H + 2 + (i as u16)*2;
 
             // PRINT TRACK NUMBER
             write!(out, "{}{}",
-                cursor::Goto(self.x+2, track_y),
+                cursor::Goto(self.x, track_y),
                 i+1).unwrap();
 
             // PRINT REGIONS
             for region in track.regions.iter() {
                 let id: u32 = region.asset_id;
                 let pairs: Vec<(i32, i32)> = self.waveforms.get(&id).unwrap().to_vec();
-                out = waveform::render(out, &pairs, self.x+7, track_y);
+                out = waveform::render(out, &pairs, self.x+EXTRAS_W, track_y);
             }
         }
 

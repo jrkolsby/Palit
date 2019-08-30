@@ -100,7 +100,8 @@ impl Home {
             }
         }
 
-        write!(out, "{}", color::Bg(color::Reset)).unwrap();
+        write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
+
         out.flush().unwrap();
 
         out
