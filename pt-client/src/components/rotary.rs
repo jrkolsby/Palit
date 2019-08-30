@@ -4,7 +4,9 @@ use std::io::prelude::*;
 
 use std::io::{Write, Stdout};
 
-pub fn angle_to_char(angle: f32, quadrant: usize) -> char {
+pub fn angle_to_char(angle: f32, mirror: bool) -> char {
+
+    // e, f, b, c, g, h, 
 
     braille::BRAILLE[d][h]
                     [c][g]

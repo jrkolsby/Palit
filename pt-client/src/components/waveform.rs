@@ -24,11 +24,10 @@ pub fn pair_to_char(pair: (i32, i32)) -> char {
 
 pub fn render(mut out: RawTerminal<Stdout>, pairs: &Vec<(i32, i32)>, x: u16, y: u16) -> RawTerminal<Stdout> {
     for (i, pair) in pairs.iter().enumerate() {
-        write!(out, "{}{}{}{:}",
+        write!(out, "{}{:}",
             cursor::Goto(x+(i as u16),y),
-            color::Bg(color::Magenta),
-            color::Fg(color::Black),
-            pair_to_char(*pair)).unwrap();
+            pair_to_char(*pair),
+            ).unwrap();
     }
 
     out

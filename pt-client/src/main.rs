@@ -34,7 +34,8 @@ fn main() -> std::io::Result<()> {
     let mut timeline: Timeline = Timeline::new();
 
     write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
-    stdout = root.render(timeline.render(stdout));
+    //stdout = root.render();
+    stdout = timeline.render(stdout);
     stdout.flush().unwrap();
 
     // Loops until break
@@ -49,12 +50,13 @@ fn main() -> std::io::Result<()> {
         };
 
         write!(stdout, "{}", clear::All).unwrap();
-        root.dispatch(action);
+        timeline.dispatch(action);
 
-        stdout = root.render(timeline.render(stdout));
+        //stdout = root.render(timeline.render(stdout));
         stdout = timeline.render(stdout);
     }
 
+    // CLEAN UP
     write!(stdout, "{}{}{}", 
         clear::All, 
         cursor::Goto(1,1), 
