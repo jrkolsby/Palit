@@ -5,6 +5,8 @@ use std::fs::{File};
 use termion::{clear, color, cursor, terminal_size};
 use termion::raw::{RawTerminal};
 
+use crate::common::Action;
+
 pub struct Home {
     logo_asset: String,
     logo_x: u16,
@@ -19,22 +21,15 @@ pub struct HomeState {
     focus: usize,
 }
 
-pub enum HomeAction {
-    Up,
-    Down,
-    Select,
-    Noop,
-}
-
-fn reduce(state: HomeState, action: HomeAction) -> HomeState {
+fn reduce(state: HomeState, action: Action) -> HomeState {
     let len = state.projects.len();
     HomeState {
         motd: state.motd.clone(),
         focus: match action {
-            HomeAction::Up => if state.focus < 2 { len } else {
+            Action::Up => if state.focus < 2 { len } else {
                 (state.focus-1) % len
             },
-            HomeAction::Down => (state.focus+1) % len,
+            Action::Down => (state.focus+1) % len,
             _ => state.focus,
         },
         projects: state.projects.clone(),
@@ -111,7 +106,7 @@ impl Home {
         out
     }
 
-    pub fn dispatch(&mut self, action: HomeAction) {
+    pub fn dispatch(&mut self, action: Action) {
         self.state = reduce(self.state.clone(), action);
     }
 }

@@ -2,14 +2,14 @@ extern crate wavefile;
 
 use wavefile::WaveFile;
 
-use termion::{clear, color, cursor, terminal_size};
+use termion::{color, cursor, terminal_size};
 use termion::raw::{RawTerminal};
 
 use std::fs::File;
-use std::io::{stdout, stdin, Write, Stdout, BufReader};
+use std::io::{Write, Stdout, BufReader};
 
 use crate::components::{waveform};
-use crate::common::{Asset, Track, Region, file_to_pairs};
+use crate::common::{Action, Asset, Track, Region, file_to_pairs};
 
 //#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
 
@@ -35,23 +35,9 @@ pub struct TimelineState {
     pub assets: Vec<Asset> // FILES
 }
 
-pub enum TimelineAction {
-    Add_Note,
-    Arm,
-    Edit_Mode,
-    Loop_Mode,
-    Pitch,
-    Volume,
-    Select_Y, // Yellow
-    Select_G, // Green
-    Select_P, // Pink
-    Select_B, // Blue
-}
-
-fn reduce(state: TimelineState, action: TimelineAction) -> TimelineState {
+fn reduce(state: TimelineState, action: Action) -> TimelineState {
     state.clone()
 }
-
 
 impl Timeline {
     pub fn new() -> Self {
@@ -126,7 +112,7 @@ impl Timeline {
         out
     }
 
-    pub fn dispatch(&mut self, action: TimelineAction) {
+    pub fn dispatch(&mut self, action: Action) {
         self.state = reduce(self.state.clone(), action);
     }
 }
