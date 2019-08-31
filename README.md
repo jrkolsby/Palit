@@ -35,5 +35,6 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 - [ ] INF-1: Implement testing suite which takes keyboard input and project files and outputs UI sequences and stored audio files
 - [X] INF-2: Design project filetype around .xml or .json (Hopefully compatible with android)
-- [ ] INF-3: Implement redux-rs for view state
-- [ ] INF-4: Remove cursive dep in favor of termion
+- [X] INF-3: Implement view state
+- [X] INF-4: Remove cursive dep in favor of termion
+- [ ] INF-5: Unicode Support
