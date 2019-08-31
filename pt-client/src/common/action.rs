@@ -11,7 +11,6 @@ pub enum Action {
     SelectY,
     SelectP,
 
-
     MidiEvent,
     RotaryEvent,
 

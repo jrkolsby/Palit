@@ -29,6 +29,5 @@ pub fn render(mut out: RawTerminal<Stdout>, pairs: &Vec<(i32, i32)>, x: u16, y: 
             pair_to_char(*pair),
             ).unwrap();
     }
-
     out
 }
