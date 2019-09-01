@@ -6,6 +6,7 @@ use termion::{clear, color, cursor, terminal_size};
 use termion::raw::{RawTerminal};
 
 use crate::common::Action;
+use crate::views::{Layer};
 
 pub struct Home {
     logo_asset: String,
@@ -73,8 +74,10 @@ impl Home {
             state: initial_state
         }
     }
+}
 
-    pub fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
+impl Layer for Home {
+    fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
 
 
         for (i, line) in self.logo_asset.lines().enumerate() {
@@ -107,7 +110,17 @@ impl Home {
         out
     }
 
-    pub fn dispatch(&mut self, action: Action) {
+    fn dispatch(&mut self, action: Action) -> Action {
         self.state = reduce(self.state.clone(), action);
+        Action::Noop
+    }
+    fn undo(&mut self) {
+        self.state = self.state.clone()
+    }
+    fn redo(&mut self) {
+        self.state = self.state.clone()
+    }
+    fn alpha(&self) -> bool {
+        false
     }
 }

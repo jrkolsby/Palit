@@ -11,6 +11,7 @@ use std::collections::HashMap;
 
 use crate::components::{waveform};
 use crate::common::{Action, Asset, Track, Region, file_to_pairs};
+use crate::views::{Layer};
 
 //#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
 
@@ -169,8 +170,10 @@ impl Timeline {
             project: project_file,
         }
     }
+}
 
-    pub fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
+impl Layer for Timeline {
+    fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
 
         // PRINT NAME
         let name_len: u16 = self.state.name.len() as u16;
@@ -217,8 +220,17 @@ impl Timeline {
 
         out
     }
-
-    pub fn dispatch(&mut self, action: Action) {
+    fn dispatch(&mut self, action: Action) -> Action {
         self.state = reduce(self.state.clone(), action);
+        Action::Noop
+    }
+    fn undo(&mut self) {
+        self.state = self.state.clone()
+    }
+    fn redo(&mut self) {
+        self.state = self.state.clone()
+    }
+    fn alpha(&self) -> bool {
+        false
     }
 }

@@ -1,19 +1,36 @@
 extern crate termion;
 
-use std::io::{Write, stdout, stdin};
+use std::io::{Write, Stdout, stdout, stdin};
 
 use termion::{clear, cursor};
 use termion::event::Key;
 use termion::input::TermRead;
-use termion::raw::{IntoRawMode};
+use termion::raw::{IntoRawMode, RawTerminal};
 
-mod components; // NEED THIS IN MAIN FOR OTHER MODULES TO FIND IT!!!
+// NOTE: These need to be here
+mod components; 
 mod common;
 mod views;
 
-use views::{Home, Timeline};
+use views::{Layer, Home, Timeline};
 
 use common::{Action, Region, Asset, Track};
+
+// struct State {}
+
+fn back() {} // Pop a layer
+
+fn render(mut stdout: RawTerminal<Stdout>, layers: &Vec<Box<Layer>>) -> RawTerminal<Stdout> {
+    for layer in (*layers).iter() {
+        stdout = match layer {
+            Home => layer.render(stdout),
+            Timeline => layer.render(stdout)
+        };
+        // Only render to first fullscreen layer 
+        if layer.alpha() { break; }
+    }
+    stdout
+}
 
 fn main() -> std::io::Result<()> {
 
@@ -21,17 +38,13 @@ fn main() -> std::io::Result<()> {
     let stdin = stdin();
     let mut stdout = stdout().into_raw_mode().unwrap();
 
-    let mut home: Home = Home::new();
-    let mut timeline: Timeline = Timeline::new();
-
-    let mut enableHome = true;
-    let mut enableTimeline = false;
+    // Configure UI layers
+    let mut layers: Vec<Box<Layer>> = Vec::new();
+    layers.push(Box::new(Home::new()));
 
     write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
 
-    if enableHome { stdout = home.render(stdout); }
-    if enableTimeline { stdout = timeline.render(stdout); }
-
+    stdout = render(stdout, &layers);
     stdout.flush().unwrap();
 
     // Loops until break
@@ -42,26 +55,20 @@ fn main() -> std::io::Result<()> {
             Key::Up => Action::Up,
             Key::Down => Action::Down,
             Key::Right => {
-                enableHome = false;
-                enableTimeline = true;
                 Action::Noop
             },
             Key::Left => {
-                enableHome = true;
-                enableTimeline = false;
                 Action::Noop
             }
             _ => Action::Noop,
         };
 
-        if enableHome { home.dispatch(action.clone()); }
-        if enableTimeline { timeline.dispatch(action.clone()); }
+        layers[0].dispatch(action);
 
         write!(stdout, "{}", clear::All).unwrap();
         stdout.flush().unwrap();
 
-        if enableHome { stdout = home.render(stdout); }
-        if enableTimeline { stdout = timeline.render(stdout); }
+        stdout = render(stdout, &layers);
     }
 
     // CLEAN UP
