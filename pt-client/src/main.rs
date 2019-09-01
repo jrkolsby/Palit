@@ -21,10 +21,22 @@ use common::{Action, Region, Asset, Track};
 fn back() {} // Pop a layer
 
 fn render(mut stdout: RawTerminal<Stdout>, layers: &Vec<Box<Layer>>) -> RawTerminal<Stdout> {
-    for layer in (*layers).iter() {
-        stdout = layer.render(stdout);
-        // Only render until first fullscreen layer 
-        if layer.alpha() { break; }
+    /*
+        LAYERS:
+        4:   ---    <- End render here
+        3:  -----
+        2: -------  <- Start render here (!alpha)
+        1:   ---
+        0: -------  <- Home
+    */
+    // Determine bottom layer
+    let mut bottom = layers.len()-1;
+    for layer in (*layers).iter().rev() {
+        if layer.alpha() { bottom -= 1 }
+        else { break }
+    };
+    for i in bottom..(*layers).len() {
+        stdout = layers[i].render(stdout);
     }
     stdout
 }
@@ -39,14 +51,17 @@ fn main() -> std::io::Result<()> {
     let mut layers: Vec<Box<Layer>> = Vec::new();
     layers.push(Box::new(Home::new()));
 
+    // Hide cursor and clear screen
     write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
 
+    // Initial Render
     stdout = render(stdout, &layers);
     stdout.flush().unwrap();
 
     // Loops until break
     for c in stdin.keys() {
 
+        // Map keypress to Action
         let action: Action = match c.unwrap() {
             Key::Char('q') => break,
             Key::Up => Action::Up,
@@ -57,14 +72,20 @@ fn main() -> std::io::Result<()> {
         };
 
         // Dispatch action to front layer and match talkback action
-        match layers[0].dispatch(action) {
-            Action::OpenProject(s) => println!("OPEN {}", s),
+        let target = layers.last_mut().unwrap();
+        match target.dispatch(action) {
+            Action::OpenProject(s) => {
+                eprintln!("OPEN {}", s);
+                layers.push(Box::new(Timeline::new()));
+            },
             _ => {}
         };
 
+        // Clears screen
         write!(stdout, "{}", clear::All).unwrap();
         stdout.flush().unwrap();
 
+        // Renders layers
         stdout = render(stdout, &layers);
     }
 

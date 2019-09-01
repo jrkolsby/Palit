@@ -146,7 +146,7 @@ impl Timeline {
 
         for asset in initial_state.assets.iter() {
             let asset_src = format!("{}{}", ASSET_PREFIX, asset.src);
-            println!("DRAWING {}", asset_src);
+            eprintln!("DRAWING {}", asset_src);
             let asset_file = WaveFile::open(asset_src).unwrap();
             let pairs: Vec<(i32, i32)> = file_to_pairs(asset_file, timeline_width as usize, 4);
             waveforms.insert(asset.id, pairs);

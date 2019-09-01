@@ -1,0 +1,4 @@
+rm -f ./debug-pipe && mkfifo ./debug-pipe && 
+tmux split -v cat ./debug-pipe && 
+cargo run 2> ./debug-pipe && 
+rm ./debug-pipe

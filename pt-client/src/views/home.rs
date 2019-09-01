@@ -24,15 +24,16 @@ pub struct HomeState {
 
 fn reduce(state: HomeState, action: Action) -> HomeState {
     let len = state.projects.len();
+    let focus = match action {
+        Action::Up => if state.focus == 0 { len-1 } else {
+            (state.focus-1) % len
+        },
+        Action::Down => (state.focus+1) % len,
+        _ => state.focus,
+    };
     HomeState {
         motd: state.motd.clone(),
-        focus: match action {
-            Action::Up => if state.focus < 2 { len } else {
-                (state.focus-1) % len
-            },
-            Action::Down => (state.focus+1) % len,
-            _ => state.focus,
-        },
+        focus: focus,
         projects: state.projects.clone(),
     }
 }
@@ -114,9 +115,7 @@ impl Layer for Home {
         self.state = reduce(self.state.clone(), action.clone());
         match action {
             Action::Right => {
-                eprintln!("It's a right!");
-                Action::Noop
-                //Action::OpenProject(self.state.projects[self.state.focus].clone())
+                Action::OpenProject(self.state.projects[self.state.focus].clone())
             }
             _ => Action::Noop
         }
