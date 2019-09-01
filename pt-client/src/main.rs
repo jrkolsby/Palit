@@ -22,11 +22,8 @@ fn back() {} // Pop a layer
 
 fn render(mut stdout: RawTerminal<Stdout>, layers: &Vec<Box<Layer>>) -> RawTerminal<Stdout> {
     for layer in (*layers).iter() {
-        stdout = match layer {
-            Home => layer.render(stdout),
-            Timeline => layer.render(stdout)
-        };
-        // Only render to first fullscreen layer 
+        stdout = layer.render(stdout);
+        // Only render until first fullscreen layer 
         if layer.alpha() { break; }
     }
     stdout
@@ -54,16 +51,16 @@ fn main() -> std::io::Result<()> {
             Key::Char('q') => break,
             Key::Up => Action::Up,
             Key::Down => Action::Down,
-            Key::Right => {
-                Action::Noop
-            },
-            Key::Left => {
-                Action::Noop
-            }
+            Key::Left => Action::Left,
+            Key::Right => Action::Right,
             _ => Action::Noop,
         };
 
-        layers[0].dispatch(action);
+        // Dispatch action to front layer and match talkback action
+        match layers[0].dispatch(action) {
+            Action::OpenProject(s) => println!("OPEN {}", s),
+            _ => {}
+        };
 
         write!(stdout, "{}", clear::All).unwrap();
         stdout.flush().unwrap();

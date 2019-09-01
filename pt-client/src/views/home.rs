@@ -64,7 +64,7 @@ impl Home {
                 "tinytoes.xml".to_string(),
                 "heyo!!.xml".to_string(),
             ],
-            focus: 100,
+            focus: 0,
         };
 
         Home {
@@ -111,8 +111,15 @@ impl Layer for Home {
     }
 
     fn dispatch(&mut self, action: Action) -> Action {
-        self.state = reduce(self.state.clone(), action);
-        Action::Noop
+        self.state = reduce(self.state.clone(), action.clone());
+        match action {
+            Action::Right => {
+                eprintln!("It's a right!");
+                Action::Noop
+                //Action::OpenProject(self.state.projects[self.state.focus].clone())
+            }
+            _ => Action::Noop
+        }
     }
     fn undo(&mut self) {
         self.state = self.state.clone()

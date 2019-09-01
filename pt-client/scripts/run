@@ -1,0 +1,1 @@
+mkfifo ./temp && tmux split -v cat ./temp && cargo run 2> ./temp && rm ./temp

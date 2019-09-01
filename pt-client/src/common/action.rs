@@ -22,4 +22,6 @@ pub enum Action {
     Loop_Mode,
     Pitch,
     Volume,
+
+    OpenProject(String)
 }
