@@ -56,12 +56,30 @@ impl Layer for Help {
     fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
 
+        for x in 0..self.width {
+            for y in 0..self.height {
+                write!(out, "{}{} ",
+                    cursor::Goto(self.x+x, self.y+y),
+                    color::Bg(color::LightYellow)).unwrap();
+                if ((x+1) % self.width == 0 ||
+                    (y+1) % self.height == 0) {
+                    write!(out, "{}{}  ",
+                        cursor::Goto(self.x+x+1, self.y+y+1),
+                        color::Bg(color::LightBlue)).unwrap();
+                }
+            }
+        }
+
+        write!(out, "{}", color::Bg(color::LightYellow)).unwrap();
+
         for (i, line) in self.keyboard_asset.lines().enumerate() {
             write!(out, "{}{}{}",
-                cursor::Goto(self.x, (i as u16)+self.y+1),
-                color::Fg(color::Red),
+                cursor::Goto(self.x+5, (i as u16)+self.y+5),
+                color::Fg(color::Black),
                 line).unwrap();
         }
+
+        write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
 
         out.flush().unwrap();
 

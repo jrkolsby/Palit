@@ -69,6 +69,11 @@ fn main() -> std::io::Result<()> {
             Key::Char('q') => break,
             Key::Char('1') => Action::Help,
             Key::Char('2') => Action::Back,
+            Key::Char(' ') => Action::SelectR,
+            Key::Char('v') => Action::SelectG,
+            Key::Char(',') => Action::SelectY,
+            Key::Char('t') => Action::SelectP,
+            Key::Char('i') => Action::SelectB,
             Key::Up => Action::Up,
             Key::Down => Action::Down,
             Key::Left => Action::Left,
@@ -78,7 +83,7 @@ fn main() -> std::io::Result<()> {
 
         // Dispatch Action and capture talkback
         match action {
-            Action::Help => { layers.push(Box::new(Help::new(10, 10, 20, 20))); },
+            Action::Help => { layers.push(Box::new(Help::new(10, 10, 44, 15))); },
             Action::Back => { layers.pop(); }, 
             _ => {
                 // Dispatch action to front layer and match talkback action
@@ -88,6 +93,7 @@ fn main() -> std::io::Result<()> {
                         eprintln!("OPEN {}", s);
                         layers.push(Box::new(Timeline::new(0, 3, size.0, size.1)));
                     },
+                    Action::Back => { layers.pop(); }, 
                     _ => {}
                 };
             }
