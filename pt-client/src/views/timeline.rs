@@ -2,7 +2,7 @@ extern crate wavefile;
 
 use wavefile::WaveFile;
 
-use termion::{color, cursor, terminal_size};
+use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 
 use std::fs::File;
@@ -62,7 +62,7 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
 }
 
 impl Timeline {
-    pub fn new() -> Self {
+    pub fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
 
         // Initialize State
         let initial_state: TimelineState = TimelineState {
@@ -137,18 +137,13 @@ impl Timeline {
             ] // FILES
         };
 
-        // Calculate margins
-        let size: (u16, u16) = terminal_size().unwrap();
-        let timeline_width = size.0 - (MARGIN.0*2);
-        let timeline_height = size.1 - (MARGIN.1*2);
-
         let mut waveforms: HashMap<u32, Vec<(i32, i32)>> = HashMap::new();
 
         for asset in initial_state.assets.iter() {
             let asset_src = format!("{}{}", ASSET_PREFIX, asset.src);
             eprintln!("DRAWING {}", asset_src);
             let asset_file = WaveFile::open(asset_src).unwrap();
-            let pairs: Vec<(i32, i32)> = file_to_pairs(asset_file, timeline_width as usize, 4);
+            let pairs: Vec<(i32, i32)> = file_to_pairs(asset_file, width as usize, 4);
             waveforms.insert(asset.id, pairs);
 
             /* HASHMAP FNS 
@@ -161,10 +156,10 @@ impl Timeline {
         let project_file = File::open("storage/project.xml").unwrap();
 
         Timeline {
-            x: MARGIN.0,
-            y: MARGIN.1,
-            width: timeline_width,
-            height: timeline_height,
+            x: x,
+            y: y,
+            width: height,
+            height: width,
             waveforms: waveforms,
             state: initial_state,
             project: project_file,

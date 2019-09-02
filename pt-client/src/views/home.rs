@@ -8,13 +8,17 @@ use termion::raw::{RawTerminal};
 use crate::common::Action;
 use crate::views::{Layer};
 
+// Store for heavy, static vars
 pub struct Home {
+    x: u16,
+    y: u16,
+    width: u16,
+    height: u16,
     logo_asset: String,
-    logo_x: u16,
-    logo_y: u16,
     state: HomeState,
 }
 
+// Store for light, cloneable vars
 #[derive(Clone, Debug)]
 pub struct HomeState {
     motd: String,
@@ -39,7 +43,7 @@ fn reduce(state: HomeState, action: Action) -> HomeState {
 }
 
 impl Home {
-    pub fn new() -> Self {
+    pub fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
         // Load logo asset
         let asset_file = File::open("src/assets/logo.txt").unwrap();
         let mut buf_reader = BufReader::new(asset_file);
@@ -47,7 +51,6 @@ impl Home {
         buf_reader.read_to_string(&mut asset_str).unwrap();
 
         // Calculate center position
-        let size: (u16, u16) = terminal_size().unwrap();
         let mut max_len: u16 = 0; 
         for line in asset_str.lines() {
             let len = line.len();
@@ -69,9 +72,11 @@ impl Home {
         };
 
         Home {
+            x: x + (width / 2) - (max_len / 2),
+            y: y,
+            width: width,
+            height: height,
             logo_asset: asset_str,
-            logo_x: (size.0 / 2) - (max_len / 2),
-            logo_y: 3,
             state: initial_state
         }
     }
@@ -83,7 +88,7 @@ impl Layer for Home {
 
         for (i, line) in self.logo_asset.lines().enumerate() {
             write!(out, "{}{}{}",
-                cursor::Goto(self.logo_x, (i as u16)+self.logo_y+1),
+                cursor::Goto(self.x, (i as u16)+self.y+1),
                 color::Fg(color::White),
                 line).unwrap();
         }
@@ -91,13 +96,13 @@ impl Layer for Home {
         for (i, project) in self.state.projects.iter().enumerate() {
             if (self.state.focus % self.state.projects.len()) == i {
                 write!(out, "{}{}{} {} ",
-                    cursor::Goto(self.logo_x,self.logo_y+10+(i*2) as u16),
+                    cursor::Goto(self.x,self.y+10+(i*2) as u16),
                     color::Bg(color::Red),
                     color::Fg(color::Black),
                     project).unwrap();
             } else {
                 write!(out, "{}{}{} {} ",
-                    cursor::Goto(self.logo_x,self.logo_y+10+(i*2) as u16),
+                    cursor::Goto(self.x,self.y+10+(i*2) as u16),
                     color::Bg(color::Reset),
                     color::Fg(color::Reset),
                     project).unwrap();

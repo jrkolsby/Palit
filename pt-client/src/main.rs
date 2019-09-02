@@ -2,7 +2,7 @@ extern crate termion;
 
 use std::io::{Write, Stdout, stdout, stdin};
 
-use termion::{clear, cursor};
+use termion::{clear, cursor, terminal_size};
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::{IntoRawMode, RawTerminal};
@@ -12,7 +12,7 @@ mod components;
 mod common;
 mod views;
 
-use views::{Layer, Home, Timeline};
+use views::{Layer, Home, Timeline, Help};
 
 use common::{Action, Region, Asset, Track};
 
@@ -47,9 +47,12 @@ fn main() -> std::io::Result<()> {
     let stdin = stdin();
     let mut stdout = stdout().into_raw_mode().unwrap();
 
+    // Configure margins and sizes
+    let size: (u16, u16) = terminal_size().unwrap();
+
     // Configure UI layers
     let mut layers: Vec<Box<Layer>> = Vec::new();
-    layers.push(Box::new(Home::new()));
+    layers.push(Box::new(Home::new(0, 3, size.0, size.1)));
 
     // Hide cursor and clear screen
     write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
@@ -64,6 +67,8 @@ fn main() -> std::io::Result<()> {
         // Map keypress to Action
         let action: Action = match c.unwrap() {
             Key::Char('q') => break,
+            Key::Char('1') => Action::Help,
+            Key::Char('2') => Action::Back,
             Key::Up => Action::Up,
             Key::Down => Action::Down,
             Key::Left => Action::Left,
@@ -71,14 +76,21 @@ fn main() -> std::io::Result<()> {
             _ => Action::Noop,
         };
 
-        // Dispatch action to front layer and match talkback action
-        let target = layers.last_mut().unwrap();
-        match target.dispatch(action) {
-            Action::OpenProject(s) => {
-                eprintln!("OPEN {}", s);
-                layers.push(Box::new(Timeline::new()));
-            },
-            _ => {}
+        // Dispatch Action and capture talkback
+        match action {
+            Action::Help => { layers.push(Box::new(Help::new(10, 10, 20, 20))); },
+            Action::Back => { layers.pop(); }, 
+            _ => {
+                // Dispatch action to front layer and match talkback action
+                let target = layers.last_mut().unwrap();
+                match target.dispatch(action) {
+                    Action::OpenProject(s) => {
+                        eprintln!("OPEN {}", s);
+                        layers.push(Box::new(Timeline::new(0, 3, size.0, size.1)));
+                    },
+                    _ => {}
+                };
+            }
         };
 
         // Clears screen
