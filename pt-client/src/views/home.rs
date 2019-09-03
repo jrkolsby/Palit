@@ -7,6 +7,7 @@ use termion::raw::{RawTerminal};
 
 use crate::common::Action;
 use crate::views::{Layer};
+use crate::components::{logo};
 
 // Store for heavy, static vars
 pub struct Home {
@@ -85,13 +86,7 @@ impl Home {
 impl Layer for Home {
     fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
 
-
-        for (i, line) in self.logo_asset.lines().enumerate() {
-            write!(out, "{}{}{}",
-                cursor::Goto(self.x, (i as u16)+self.y+1),
-                color::Fg(color::White),
-                line).unwrap();
-        }
+        out = logo::render(out, self.x, self.y);
 
         for (i, project) in self.state.projects.iter().enumerate() {
             if (self.state.focus % self.state.projects.len()) == i {
