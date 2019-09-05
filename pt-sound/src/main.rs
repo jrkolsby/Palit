@@ -2,11 +2,13 @@
 
 extern crate alsa;
 extern crate sample;
+extern crate wavefile;
 
 use std::{iter, error};
 use alsa::{seq, pcm};
 use std::ffi::CString;
 use sample::signal;
+use wavefile::{WaveFile, WaveFileIterator};
 
 fn open_audio_dev() -> Result<(alsa::PCM, u32), Box<error::Error>> {
     let args: Vec<_> = std::env::args().collect();
@@ -65,14 +67,15 @@ struct Sig {
     baridx: usize,
 }
 
-struct Synth {
+struct Synth<'a> {
     sigs: Vec<Option<Sig>>,
     sample_rate: signal::Rate,
     stored_sample: Option<SF>,
     bar_values: [f64; 9],
+    wave_file: WaveFileIterator<'a>,
 }
 
-impl Synth {
+impl Synth<'_> {
     fn add_note(&mut self, note: u8, vol: f64) {
         let hz = 440. * 2_f64.powf((note as f64 - 69.)/12.);
 
@@ -111,10 +114,11 @@ impl Synth {
     }
 }
 
-impl Iterator for Synth { 
+impl Iterator for Synth<'_> { 
     type Item = SF;
     fn next(&mut self) -> Option<Self::Item> {
         use sample::{Signal, Sample};
+	/*
 
         // Mono -> Stereo
         if let Some(s) = self.stored_sample.take() { return Some(s) };
@@ -142,12 +146,16 @@ impl Iterator for Synth {
             }
             if remove { *sig = None };
         }
+	*/
+	let z: f64 = self.wave_file.next().unwrap()[0] as f64;
+	let z = z / 20000000.0;
         let z = z.min(0.999).max(-0.999);
         let z: Option<SF> = Some(SF::from_sample(z));
         self.stored_sample = z;
         z
     }
 }
+
 
 fn write_samples_direct(p: &alsa::PCM, mmap: &mut alsa::direct::pcm::MmapPlayback<SF>, synth: &mut Synth)
     -> Result<bool, Box<error::Error>> {
@@ -184,7 +192,7 @@ fn write_samples_io(p: &alsa::PCM, io: &mut alsa::pcm::IO<SF>, synth: &mut Synth
             for sample in buf.iter_mut() {
                 *sample = synth.next().unwrap()
             };
-            buf.len() / 2 
+	    buf.len() / 2 
         })?;
     }
     use alsa::pcm::State;
@@ -199,12 +207,16 @@ fn write_samples_io(p: &alsa::PCM, io: &mut alsa::pcm::IO<SF>, synth: &mut Synth
 fn run() -> Result<(), Box<error::Error>> {
     let (audio_dev, rate) = open_audio_dev()?;
 
+    let wav: WaveFile = WaveFile::open("Who.wav").unwrap();
+    let wav_iter: WaveFileIterator = wav.iter();
+
     // 256 Voices synth
     let mut synth = Synth {
         sigs: iter::repeat(None).take(256).collect(),
         sample_rate: signal::rate(f64::from(rate)),
         stored_sample: None,
         bar_values: [1., 0.75, 1., 0.75, 0., 0., 0., 0., 0.75], // Some Gospel-ish default.
+	wave_file: wav_iter,
     };
 
     // Create an array of fds to poll.
@@ -219,7 +231,10 @@ fn run() -> Result<(), Box<error::Error>> {
         Some(audio_dev.io_i16()?)
     } else { None };
 
-    synth.add_note(128, 0.5);
+    // Play minor 7
+    synth.add_note(86, 0.5);
+    synth.add_note(89, 0.5);
+    synth.add_note(92, 0.5);
 
     loop {
         if let Ok(ref mut mmap) = mmap {
