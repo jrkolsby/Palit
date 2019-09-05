@@ -1,3 +1,4 @@
 *.cpp
 *.h
 dsp-faust
+target
