@@ -13,11 +13,10 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 ### OCTOBER 1
 - [X] SOUND-1: build a dsp file
-- [ ] SOUND-2: pt-client/common/audioengine.rs
-- [ ] SOUND-3: implement control of faust synth from audioengine
-- [ ] SOUND-2: pt-client/common/buffer.rs
-- [ ] SOUND-2: pt-client/common/input.rs
-- [ ] SOUND-2: pt-client/common/output.rs
+- [ ] SOUND-2: Implement play and stop to ALSA output
+- [ ] SOUND-3: Faust synth output from keyboard MIDI
+- [ ] SOUND-4: Recording from ALSA input
+- [ ] SOUND-5: Multitrack mixing
 
 - [X] UI-1: Display the splash graphic
 - [X] UI-2: Splash screen with project listings
