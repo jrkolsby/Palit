@@ -59,11 +59,10 @@ pub fn open_audio_dev() -> Result<(alsa::PCM, u32), Box<error::Error>> {
 pub fn write_samples_direct(
     p: &alsa::PCM, 
     mmap: &mut alsa::direct::pcm::MmapPlayback<SF>, 
-    synth: &mut Synth) -> Result<bool, Box<error::Error>> {
-
+    synth: &mut Iterator<Item=SF>) -> Result<bool, Box<error::Error>>
+{
     if mmap.avail() > 0 {
-        // Write samples to DMA area from iterator
-        mmap.write(synth);
+        mmap.write(&mut Box::new(synth));
     }
 
     match mmap.status().state() {
@@ -76,7 +75,11 @@ pub fn write_samples_direct(
     Ok(true) // Call us again, please, there might be more data to write
 }
 
-pub fn write_samples_io(p: &alsa::PCM, io: &mut alsa::pcm::IO<SF>, synth: &mut Synth) -> Result<bool, Box<error::Error>> {
+pub fn write_samples_io(
+    p: &alsa::PCM, 
+    io: &mut alsa::pcm::IO<SF>, 
+    synth: &mut Iterator<Item=SF>) -> Result<bool, Box<error::Error>> 
+{
     let avail = match p.avail_update() {
         Ok(n) => n,
         Err(e) => {

@@ -1,4 +1,4 @@
-use sample::signal;
+use sample::{signal, Signal, Sample};
 
 use wavefile::{WaveFile, WaveFileIterator};
 
@@ -16,15 +16,14 @@ pub struct Sig {
     baridx: usize,
 }
 
-pub struct Synth<'a> {
+pub struct Synth {
     pub sigs: Vec<Option<Sig>>,
     pub sample_rate: signal::Rate,
     pub stored_sample: Option<SF>,
     pub bar_values: [f64; 9],
-    pub wave_file: WaveFileIterator<'a>,
 }
 
-impl Synth<'_> {
+impl Synth {
     pub fn add_note(&mut self, note: u8, vol: f64) {
         let hz = 440. * 2_f64.powf((note as f64 - 69.)/12.);
 
@@ -63,11 +62,9 @@ impl Synth<'_> {
     }
 }
 
-impl Iterator for Synth<'_> { 
+impl Iterator for Synth { 
     type Item = SF;
     fn next(&mut self) -> Option<Self::Item> {
-        use sample::{Signal, Sample};
-	/*
 
         // Mono -> Stereo
         if let Some(s) = self.stored_sample.take() { return Some(s) };
@@ -95,9 +92,6 @@ impl Iterator for Synth<'_> {
             }
             if remove { *sig = None };
         }
-	*/
-	let z: f64 = self.wave_file.next().unwrap()[0] as f64;
-	let z = z / 20000000.0;
         let z = z.min(0.999).max(-0.999);
         let z: Option<SF> = Some(SF::from_sample(z));
         self.stored_sample = z;

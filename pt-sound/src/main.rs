@@ -7,37 +7,60 @@ extern crate wavefile;
 use std::{iter, error};
 use sample::signal;
 
+use alsa::PollDescriptors;
+
 use wavefile::{WaveFile, WaveFileIterator};
 
 mod core;
 mod synth;
+mod timeline;
 
 use crate::core::{SF, SigGen, write_samples_io, write_samples_direct, open_audio_dev};
 use crate::synth::{Synth};
+use crate::timeline::{Region, Timeline};
 
 fn main() -> Result<(), Box<error::Error>> {
     let (audio_dev, rate) = open_audio_dev()?;
 
-    let wav: WaveFile = WaveFile::open("Who.wav").unwrap();
-    let wav_iter: WaveFileIterator = wav.iter();
+    let wav1: WaveFile = WaveFile::open("Who.wav").unwrap();
+    //let wav2: WaveFile = WaveFile::open("When.wav").unwrap();
 
     // 256 Voices synth
     let mut synth = Synth {
         sigs: iter::repeat(None).take(256).collect(),
         sample_rate: signal::rate(f64::from(rate)),
         stored_sample: None,
-        bar_values: [1., 0.75, 1., 0.75, 0., 0., 0., 0., 0.75], // Some Gospel-ish default.
-	wave_file: wav_iter,
+        bar_values: [1., 0.75, 1., 0.75, 0., 0., 0., 0., 0.75],
     };
 
-    // Create an array of fds to poll.
-    use alsa::PollDescriptors;
+    let mut tl = Timeline {
+	playhead: 0,
+	wave_file: wav1.iter(),
+	regions: vec![
+	    Region {
+		active: false,
+		offset: 48000,
+		gain: 0.1,
+		duration: 480000,
+		wave: wav1.iter(),
+	    },
+	    Region {
+		active: false,
+		gain: 1.0,
+		offset: 1320000,
+		duration: 480000,
+		wave: wav1.iter(),
+	    }
+	],
+    };
+
+    // Create an array of file descriptors to poll
     let mut fds = audio_dev.get()?;
     
-    // Let's use the fancy new "direct mode" for minimum overhead!
+    // Use direct-mode memory mapping for minimum overhead
     let mut mmap = audio_dev.direct_mmap_playback::<SF>();
     
-    // Direct mode unavailable, use alsa-lib's mmap emulation instead
+    // if direct-mode unavailable, use mmap emulation instead
     let mut io = if mmap.is_err() {
         Some(audio_dev.io_i16()?)
     } else { None };
@@ -49,9 +72,9 @@ fn main() -> Result<(), Box<error::Error>> {
 
     loop {
         if let Ok(ref mut mmap) = mmap {
-            if write_samples_direct(&audio_dev, mmap, &mut synth)? { continue; }
+            if write_samples_direct(&audio_dev, mmap, &mut tl)? { continue; }
         } else if let Some(ref mut io) = io {
-            if write_samples_io(&audio_dev, io, &mut synth)? { continue; }
+            if write_samples_io(&audio_dev, io, &mut tl)? { continue; }
         }
         // Nothing to do, let's sleep until woken up by the kernel.
         alsa::poll::poll(&mut fds, 100)?;
