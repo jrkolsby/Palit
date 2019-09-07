@@ -12,15 +12,20 @@ use alsa::PollDescriptors;
 use wavefile::{WaveFile, WaveFileIterator};
 
 mod core;
+mod midi;
 mod synth;
 mod timeline;
 
 use crate::core::{SF, SigGen, write_samples_io, write_samples_direct, open_audio_dev};
 use crate::synth::{Synth};
 use crate::timeline::{Region, Timeline};
+use crate::midi::{open_midi_dev, read_midi_event, connect_midi_source_ports};
 
 fn main() -> Result<(), Box<error::Error>> {
     let (audio_dev, rate) = open_audio_dev()?;
+
+    let midi_dev = open_midi_dev()?;
+    let mut midi_input = midi_dev.input();
 
     let wav1: WaveFile = WaveFile::open("Who.wav").unwrap();
     //let wav2: WaveFile = WaveFile::open("When.wav").unwrap();
@@ -30,7 +35,7 @@ fn main() -> Result<(), Box<error::Error>> {
         sigs: iter::repeat(None).take(256).collect(),
         sample_rate: signal::rate(f64::from(rate)),
         stored_sample: None,
-        bar_values: [1., 0.75, 1., 0.75, 0., 0., 0., 0., 0.75],
+        bar_values: [0., 0., 0., 0.1, 0., 0., 0., 0., 0.75],
     };
 
     let mut tl = Timeline {
@@ -62,6 +67,7 @@ fn main() -> Result<(), Box<error::Error>> {
 
     // Create an array of file descriptors to poll
     let mut fds = audio_dev.get()?;
+    fds.append(&mut (&midi_dev, Some(alsa::Direction::Capture)).get()?); 
     
     // Use direct-mode memory mapping for minimum overhead
     let mut mmap = audio_dev.direct_mmap_playback::<SF>();
@@ -72,9 +78,11 @@ fn main() -> Result<(), Box<error::Error>> {
     } else { None };
 
     // Play minor 7
+    /*
     synth.add_note(86, 0.5);
     synth.add_note(89, 0.5);
     synth.add_note(92, 0.5);
+    */
 
     loop {
         if let Ok(ref mut mmap) = mmap {
@@ -82,6 +90,7 @@ fn main() -> Result<(), Box<error::Error>> {
         } else if let Some(ref mut io) = io {
             if write_samples_io(&audio_dev, io, &mut synth)? { continue; }
         }
+	if read_midi_event(&mut midi_input, &mut synth)? { continue; }
         // Nothing to do, let's sleep until woken up by the kernel.
         alsa::poll::poll(&mut fds, 100)?;
     }
