@@ -34,12 +34,18 @@ fn main() -> Result<(), Box<error::Error>> {
     };
 
     let mut tl = Timeline {
+	bpm: 127,
+	duration: 960000,
+	time_beat: 4,
+	time_note: 4,
+	loop_on: false,
+	loop_in: 0,
+	loop_out: 0,
 	playhead: 0,
-	wave_file: wav1.iter(),
 	regions: vec![
 	    Region {
 		active: false,
-		offset: 48000,
+		offset: 0,
 		gain: 0.1,
 		duration: 480000,
 		wave: wav1.iter(),
@@ -72,9 +78,9 @@ fn main() -> Result<(), Box<error::Error>> {
 
     loop {
         if let Ok(ref mut mmap) = mmap {
-            if write_samples_direct(&audio_dev, mmap, &mut tl)? { continue; }
+            if write_samples_direct(&audio_dev, mmap, &mut synth)? { continue; }
         } else if let Some(ref mut io) = io {
-            if write_samples_io(&audio_dev, io, &mut tl)? { continue; }
+            if write_samples_io(&audio_dev, io, &mut synth)? { continue; }
         }
         // Nothing to do, let's sleep until woken up by the kernel.
         alsa::poll::poll(&mut fds, 100)?;

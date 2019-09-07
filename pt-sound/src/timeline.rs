@@ -7,16 +7,33 @@ use crate::core::{SF, SigGen};
 
 pub struct Region<'a> {
     pub wave: WaveFileIterator<'a>,
-    pub offset: i32,
-    pub duration: i32,
+    pub offset: u32,
+    pub duration: u32,
     pub gain: f64,
     pub active: bool,
 }
 
 pub struct Timeline<'a> {
-    pub wave_file: WaveFileIterator<'a>,
-    pub playhead: i32, 
+    pub bpm: u16,
+    pub time_beat: usize,
+    pub time_note: usize,
+    pub loop_on: bool,
+    pub loop_in: u32,
+    pub loop_out: u32,
+    pub duration: u32,
+    pub playhead: u32, 
     pub regions: Vec<Region<'a>>,
+}
+
+impl Timeline<'_> {
+    //fn new() -> Self {}
+    fn arm(&mut self, t: u32) {
+	self.playhead == t;
+	for region in self.regions.iter_mut() {
+	    //if region.offset < t and 
+	}
+    }
+    fn stop() {}
 }
 
 impl Iterator for Timeline<'_> { 
