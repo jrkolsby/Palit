@@ -35,7 +35,7 @@ fn main() -> Result<(), Box<error::Error>> {
         sigs: iter::repeat(None).take(256).collect(),
         sample_rate: signal::rate(f64::from(rate)),
         stored_sample: None,
-        bar_values: [0., 0., 0., 0.1, 0., 0., 0., 0., 0.75],
+        bar_values: [1., 1., 1., 0.75, 0.5, 0., 0., 0., 0.],
     };
 
     let mut tl = Timeline {
