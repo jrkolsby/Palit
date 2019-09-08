@@ -1,10 +1,15 @@
 // A quickly made Hammond organ.
 
+extern crate libc;
 extern crate alsa;
 extern crate sample;
 extern crate wavefile;
 
 use std::{iter, error};
+use std::fs::{OpenOptions, File};
+use std::os::unix::fs::OpenOptionsExt;
+use std::io::prelude::*;
+
 use sample::signal;
 
 use alsa::PollDescriptors;
@@ -22,6 +27,22 @@ use crate::timeline::{Region, Timeline};
 use crate::midi::{open_midi_dev, read_midi_event, connect_midi_source_ports};
 
 fn main() -> Result<(), Box<error::Error>> {
+
+    // Configure pt-client IPC
+    let mut ipc_in = OpenOptions::new()
+	.custom_flags(libc::O_NONBLOCK)
+	.read(true)
+	.open("/tmp/pt-client").unwrap();
+
+    let mut ipc_out = OpenOptions::new()
+	.write(true)
+	.open("/tmp/pt-sound").unwrap();
+
+    ipc_out.write(b"HELLO FROM SOUND");
+    let mut buf = String::new();
+    ipc_in.read_to_string(&mut buf);
+    println!("CLIENT: {}", buf);
+
     let (audio_dev, rate) = open_audio_dev()?;
 
     let midi_dev = open_midi_dev()?;
@@ -83,7 +104,7 @@ fn main() -> Result<(), Box<error::Error>> {
     synth.add_note(89, 0.5);
     synth.add_note(92, 0.5);
     */
-
+  
     loop {
         if let Ok(ref mut mmap) = mmap {
             if write_samples_direct(&audio_dev, mmap, &mut synth)? { continue; }
@@ -91,6 +112,7 @@ fn main() -> Result<(), Box<error::Error>> {
             if write_samples_io(&audio_dev, io, &mut synth)? { continue; }
         }
 	if read_midi_event(&mut midi_input, &mut synth)? { continue; }
+
         // Nothing to do, let's sleep until woken up by the kernel.
         alsa::poll::poll(&mut fds, 100)?;
     }

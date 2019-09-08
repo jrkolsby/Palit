@@ -1,6 +1,10 @@
+extern crate libc;
 extern crate termion;
 
 use std::io::{Write, Stdout, stdout, stdin};
+use std::io::prelude::*;
+use std::fs::{OpenOptions};
+use std::os::unix::fs::OpenOptionsExt;
 
 use termion::{clear, cursor, terminal_size};
 use termion::event::Key;
@@ -8,9 +12,9 @@ use termion::input::TermRead;
 use termion::raw::{IntoRawMode, RawTerminal};
 
 // NOTE: These need to be here
-mod components; 
-mod common;
 mod views;
+mod common;
+mod components; 
 
 use views::{Layer, Home, Timeline, Help};
 
@@ -42,6 +46,22 @@ fn render(mut stdout: RawTerminal<Stdout>, layers: &Vec<Box<Layer>>) -> RawTermi
 }
 
 fn main() -> std::io::Result<()> {
+
+    // READER MUST OPEN BEFORE WRITER
+    let mut ipc_out = OpenOptions::new()
+	//.custom_flags(libc::O_NONBLOCK)
+	.write(true)
+	.open("/tmp/pt-client").unwrap();
+
+    let mut ipc_in = OpenOptions::new()
+	.custom_flags(libc::O_NONBLOCK)
+	.read(true)
+	.open("/tmp/pt-sound").unwrap();
+
+    ipc_out.write(b"HELLO FROM CLIENT");
+    let mut buf = String::new();
+    ipc_in.read_to_string(&mut buf);
+    eprintln!("SOUND: {}", buf);
 
     // Configure stdin and raw_mode stdout
     let stdin = stdin();
