@@ -47,9 +47,10 @@ fn render(mut stdout: RawTerminal<Stdout>, layers: &Vec<Box<Layer>>) -> RawTermi
 
 fn main() -> std::io::Result<()> {
 
-    // READER MUST OPEN BEFORE WRITER
+    // Configure pt-sound IPC
+    println!("Awaiting pt-sound...");
+    // Blocked by pt-sound reader
     let mut ipc_out = OpenOptions::new()
-	//.custom_flags(libc::O_NONBLOCK)
 	.write(true)
 	.open("/tmp/pt-client").unwrap();
 
@@ -57,11 +58,6 @@ fn main() -> std::io::Result<()> {
 	.custom_flags(libc::O_NONBLOCK)
 	.read(true)
 	.open("/tmp/pt-sound").unwrap();
-
-    ipc_out.write(b"HELLO FROM CLIENT");
-    let mut buf = String::new();
-    ipc_in.read_to_string(&mut buf);
-    eprintln!("SOUND: {}", buf);
 
     // Configure stdin and raw_mode stdout
     let stdin = stdin();
@@ -89,6 +85,8 @@ fn main() -> std::io::Result<()> {
             Key::Char('q') => break,
             Key::Char('1') => Action::Help,
             Key::Char('2') => Action::Back,
+	    Key::Char('p') => Action::Play,
+	    Key::Char('s') => Action::Stop,
             Key::Char(' ') => Action::SelectR,
             Key::Char('v') => Action::SelectG,
             Key::Char(',') => Action::SelectY,
@@ -102,22 +100,40 @@ fn main() -> std::io::Result<()> {
         };
 
         // Dispatch Action and capture talkback
-        match action {
-            Action::Help => { layers.push(Box::new(Help::new(10, 10, 44, 15))); },
-            Action::Back => { layers.pop(); }, 
+	let mut talkback: Action = match action {
+	    Action::Play => {
+		ipc_out.write(b"PLAY");
+		Action::Noop
+	    }
+	    Action::Stop => {
+		ipc_out.write(b"STOP");
+		Action::Noop
+	    }
+            Action::Help => { 
+		layers.push(Box::new(Help::new(10, 10, 44, 15))); 
+		Action::Noop
+	    },
+            Action::Back => { 
+		layers.pop(); 
+		Action::Noop
+	    }, 
             _ => {
                 // Dispatch action to front layer and match talkback action
                 let target = layers.last_mut().unwrap();
-                match target.dispatch(action) {
-                    Action::OpenProject(s) => {
-                        eprintln!("OPEN {}", s);
-                        layers.push(Box::new(Timeline::new(0, 3, size.0, size.1)));
-                    },
-                    Action::Back => { layers.pop(); }, 
-                    _ => {}
-                };
+                target.dispatch(action)
             }
         };
+
+	match talkback {
+	    Action::OpenProject(s) => {
+		eprintln!("OPEN {}", s);
+		layers.push(Box::new(Timeline::new(0, 3, size.0, size.1)));
+		ipc_out.write(b"OPEN_PROJECT");
+		ipc_out.write(s.as_bytes());
+	    },
+	    Action::Back => { layers.pop(); }, 
+	    _ => {}
+	};	
 
         // Clears screen
         write!(stdout, "{}", clear::All).unwrap();

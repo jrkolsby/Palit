@@ -26,6 +26,13 @@ use crate::synth::{Synth};
 use crate::timeline::{Region, Timeline};
 use crate::midi::{open_midi_dev, read_midi_event, connect_midi_source_ports};
 
+fn arm<'a>(wav: &'a WaveFile, timeline: &'a mut Timeline<'a>) {
+    let wav1: WaveFile = WaveFile::open("Who.wav").unwrap();
+    for mut region in timeline.regions.iter_mut() {
+	region.wave = wav.iter();
+    }
+}
+
 fn main() -> Result<(), Box<error::Error>> {
 
     // Configure pt-client IPC
@@ -33,15 +40,12 @@ fn main() -> Result<(), Box<error::Error>> {
 	.custom_flags(libc::O_NONBLOCK)
 	.read(true)
 	.open("/tmp/pt-client").unwrap();
-
+    // Blocked by pt-client reader
     let mut ipc_out = OpenOptions::new()
 	.write(true)
 	.open("/tmp/pt-sound").unwrap();
 
-    ipc_out.write(b"HELLO FROM SOUND");
     let mut buf = String::new();
-    ipc_in.read_to_string(&mut buf);
-    println!("CLIENT: {}", buf);
 
     let (audio_dev, rate) = open_audio_dev()?;
 
@@ -71,8 +75,8 @@ fn main() -> Result<(), Box<error::Error>> {
 	regions: vec![
 	    Region {
 		active: false,
-		offset: 0,
-		gain: 0.1,
+		offset: 100,
+		gain: 1.0,
 		duration: 480000,
 		wave: wav1.iter(),
 	    },
@@ -105,13 +109,28 @@ fn main() -> Result<(), Box<error::Error>> {
     synth.add_note(92, 0.5);
     */
   
+    let mut playing: bool = true;
+
     loop {
-        if let Ok(ref mut mmap) = mmap {
-            if write_samples_direct(&audio_dev, mmap, &mut synth)? { continue; }
-        } else if let Some(ref mut io) = io {
-            if write_samples_io(&audio_dev, io, &mut synth)? { continue; }
-        }
+	if playing {
+	    if let Ok(ref mut mmap) = mmap {
+		if write_samples_direct(&audio_dev, mmap, &mut tl)? { continue; }
+	    } else if let Some(ref mut io) = io {
+		if write_samples_io(&audio_dev, io, &mut tl)? { continue; }
+	    }
+	}
+
 	if read_midi_event(&mut midi_input, &mut synth)? { continue; }
+
+	buf = String::new();
+	ipc_in.read_to_string(&mut buf);
+	match &buf[..] {
+	    "OPEN_PROJECT" => { println!("OPEN"); },
+	    "PLAY" => { println!("PLAY"); playing = true; },
+	    "STOP" => { println!("STOP"); playing = false; }
+	    "NOOP" => {},
+	    _ => {}
+	}
 
         // Nothing to do, let's sleep until woken up by the kernel.
         alsa::poll::poll(&mut fds, 100)?;
