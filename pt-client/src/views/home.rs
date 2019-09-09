@@ -7,7 +7,10 @@ use termion::raw::{RawTerminal};
 
 use crate::common::Action;
 use crate::views::{Layer};
-use crate::components::{logo};
+use crate::components::{logo, button};
+
+const NUM_FOCII: usize = 3;
+const NUM_PROJECTS: usize = 4;
 
 // Store for heavy, static vars
 pub struct Home {
@@ -25,21 +28,31 @@ pub struct HomeState {
     motd: String,
     projects: Vec<String>,
     focus: usize,
+    scroll_x: usize,
 }
 
 fn reduce(state: HomeState, action: Action) -> HomeState {
     let len = state.projects.len();
-    let focus = match action {
-        Action::Up => if state.focus == 0 { len-1 } else {
-            (state.focus-1) % len
+    let scroll_max = state.projects.len()/4;
+    let scroll_x = match action {
+        Action::Left => if state.scroll_x == 0 { scroll_max-1 } else {
+            (state.scroll_x-1) % scroll_max
         },
-        Action::Down => (state.focus+1) % len,
-        _ => state.focus,
+        Action::Right => (state.scroll_x+1) % scroll_max,
+        _ => state.scroll_x,
+    };
+    let focus = match action {
+	Action::Up => if state.focus == 0 { NUM_FOCII-1 } else {
+            (state.focus-1) % NUM_FOCII
+        },
+	Action::Down => (state.focus+1) % NUM_FOCII,
+	_ => state.focus
     };
     HomeState {
         motd: state.motd.clone(),
-        focus: focus,
         projects: state.projects.clone(),
+        focus,
+	scroll_x,
     }
 }
 
@@ -64,12 +77,21 @@ impl Home {
         let initial_state: HomeState = HomeState {
             motd: "It's Fun!".to_string(),
             projects: vec![
+                "one.xml".to_string(),
+                "two.xml".to_string(),
+                "three.xml".to_string(),
+                "four.xml".to_string(),
+                "five.xml".to_string(),
+                "six.xml".to_string(),
+                "seven.xml".to_string(),
+                "eight.xml".to_string(),
                 "tinytoes.xml".to_string(),
                 "heyo!!.xml".to_string(),
                 "tinytoes.xml".to_string(),
                 "heyo!!.xml".to_string(),
             ],
             focus: 0,
+	    scroll_x: 0,
         };
 
         Home {
@@ -86,23 +108,41 @@ impl Home {
 impl Layer for Home {
     fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
 
+	// Logo
         out = logo::render(out, self.x, self.y);
 
+	// New Button
+	out = button::render(out, self.x + 10, self.y + 10, 
+	    &"New Project".to_string(), self.state.focus == 0);
+
 	// Project Listing
+	let mut col: [u16; 2] = [4,4];
         for (i, project) in self.state.projects.iter().enumerate() {
-            if (self.state.focus % self.state.projects.len()) == i {
-                write!(out, "{}{}{} {} ",
-                    cursor::Goto(self.x,self.y+10+(i*2) as u16),
-                    color::Bg(color::Red),
-                    color::Fg(color::Black),
-                    project).unwrap();
-            } else {
-                write!(out, "{}{}{} {} ",
-                    cursor::Goto(self.x,self.y+10+(i*2) as u16),
-                    color::Bg(color::Reset),
-                    color::Fg(color::Reset),
-                    project).unwrap();
-            }
+	    if (i >= self.state.scroll_x * NUM_PROJECTS && 
+		i < (self.state.scroll_x+1) * NUM_PROJECTS) {
+		let j: u16 = (i % NUM_PROJECTS) as u16;
+		let row: usize = (j % 2) as usize;
+		write!(out, "{}", cursor::Goto(self.x+col[row] as u16, 
+		    self.y+15+(row as u16 * 2))).unwrap();
+		if self.state.focus == 0 { 
+		    write!(out, "{}", color::Fg(color::Black)).unwrap();
+		    match j {
+			0 => write!(out, "{}", color::Bg(color::Yellow)).unwrap(),
+			1 => write!(out, "{}", color::Bg(color::Magenta)).unwrap(),
+			2 => write!(out, "{}", color::Bg(color::Blue)).unwrap(),
+			3 => write!(out, "{}", color::Bg(color::Green)).unwrap(),
+			_ => write!(out, "{}", color::Bg(color::Reset)).unwrap(), 
+		    }
+		} else {
+		    write!(out, "{}{}", 
+			color::Fg(color::White), 
+			color::Bg(color::Reset)
+		    ).unwrap();
+		}
+
+		write!(out, " {} ", project).unwrap();
+		col[row] += project.len() as u16 + 4;
+	    }
         }
 
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
@@ -115,7 +155,7 @@ impl Layer for Home {
     fn dispatch(&mut self, action: Action) -> Action {
         self.state = reduce(self.state.clone(), action.clone());
         match action {
-            Action::Right => {
+            Action::SelectR => {
                 Action::OpenProject(self.state.projects[self.state.focus].clone())
             }
             _ => Action::Noop
