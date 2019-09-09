@@ -13,19 +13,22 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 ### OCTOBER 1
 - [X] SOUND-1: build a dsp file
-- [ ] SOUND-2: pt-client/common/audioengine.rs
-- [ ] SOUND-3: implement control of faust synth from audioengine
-- [ ] SOUND-2: pt-client/common/buffer.rs
-- [ ] SOUND-2: pt-client/common/input.rs
-- [ ] SOUND-2: pt-client/common/output.rs
+- [X] SOUND-2: Implement play and stop to ALSA output
+- [ ] SOUND-3: Faust synth output from keyboard MIDI
+- [ ] SOUND-4: Recording from ALSA input
+- [X] SOUND-5: Multitrack mixing
+- [X] SOUND-6: Receive Midi events in sound
+- [ ] SOUND-7: Send midi events from client
+- [ ] SOUND-8: Fix audio underruns
 
 - [X] UI-1: Display the splash graphic
 - [X] UI-2: Splash screen with project listings
 - [ ] UI-3: Keyboard display with feedback for keypress events
 - [X] UI-4: Display empty timeline for new project
-- [ ] UI-5: Splitscreen two timelines
+- [ ] UI-5: Timeline Cursor
 - [X] UI-6: Layered rendering
 - [ ] UI-7: Loading screen
+- [ ] UI-8: Multi Cursor
 
 - [X] HARD-1: Acquire Lenovo Thinkpad T400
 - [ ] HARD-2: Rewire Green function key (Fn) to a keyboard-event producing key
@@ -45,6 +48,7 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [X] INF-2: Design project filetype around .xml or .json (Hopefully compatible with android)
 - [X] INF-3: Implement view state
 - [X] INF-4: Remove cursive dep in favor of termion
-- [ ] INF-5: Unicode Support
+- [ ] INF-5: Unicode Support in linux TTY
 - [ ] INF-6: Migrate state to root structs
 - [X] INF-7: Debug console
+- [ ] INF-8: Read XML file and update timeline state

@@ -88,6 +88,7 @@ impl Layer for Home {
 
         out = logo::render(out, self.x, self.y);
 
+	// Project Listing
         for (i, project) in self.state.projects.iter().enumerate() {
             if (self.state.focus % self.state.projects.len()) == i {
                 write!(out, "{}{}{} {} ",
