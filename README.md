@@ -28,7 +28,8 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [ ] UI-5: Timeline Cursor
 - [X] UI-6: Layered rendering
 - [ ] UI-7: Loading screen
-- [ ] UI-8: Multi Cursor
+- [X] UI-8: Multi Cursor
+- [ ] UI-9: Fix termion light/dark colors
 
 - [X] HARD-1: Acquire Lenovo Thinkpad T400
 - [ ] HARD-2: Rewire Green function key (Fn) to a keyboard-event producing key

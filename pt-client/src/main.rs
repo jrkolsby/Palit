@@ -68,7 +68,7 @@ fn main() -> std::io::Result<()> {
 
     // Configure UI layers
     let mut layers: Vec<Box<Layer>> = Vec::new();
-    layers.push(Box::new(Home::new(0, 3, size.0, size.1)));
+    layers.push(Box::new(Home::new(0, 1, size.0, size.1)));
 
     // Hide cursor and clear screen
     write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
@@ -127,7 +127,7 @@ fn main() -> std::io::Result<()> {
 	match talkback {
 	    Action::OpenProject(s) => {
 		eprintln!("OPEN {}", s);
-		layers.push(Box::new(Timeline::new(0, 3, size.0, size.1)));
+		layers.push(Box::new(Timeline::new(0, 3, size.1, size.0)));
 		ipc_out.write(b"OPEN_PROJECT");
 		ipc_out.write(s.as_bytes());
 	    },

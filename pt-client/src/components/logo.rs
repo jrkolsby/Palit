@@ -17,7 +17,7 @@ pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16) -> RawTerminal<Stdou
     for (i, line) in LOGO.lines().enumerate() {
         write!(out, "{}{}{}",
             cursor::Goto(x, (i as u16)+y+1),
-            color::Fg(color::White),
+            color::Fg(color::LightWhite),
             line).unwrap();
     };
     out
