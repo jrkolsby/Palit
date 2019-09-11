@@ -5,7 +5,7 @@ use std::fs::{File};
 use termion::{clear, color, cursor, terminal_size};
 use termion::raw::{RawTerminal};
 
-use crate::common::Action;
+use crate::common::{Action, Color};
 use crate::views::{Layer};
 use crate::components::{logo, button};
 
@@ -112,8 +112,8 @@ impl Layer for Home {
         out = logo::render(out, self.x, self.y);
 
 	// New Button
-	out = button::render(out, self.x + 10, self.y + 10, 
-	    &"New Project".to_string(), self.state.focus == 0);
+	out = button::render(out, self.x + 10, self.y + 10, 17, 
+        "New Project", Color::Red, self.state.focus == 0);
 
 	// Project Listing
 	let mut col: [u16; 2] = [4,4];
@@ -155,8 +155,10 @@ impl Layer for Home {
     fn dispatch(&mut self, action: Action) -> Action {
         self.state = reduce(self.state.clone(), action.clone());
         match action {
-            Action::SelectR => {
-                Action::OpenProject(self.state.projects[self.state.focus].clone())
+            Action::SelectR => { Action::CreateProject }
+            Action::SelectY => {
+                eprintln!("{} {}", self.state.projects.len(), self.state.scroll_x);
+                Action::OpenProject(self.state.projects[self.state.scroll_x].clone())
             }
             _ => Action::Noop
         }

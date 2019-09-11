@@ -9,15 +9,15 @@ use std::fs::File;
 use std::io::{Write, Stdout, BufReader};
 use std::collections::HashMap;
 
-use crate::components::{waveform};
-use crate::common::{Action, Asset, Track, Region, file_to_pairs};
+use crate::components::{waveform, tempo, button};
+use crate::common::{Action, Asset, Track, Region, file_to_pairs, Color};
 use crate::views::{Layer};
 
 //#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
 
 const MARGIN: (u16, u16) = (3, 3);
-const EXTRAS_W: u16 = 7;
-const EXTRAS_H: u16 = 3;
+const EXTRAS_W: u16 = 6;
+const EXTRAS_H: u16 = 5;
 const ASSET_PREFIX: &str = "storage/";
 
 // STATIC PROPERTIES THROUGHOUT VIEW'S LIFETIME
@@ -38,10 +38,18 @@ pub struct TimelineState {
     pub tempo: u16,             // TEMPO
     pub time_beat: usize,       // TOP 
     pub time_note: usize,       // BOTTOM
+    pub duration_measure: usize,
+    pub duration_beat: usize,
     pub zoom: f32,              // BEATS per tick
     pub loop_mode: bool,        // TRUE FOR LOOP
     pub sequence: Vec<Track>,   // TRACKS
-    pub assets: Vec<Asset>      // FILES
+    pub assets: Vec<Asset>,      // FILES
+
+    pub tick: bool,
+
+    pub scroll_x: u16,
+    pub scroll_y: u16,
+    pub focus: usize, 
 }
 
 fn reduce(state: TimelineState, action: Action) -> TimelineState {
@@ -50,7 +58,7 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         tempo: state.tempo.clone(),
         time_beat: match action {
             Action::Up => (state.time_beat + 1),
-            Action::Down => (state.time_beat - 1),
+            Action::Down => (if state.time_beat == 0 { 0 } else { state.time_beat - 1 }),
             _ => state.time_beat,
         },
         time_note: state.time_note.clone(),
@@ -58,11 +66,20 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         assets: state.assets.clone(),
         sequence: state.sequence.clone(),
         loop_mode: state.loop_mode.clone(),
+        focus: state.focus.clone(),
+        scroll_x: state.scroll_x.clone(),
+        scroll_y: state.scroll_y.clone(), 
+        tick: match action {
+            Action::SelectR => !state.tick,
+            _ => state.tick.clone(),
+        },
+        duration_beat: state.duration_beat.clone(),
+        duration_measure: state.duration_measure.clone(),
     }
 }
 
 impl Timeline {
-    pub fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
+    pub fn new(x: u16, y: u16, width: u16, height: u16, fd: File) -> Self {
 
         // Initialize State
         let initial_state: TimelineState = TimelineState {
@@ -70,71 +87,16 @@ impl Timeline {
             tempo: 127,
             time_beat: 4, // TOP 
             time_note: 4, // BOTTOM
+            duration_beat: 0,
+            duration_measure: 15,
             zoom: 1.0,
             loop_mode: false,
-            sequence: vec![
-                Track {
-                    id: 0,
-                    regions: vec![
-                        Region {
-                            id: 0,
-                            asset_id: 0,
-                            asset_in: 0,
-                            asset_out: 48000,
-                            offset: 0,
-
-                        }
-                    ]
-                },
-                Track {
-                    id: 1,
-                    regions: vec![
-                        Region {
-                            id: 0,
-                            asset_id: 1,
-                            asset_in: 0,
-                            asset_out: 48000,
-                            offset: 0,
-                        }
-                    ]
-                },
-                Track {
-                    id: 2,
-                    regions: vec![
-                        Region {
-                            id: 0,
-                            asset_id: 2,
-                            asset_in: 0,
-                            asset_out: 48000,
-                            offset: 0,
-                        }
-                    ]
-                }
-            ], // TRACKS
-            assets: vec![
-                Asset {
-                    id: 0,
-                    src: "Keyboard.wav".to_string(),
-                    sample_rate: 44800,
-                    duration: 480000,
-                    channels: 2
-                },
-                Asset {
-                    id: 1,
-                    src: "Loop.wav".to_string(),
-                    sample_rate: 44800,
-                    duration: 480000,
-                    channels: 2
-                },
-                Asset {
-                    id: 2,
-                    src: "Who.wav".to_string(),
-                    sample_rate: 44800,
-                    duration: 480000,
-                    channels: 2
-                },
-
-            ] // FILES
+            sequence: vec![],
+            assets: vec![],
+            focus: 0,
+            scroll_x: 0,
+            scroll_y: 0,
+            tick: false,
         };
 
         let mut waveforms: HashMap<u32, Vec<(i32, i32)>> = HashMap::new();
@@ -153,8 +115,6 @@ impl Timeline {
             */
         }
 
-        let project_file = File::open("storage/project.xml").unwrap();
-
         Timeline {
             x: x,
             y: y,
@@ -162,7 +122,7 @@ impl Timeline {
             height: width,
             waveforms: waveforms,
             state: initial_state,
-            project: project_file,
+            project: fd,
         }
     }
 }
@@ -170,14 +130,22 @@ impl Timeline {
 impl Layer for Timeline {
     fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
 
-        // PRINT NAME
-        let name_len: u16 = self.state.name.len() as u16;
-        let name_x: u16 = self.x + (self.width/2) - (name_len/2);
-        write!(out, "{}{}",
-            cursor::Goto(name_x,self.y),
-            self.state.name).unwrap();
+        // PRINT TEMPO
+        out = tempo::render(out, self.x + self.width-1, self.y,
+            self.state.time_beat,
+            self.state.time_note,
+            self.state.duration_measure,
+            self.state.duration_beat,
+            self.state.tempo,
+            self.state.tick,
+            self.state.focus == 0,
+        ); // top right corner
 
-        let content_x = self.x + EXTRAS_W;
+        out = button::render(out, 2, self.height-3, 30, 
+            "RECORD", Color::Red, true);
+
+        out = button::render(out, 60, self.height-3, 10, 
+            "IMPORT", Color::Pink, true);
 
         // PRINT TEMPO
         let mut measure: String = ".".to_string();
@@ -185,12 +153,21 @@ impl Layer for Timeline {
             measure = format!("{} `", measure);
         }
         let tempo_len: u16 = measure.len() as u16 + 1;
+        let content_x = self.x + EXTRAS_W;
         let n: u16 = self.width / tempo_len;
         for j in 0..n {
             write!(out, "{}{}",
-                cursor::Goto(content_x+(j*tempo_len), EXTRAS_H+self.y),
+                cursor::Goto(content_x+(j*tempo_len), self.y+5),
                 measure).unwrap()
         }
+
+        // SAVE AND QUIT
+        write!(out, "{}{}{}  Save and quit  {}{}",
+            cursor::Goto(self.x+2, self.y+1),
+            color::Bg(color::Yellow),
+            color::Fg(color::Black),
+            color::Bg(color::Reset),
+            color::Fg(color::White)).unwrap();
 
         // PRINT TRACKS
         for (i, track) in self.state.sequence.iter().enumerate() {
@@ -208,6 +185,16 @@ impl Layer for Timeline {
                 out = waveform::render(out, &pairs, self.x+EXTRAS_W, track_y);
             }
         }
+
+        // Render Title
+        for i in 1..self.width+1 {
+            write!(out, "{}─", cursor::Goto(i,self.y)).unwrap();
+        }
+        let name_len: u16 = self.state.name.len() as u16;
+        let name_x: u16 = self.x + (self.width/2) - (name_len/2);
+        write!(out, "{} {} ",
+            cursor::Goto(name_x,self.y),
+            self.state.name).unwrap();
 
         write!(out, "{}", color::Bg(color::Reset)).unwrap();
 

@@ -3,7 +3,7 @@ extern crate termion;
 
 use std::io::{Write, Stdout, stdout, stdin};
 use std::io::prelude::*;
-use std::fs::{OpenOptions};
+use std::fs::{File, OpenOptions};
 use std::os::unix::fs::OpenOptionsExt;
 
 use termion::{clear, cursor, terminal_size};
@@ -22,7 +22,7 @@ use common::{Action, Region, Asset, Track};
 
 // struct State {}
 
-fn back() {} // Pop a layer
+const HOME_DIR: &str = "~/.palit/";
 
 fn render(mut stdout: RawTerminal<Stdout>, layers: &Vec<Box<Layer>>) -> RawTerminal<Stdout> {
     /*
@@ -77,7 +77,7 @@ fn main() -> std::io::Result<()> {
     stdout = render(stdout, &layers);
     stdout.flush().unwrap();
 
-    // Loops until break
+    // MAIN LOOP
     for c in stdin.keys() {
 
         // Map keypress to Action
@@ -85,8 +85,8 @@ fn main() -> std::io::Result<()> {
             Key::Char('q') => break,
             Key::Char('1') => Action::Help,
             Key::Char('2') => Action::Back,
-	    Key::Char('p') => Action::Play,
-	    Key::Char('s') => Action::Stop,
+	        Key::Char('p') => Action::Play,
+	        Key::Char('s') => Action::Stop,
             Key::Char(' ') => Action::SelectR,
             Key::Char('v') => Action::SelectG,
             Key::Char(',') => Action::SelectY,
@@ -100,23 +100,17 @@ fn main() -> std::io::Result<()> {
         };
 
         // Dispatch Action and capture talkback
-	let mut talkback: Action = match action {
-	    Action::Play => {
-		ipc_out.write(b"PLAY");
-		Action::Noop
-	    }
-	    Action::Stop => {
-		ipc_out.write(b"STOP");
-		Action::Noop
-	    }
+        let mut talkback: Action = match action {
+            Action::Play => { ipc_out.write(b"PLAY"); Action::Noop }
+            Action::Stop => { ipc_out.write(b"STOP"); Action::Noop }
             Action::Help => { 
-		layers.push(Box::new(Help::new(10, 10, 44, 15))); 
-		Action::Noop
-	    },
+                layers.push(Box::new(Help::new(10, 10, 44, 15))); 
+                Action::Noop
+            },
             Action::Back => { 
-		layers.pop(); 
-		Action::Noop
-	    }, 
+                layers.pop(); 
+                Action::Noop
+            }, 
             _ => {
                 // Dispatch action to front layer and match talkback action
                 let target = layers.last_mut().unwrap();
@@ -124,16 +118,29 @@ fn main() -> std::io::Result<()> {
             }
         };
 
-	match talkback {
-	    Action::OpenProject(s) => {
-		eprintln!("OPEN {}", s);
-		layers.push(Box::new(Timeline::new(0, 3, size.1, size.0)));
-		ipc_out.write(b"OPEN_PROJECT");
-		ipc_out.write(s.as_bytes());
-	    },
-	    Action::Back => { layers.pop(); }, 
-	    _ => {}
-	};	
+        // View specific actions
+        match talkback {
+            Action::CreateProject => {
+                ipc_out.write(b"NEW_PROJECT\n");
+                let fd = OpenOptions::new()
+                    .read(true)
+                    .write(true)
+                    .create(true)
+                    .open("foo.xml").unwrap();
+                layers.push(Box::new(Timeline::new(1, 1, size.1, size.0, fd)));
+            }
+            Action::OpenProject(s) => {
+                let fname = HOME_DIR.to_owned() + &s;
+
+                ipc_out.write(b"OPEN_PROJECT\n");
+                ipc_out.write(fname.as_bytes());
+
+                let fd = File::open(fname).unwrap();
+                layers.push(Box::new(Timeline::new(0, 3, size.1, size.0, fd)));
+            },
+            Action::Back => { layers.pop(); }, 
+            _ => {}
+        };	
 
         // Clears screen
         write!(stdout, "{}", clear::All).unwrap();

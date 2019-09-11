@@ -36,6 +36,7 @@ pub enum Action {
 
     // ABSTRACT ACTIONS
     OpenProject(String),
+    CreateProject,
 
     Noop,
 }
