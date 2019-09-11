@@ -9,7 +9,7 @@ use std::fs::File;
 use std::io::{Write, Stdout, BufReader};
 use std::collections::HashMap;
 
-use crate::components::{waveform, tempo, button};
+use crate::components::{waveform, tempo, button, ruler};
 use crate::common::{Action, Asset, Track, Region, file_to_pairs, Color};
 use crate::views::{Layer};
 
@@ -40,7 +40,7 @@ pub struct TimelineState {
     pub time_note: usize,       // BOTTOM
     pub duration_measure: usize,
     pub duration_beat: usize,
-    pub zoom: f32,              // BEATS per tick
+    pub zoom: i32,              // BEATS per tick
     pub loop_mode: bool,        // TRUE FOR LOOP
     pub sequence: Vec<Track>,   // TRACKS
     pub assets: Vec<Asset>,      // FILES
@@ -58,7 +58,7 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         tempo: state.tempo.clone(),
         time_beat: match action {
             Action::Up => (state.time_beat + 1),
-            Action::Down => (if state.time_beat == 0 { 0 } else { state.time_beat - 1 }),
+            Action::Down => (if state.time_beat == 1 { 1 } else { state.time_beat - 1 }),
             _ => state.time_beat,
         },
         time_note: state.time_note.clone(),
@@ -67,7 +67,11 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         sequence: state.sequence.clone(),
         loop_mode: state.loop_mode.clone(),
         focus: state.focus.clone(),
-        scroll_x: state.scroll_x.clone(),
+        scroll_x: match action {
+            Action::Right => (state.scroll_x + 1),
+            Action::Left => (if state.scroll_x == 0 { 0 } else { state.scroll_x - 1 }),
+            _ => state.scroll_x.clone(),
+        },
         scroll_y: state.scroll_y.clone(), 
         tick: match action {
             Action::SelectR => !state.tick,
@@ -89,7 +93,7 @@ impl Timeline {
             time_note: 4, // BOTTOM
             duration_beat: 0,
             duration_measure: 15,
-            zoom: 1.0,
+            zoom: 0,
             loop_mode: false,
             sequence: vec![],
             assets: vec![],
@@ -131,7 +135,7 @@ impl Layer for Timeline {
     fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
 
         // PRINT TEMPO
-        out = tempo::render(out, self.x + self.width-1, self.y,
+        out = tempo::render(out, self.x + self.width-3, self.y,
             self.state.time_beat,
             self.state.time_note,
             self.state.duration_measure,
@@ -141,26 +145,18 @@ impl Layer for Timeline {
             self.state.focus == 0,
         ); // top right corner
 
-        out = button::render(out, 2, self.height-3, 30, 
+        out = button::render(out, 2, self.height-3, 56, 
             "RECORD", Color::Red, true);
 
-        out = button::render(out, 60, self.height-3, 10, 
+        out = button::render(out, 60, self.height-3, 19, 
             "IMPORT", Color::Pink, true);
 
         // PRINT TEMPO
-        let mut measure: String = ".".to_string();
-        for i in 0..self.state.time_beat-1 {
-            measure = format!("{} `", measure);
-        }
-        let tempo_len: u16 = measure.len() as u16 + 1;
-        let content_x = self.x + EXTRAS_W;
-        let n: u16 = self.width / tempo_len;
-        for j in 0..n {
-            write!(out, "{}{}",
-                cursor::Goto(content_x+(j*tempo_len), self.y+5),
-                measure).unwrap()
-        }
-
+        out = ruler::render(out, 5, 6, self.width-4,
+            self.state.time_beat,
+            self.state.zoom,
+            self.state.scroll_x);
+            
         // SAVE AND QUIT
         write!(out, "{}{}{}  Save and quit  {}{}",
             cursor::Goto(self.x+2, self.y+1),

@@ -118,7 +118,7 @@ fn main() -> std::io::Result<()> {
             }
         };
 
-        // View specific actions
+        // Actions which return from actions
         match talkback {
             Action::CreateProject => {
                 ipc_out.write(b"NEW_PROJECT\n");

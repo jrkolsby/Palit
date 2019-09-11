@@ -35,8 +35,11 @@ fn reduce(state: HomeState, action: Action) -> HomeState {
     let len = state.projects.len();
     let scroll_max = state.projects.len()/4;
     let scroll_x = match action {
-        Action::Left => if state.scroll_x == 0 { scroll_max-1 } else {
-            (state.scroll_x-1) % scroll_max
+        Action::Left => {
+            eprintln!("HOME LEFT");
+            if state.scroll_x == 0 { scroll_max-1 } else {
+                (state.scroll_x-1) % scroll_max
+            }
         },
         Action::Right => (state.scroll_x+1) % scroll_max,
         _ => state.scroll_x,
