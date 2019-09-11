@@ -53,3 +53,4 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [ ] INF-6: Migrate state to root structs
 - [X] INF-7: Debug console
 - [ ] INF-8: Read XML file and update timeline state
+- [ ] INF-9: Update pt-client to kernel input_event loop
