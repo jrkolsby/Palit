@@ -15,8 +15,12 @@ pub fn render(mut out: RawTerminal<Stdout>,
     zoom: i32,
     scroll: u16, 
 ) -> RawTerminal<Stdout>{
+    if scroll == 0 {
+        write!(out, "{}{{{{", cursor::Goto(origin_x-2, origin_y)).unwrap()
+
+    }
     for i in 0..width {
-        let measure = if (i+scroll) % time_beat as u16 == 0 { "!" } else { "." };
+        let measure = if (i+scroll+1) % time_beat as u16 == 0 { "!" } else { "." };
         let space = {
             let mut a: String = " ".to_string();
             for i in 0..zoom {
