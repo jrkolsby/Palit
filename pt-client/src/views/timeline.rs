@@ -5,12 +5,15 @@ use wavefile::WaveFile;
 use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 
+use xmltree::Element;
+
 use std::fs::File;
 use std::io::{Write, Stdout, BufReader};
 use std::collections::HashMap;
 
 use crate::components::{waveform, tempo, button, ruler};
 use crate::common::{Action, Asset, Track, Region, file_to_pairs, Color};
+use crate::common::{read_document};
 use crate::views::{Layer};
 
 //#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
@@ -26,7 +29,7 @@ pub struct Timeline {
     y: u16,
     height: u16,
     width: u16,
-    project: File,
+    project: Element,
     waveforms: HashMap<u32, Vec<(i32, i32)>>,
     state: TimelineState,
 }
@@ -83,7 +86,9 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
 }
 
 impl Timeline {
-    pub fn new(x: u16, y: u16, width: u16, height: u16, fd: File) -> Self {
+    pub fn new(x: u16, y: u16, width: u16, height: u16, project: String) -> Self {
+
+        let xml: Element = read_document(project);
 
         // Initialize State
         let initial_state: TimelineState = TimelineState {
@@ -126,7 +131,7 @@ impl Timeline {
             height: width,
             waveforms: waveforms,
             state: initial_state,
-            project: fd,
+            project: xml,
         }
     }
 }

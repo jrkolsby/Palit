@@ -33,6 +33,7 @@ pub enum Action {
     VolumeUp,
     VolumeDown,
     Help,
+    Tick,
 
     // ABSTRACT ACTIONS
     OpenProject(String),

@@ -1,8 +1,13 @@
 extern crate wavefile;
+extern crate xmltree;
+
+use std::fs;
 
 use wavefile::WaveFile;
-
 use itertools::Itertools;
+use xmltree::Element;
+
+use crate::common::{Color, };
 
 #[derive(Debug, Clone)]
 pub struct Asset {
@@ -25,7 +30,12 @@ pub struct Region {
 #[derive(Clone, Debug)]
 pub struct Track {
     pub id: u32,
+    pub color: Color,
     pub regions: Vec<Region>,
+}
+
+pub struct ProjectState {
+    pub saved: bool,
 }
 
 pub fn file_to_pairs(file: WaveFile, width: usize, height: usize) -> Vec<(i32, i32)> {
@@ -45,9 +55,7 @@ pub fn file_to_pairs(file: WaveFile, width: usize, height: usize) -> Vec<(i32, i
 
     let mut pairs = vec![];
     for (i, value) in values.iter().enumerate() {
-        if i % 2 > 0 {
-            continue;
-        }
+        if i % 2 > 0 { continue; }
 
         let tick: (i32, i32) = (((*value as f64) * scale).round() as i32, 
                                 ((values[i+1] as f64) * scale).round() as i32);
@@ -59,28 +67,59 @@ pub fn file_to_pairs(file: WaveFile, width: usize, height: usize) -> Vec<(i32, i
 }
 
 /*
-struct Device {
-    inputs: File,
-    output: File,
-}
-
-struct Route {
-
-}
-*/
-
-/*
 pub fn write_document(out_file: File, state: TimelineState) {
     println!("WRITING");
 }
+*/
 
-pub fn read_document(in_file: File) -> TimelineState {
+pub fn read_document(in_file: String) -> Element {
 
-    let asset_file: File = match File::open("examples/test.wav") {
-        Ok(f)  => f,
-        Err(e) => panic!("{}",  e)
-    };
+    /*
+    let fd = OpenOptions::new()
+        .read(true)
+        .write(true)
+        .create(true)
+        .open("foo.xml").unwrap();
+        */
 
+    let doc_str: String = fs::read_to_string(in_file).unwrap();
+    let doc: Element = Element::parse(doc_str.as_bytes()).unwrap();
+    
+    // SECTIONS
+    let format: &Element = doc.get_child("format").unwrap();
+    let tempo: &Element = doc.get_child("tempo").unwrap();
+    let assets: &Element = doc.get_child("assets").unwrap();
+    let tracks: &Element = doc.get_child("tracks").unwrap();
+
+    // GET FORMAT
+    let bitrate = format.attributes.get("bitrate").unwrap();
+    let samplerate = format.attributes.get("samplerate").unwrap();
+
+    // GET TEMPO
+    let bpm = tempo.attributes.get("bpm").unwrap();
+    let note = tempo.attributes.get("note").unwrap();
+    let beat = tempo.attributes.get("beat").unwrap();
+
+    // GET ASSETS
+    for asset in assets.children.iter() {
+        eprintln!("asset id {:}", asset.attributes.get("id").unwrap());
+        eprintln!("asset src {:}", asset.attributes.get("src").unwrap());
+    }
+
+    // GET TRACKS
+    for track in tracks.children.iter() {
+        eprintln!("color {:}", track.attributes.get("color").unwrap());
+        for region in track.children.iter() {
+            eprintln!("asset {:}", region.attributes.get("asset").unwrap());
+            eprintln!("offset {:}", region.attributes.get("offset").unwrap());
+        }
+    }
+
+    println!("HI");
+
+    doc
+
+    /*
     TimelineState {
         name: "Wowee".to_string(),
         tempo: 127,
@@ -89,7 +128,7 @@ pub fn read_document(in_file: File) -> TimelineState {
         sequence: vec![
             Track {
                 id: 0,
-                color: Color::Light(BaseColor::Yellow),
+                color: Color::Yellow,
                 regions: vec![
                     Region {
                         id: 0,
@@ -105,8 +144,7 @@ pub fn read_document(in_file: File) -> TimelineState {
         assets: vec![
             Asset {
                 id: 0,
-                name: "Audio-1.wav".to_string(),
-                src: asset_file,
+                src: "Audio-1.wav".to_string(),
                 sample_rate: 44800,
                 duration: 448000,
                 channels: 2
@@ -114,5 +152,5 @@ pub fn read_document(in_file: File) -> TimelineState {
 
         ] // FILES
     }
+    */
 }
-*/

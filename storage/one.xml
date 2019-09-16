@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE notedoc>
+
+<nd>
+    <format samplerate="48000" bitrate="12"/>
+    <tempo bpm="127" beat="4" note="4" />
+    <assets>
+		<asset id="a1" src="assets/Wav/Keyboard.wav" />
+		<asset id="a2" src="assets/Wav/Loop.wav" />
+		<asset id="a3" src="assets/Wav/Who.wav" />
+    </assets>
+    <tracks>
+		<track color="Yellow">
+			<region asset="a1" offset="48000" />
+			<region asset="a2" offset="1800000" />
+			<region asset="a3" offset="130000" />
+		</track>
+		<track color="Blue">
+			<region asset="a1" offset="48000" />
+			<region asset="a2" offset="1800000" />
+			<region asset="a3" offset="130000" />
+		</track>
+    </tracks>
+</nd>

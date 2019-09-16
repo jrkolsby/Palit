@@ -12,3 +12,7 @@ dev:
 .PHONY : run
 run:
 	cd ./pt-client && ./scripts/run
+
+.PHONY : tick
+tick:
+	watch -n .1 "echo TICK > /tmp/pt-client"

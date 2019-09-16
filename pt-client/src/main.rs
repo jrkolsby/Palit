@@ -92,6 +92,7 @@ fn main() -> std::io::Result<()> {
             Key::Char(',') => Action::SelectY,
             Key::Char('t') => Action::SelectP,
             Key::Char('i') => Action::SelectB,
+            Key::Char('-') => Action::Tick,
             Key::Up => Action::Up,
             Key::Down => Action::Down,
             Key::Left => Action::Left,
@@ -122,12 +123,8 @@ fn main() -> std::io::Result<()> {
         match talkback {
             Action::CreateProject => {
                 ipc_out.write(b"NEW_PROJECT\n");
-                let fd = OpenOptions::new()
-                    .read(true)
-                    .write(true)
-                    .create(true)
-                    .open("foo.xml").unwrap();
-                layers.push(Box::new(Timeline::new(1, 1, size.1, size.0, fd)));
+
+                layers.push(Box::new(Timeline::new(1, 1, size.1, size.0, "/Users/jrkolsby/Work/Palit/storage/one.xml".to_string())));
             }
             Action::OpenProject(s) => {
                 let fname = HOME_DIR.to_owned() + &s;
@@ -135,8 +132,7 @@ fn main() -> std::io::Result<()> {
                 ipc_out.write(b"OPEN_PROJECT\n");
                 ipc_out.write(fname.as_bytes());
 
-                let fd = File::open(fname).unwrap();
-                layers.push(Box::new(Timeline::new(0, 3, size.1, size.0, fd)));
+                layers.push(Box::new(Timeline::new(0, 3, size.1, size.0, fname)));
             },
             Action::Back => { layers.pop(); }, 
             _ => {}
