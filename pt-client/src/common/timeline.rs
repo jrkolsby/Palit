@@ -22,9 +22,9 @@ pub struct Asset {
 pub struct Region {
     pub id: u32,
     pub asset_id: u32,
-    pub asset_in: i32,
-    pub asset_out: i32,
-    pub offset: i32,
+    pub asset_in: u32,
+    pub asset_out: u32,
+    pub offset: u32,
 }
 
 #[derive(Clone, Debug)]
@@ -38,7 +38,14 @@ pub struct ProjectState {
     pub saved: bool,
 }
 
-pub fn file_to_pairs(file: WaveFile, width: usize, height: usize) -> Vec<(i32, i32)> {
+pub fn offset(delay: u32, sample_rate: u32, bpm: u16, zoom: usize) -> u32 {
+    // return how many beats passed based on a given sample rate
+    let samples_per_beat = (60 * sample_rate) / (bpm as u32);
+    delay / (samples_per_beat * zoom as u32)
+
+}
+
+pub fn file_to_pairs(file: WaveFile, width: usize, samples_per_tick: u16) -> Vec<(i32, i32)> {
 
     let chunk_size = (file.len()) / (width*2);
     let chunks = &file.iter().chunks(chunk_size);
@@ -51,7 +58,7 @@ pub fn file_to_pairs(file: WaveFile, width: usize, height: usize) -> Vec<(i32, i
     }).take(width*2).collect::<Vec<i32>>();
 
     let global_max = *values.iter().max().unwrap();
-    let scale: f64 = height as f64 / global_max as f64;
+    let scale: f64 = 4.0 / global_max as f64;
 
     let mut pairs = vec![];
     for (i, value) in values.iter().enumerate() {

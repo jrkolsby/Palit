@@ -100,7 +100,7 @@ fn main() -> std::io::Result<()> {
             _ => Action::Noop,
         };
 
-        // Dispatch Action and capture talkback
+        // Catch root actions else dispatch to top layer
         let mut talkback: Action = match action {
             Action::Play => { ipc_out.write(b"PLAY"); Action::Noop }
             Action::Stop => { ipc_out.write(b"STOP"); Action::Noop }
@@ -119,13 +119,13 @@ fn main() -> std::io::Result<()> {
             }
         };
 
-        // Actions which return from actions
+        // Dispatch root action if returned from layer
         match talkback {
             Action::CreateProject => {
                 ipc_out.write(b"NEW_PROJECT\n");
 
                 layers.push(Box::new(Timeline::new(1, 1, size.1, size.0, "/Users/jrkolsby/Work/Palit/storage/one.xml".to_string())));
-            }
+            },
             Action::OpenProject(s) => {
                 let fname = HOME_DIR.to_owned() + &s;
 
@@ -135,6 +135,9 @@ fn main() -> std::io::Result<()> {
                 layers.push(Box::new(Timeline::new(0, 3, size.1, size.0, fname)));
             },
             Action::Back => { layers.pop(); }, 
+            Action::Pepper => {
+                layers.push(Box::new(Help::new(10, 10, 44, 15))); 
+            },
             _ => {}
         };	
 

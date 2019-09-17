@@ -53,9 +53,15 @@ pub struct TimelineState {
     pub scroll_x: u16,
     pub scroll_y: u16,
     pub focus: usize, 
+
+    pub playhead: u16,
 }
 
 fn reduce(state: TimelineState, action: Action) -> TimelineState {
+    let playhead = match action {
+        Action::Tick => state.playhead + 1,
+        _ => state.playhead.clone(),
+    };
     TimelineState {
         name: state.name.clone(),
         tempo: state.tempo.clone(),
@@ -76,12 +82,10 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             _ => state.scroll_x.clone(),
         },
         scroll_y: state.scroll_y.clone(), 
-        tick: match action {
-            Action::SelectR => !state.tick,
-            _ => state.tick.clone(),
-        },
+        tick: (playhead % 2) == 0,
         duration_beat: state.duration_beat.clone(),
         duration_measure: state.duration_measure.clone(),
+        playhead,
     }
 }
 
@@ -105,7 +109,8 @@ impl Timeline {
             focus: 0,
             scroll_x: 0,
             scroll_y: 0,
-            tick: false,
+            tick: true,
+            playhead: 0,
         };
 
         let mut waveforms: HashMap<u32, Vec<(i32, i32)>> = HashMap::new();
@@ -157,10 +162,13 @@ impl Layer for Timeline {
             "IMPORT", Color::Pink, true);
 
         // PRINT TEMPO
-        out = ruler::render(out, 5, 6, self.width-4,
+        out = ruler::render(out, 5, 6, 
+            self.width-4,
+            self.height,
             self.state.time_beat,
             self.state.zoom,
-            self.state.scroll_x);
+            self.state.scroll_x,
+            self.state.playhead);
             
         // SAVE AND QUIT
         write!(out, "{}{}{}  Save and quit  {}{}",
@@ -182,6 +190,7 @@ impl Layer for Timeline {
             // PRINT REGIONS
             for region in track.regions.iter() {
                 let id: u32 = region.asset_id;
+                // how many pairs? 
                 let pairs: Vec<(i32, i32)> = self.waveforms.get(&id).unwrap().to_vec();
                 out = waveform::render(out, &pairs, self.x+EXTRAS_W, track_y);
             }

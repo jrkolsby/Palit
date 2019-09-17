@@ -162,7 +162,10 @@ impl Layer for Home {
             Action::SelectY => {
                 eprintln!("{} {}", self.state.projects.len(), self.state.scroll_x);
                 Action::OpenProject(self.state.projects[self.state.scroll_x].clone())
-            }
+            },
+            Action::Up => { 
+                if self.state.focus == 2 { Action::Pepper } else { Action::Noop }
+            },
             _ => Action::Noop
         }
     }

@@ -11,16 +11,17 @@ pub fn render(mut out: RawTerminal<Stdout>,
     origin_x: u16, 
     origin_y: u16, 
     width: u16,
+    height: u16,
     time_beat: usize,
     zoom: i32,
     scroll: u16, 
+    playhead: u16,
 ) -> RawTerminal<Stdout>{
     if scroll == 0 {
         write!(out, "{}{{{{", cursor::Goto(origin_x-2, origin_y)).unwrap()
-
     }
     for i in 0..width {
-        let measure = if (i+scroll+1) % time_beat as u16 == 0 { "!" } else { "." };
+        let beat = if (i+scroll+1) % time_beat as u16 == 0 { "!" } else { "." };
         let space = {
             let mut a: String = " ".to_string();
             for i in 0..zoom {
@@ -28,9 +29,17 @@ pub fn render(mut out: RawTerminal<Stdout>,
             }
             a
         };
+        if i+scroll == playhead {
+            for j in 0..height {
+                write!(out, "{}|", cursor::Goto(origin_x+i, origin_y+j));
+            }
+            write!(out, "{}", color::Fg(color::Red));
+        } else {
+            write!(out, "{}", color::Fg(color::White));
+        }
         write!(out, "{}{}",
             cursor::Goto(origin_x+i, origin_y),
-            measure).unwrap()
+            beat).unwrap()
     }
     out
 }
