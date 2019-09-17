@@ -7,7 +7,7 @@ use wavefile::WaveFile;
 use itertools::Itertools;
 use xmltree::Element;
 
-use crate::common::{Color, };
+use crate::common::{Color, Rate};
 
 #[derive(Debug, Clone)]
 pub struct Asset {
@@ -38,11 +38,18 @@ pub struct ProjectState {
     pub saved: bool,
 }
 
-pub fn offset(delay: u32, sample_rate: u32, bpm: u16, zoom: usize) -> u32 {
-    // return how many beats passed based on a given sample rate
-    let samples_per_beat = (60 * sample_rate) / (bpm as u32);
-    delay / (samples_per_beat * zoom as u32)
+fn sample_rate(rate: Rate) -> u32 {
+    match rate {
+        Rate::Fast => 64000,
+        Rate::Med => 48000,
+        Rate::Slow => 32000,
+    }
+}
 
+pub fn beat_offset(sample_offset: u32, srate: Rate, bpm: u16, zoom: usize) -> u32 {
+    // return how many beats passed based on a given sample rate
+    let samples_per_beat = (60 * sample_rate(srate)) / (bpm as u32);
+    sample_offset / (samples_per_beat * zoom as u32)
 }
 
 pub fn file_to_pairs(file: WaveFile, width: usize, samples_per_tick: u16) -> Vec<(i32, i32)> {

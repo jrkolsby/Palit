@@ -124,7 +124,7 @@ fn main() -> std::io::Result<()> {
             Action::CreateProject => {
                 ipc_out.write(b"NEW_PROJECT\n");
 
-                layers.push(Box::new(Timeline::new(1, 1, size.1, size.0, "/Users/jrkolsby/Work/Palit/storage/one.xml".to_string())));
+                layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, "/Users/jrkolsby/Work/Palit/storage/one.xml".to_string())));
             },
             Action::OpenProject(s) => {
                 let fname = HOME_DIR.to_owned() + &s;
@@ -132,7 +132,7 @@ fn main() -> std::io::Result<()> {
                 ipc_out.write(b"OPEN_PROJECT\n");
                 ipc_out.write(fname.as_bytes());
 
-                layers.push(Box::new(Timeline::new(0, 3, size.1, size.0, fname)));
+                layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, fname)));
             },
             Action::Back => { layers.pop(); }, 
             Action::Pepper => {

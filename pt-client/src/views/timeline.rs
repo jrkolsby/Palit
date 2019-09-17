@@ -12,8 +12,8 @@ use std::io::{Write, Stdout, BufReader};
 use std::collections::HashMap;
 
 use crate::components::{waveform, tempo, button, ruler};
-use crate::common::{Action, Asset, Track, Region, file_to_pairs, Color};
-use crate::common::{read_document};
+use crate::common::{Action, Asset, Track, Region, Color, Rate};
+use crate::common::{read_document, beat_offset, file_to_pairs};
 use crate::views::{Layer};
 
 //#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
@@ -43,10 +43,11 @@ pub struct TimelineState {
     pub time_note: usize,       // BOTTOM
     pub duration_measure: usize,
     pub duration_beat: usize,
-    pub zoom: i32,              // BEATS per tick
+    pub zoom: usize,              // BEATS per tick
     pub loop_mode: bool,        // TRUE FOR LOOP
     pub sequence: Vec<Track>,   // TRACKS
     pub assets: Vec<Asset>,      // FILES
+    pub sample_rate: Rate,
 
     pub tick: bool,
 
@@ -71,6 +72,7 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             _ => state.time_beat,
         },
         time_note: state.time_note.clone(),
+        sample_rate: state.sample_rate.clone(),
         zoom: state.zoom.clone(),
         assets: state.assets.clone(),
         sequence: state.sequence.clone(),
@@ -89,10 +91,32 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
     }
 }
 
-impl Timeline {
-    pub fn new(x: u16, y: u16, width: u16, height: u16, project: String) -> Self {
+fn generate_waveforms(state: &TimelineState) 
+    -> HashMap<u32, Vec<(i32, i32)>> {
+    let mut waveforms: HashMap<u32, Vec<(i32, i32)>> = HashMap::new();
 
-        let xml: Element = read_document(project);
+    for asset in state.assets.iter() {
+        eprintln!("generating wave: {}", asset.src.clone());
+
+        let asset_file = WaveFile::open(asset.src.clone()).unwrap();
+
+        let num_pairs: usize = beat_offset(
+            asset.duration,
+            state.sample_rate.clone(),
+            state.tempo,
+            state.zoom) as usize;
+
+        let pairs: Vec<(i32, i32)> = file_to_pairs(asset_file, num_pairs, 4);
+
+        waveforms.insert(asset.id, pairs);
+    }
+    waveforms
+}
+
+impl Timeline {
+    pub fn new(x: u16, y: u16, width: u16, height: u16, project_src: String) -> Self {
+
+        let project: Element = read_document(project_src);
 
         // Initialize State
         let initial_state: TimelineState = TimelineState {
@@ -102,41 +126,55 @@ impl Timeline {
             time_note: 4, // BOTTOM
             duration_beat: 0,
             duration_measure: 15,
-            zoom: 0,
+            zoom: 1,
             loop_mode: false,
-            sequence: vec![],
-            assets: vec![],
+            sequence: vec![
+                Track {
+                    id: 0,
+                    color: Color::Yellow,
+                    regions: vec![
+                        Region {
+                            id: 0,
+                            asset_id: 0,
+                            offset: 448000,
+                            asset_in: 0,
+                            asset_out: 448000,
+                        }
+                    ]
+                }
+            ],
+            assets: vec![
+                Asset {
+                    id: 0,
+                    src: "/Users/jrkolsby/Work/Palit/storage/assets/Keyboard.wav".to_string(),
+                    sample_rate: 48000,
+                    duration: 448000,
+                    channels: 2
+                }
+
+            ],
             focus: 0,
             scroll_x: 0,
             scroll_y: 0,
             tick: true,
             playhead: 0,
+            sample_rate: Rate::Fast,
         };
 
-        let mut waveforms: HashMap<u32, Vec<(i32, i32)>> = HashMap::new();
-
-        for asset in initial_state.assets.iter() {
-            let asset_src = format!("{}{}", ASSET_PREFIX, asset.src);
-            eprintln!("DRAWING {}", asset_src);
-            let asset_file = WaveFile::open(asset_src).unwrap();
-            let pairs: Vec<(i32, i32)> = file_to_pairs(asset_file, width as usize, 4);
-            waveforms.insert(asset.id, pairs);
-
-            /* HASHMAP FNS 
-            insert(u32, Vec)
-            get(u32)
-            remove(u32)
-            */
-        }
-
         Timeline {
-            x: x,
-            y: y,
-            width: height,
-            height: width,
-            waveforms: waveforms,
+            x,
+            y,
+            width,
+            height,
+            project,
+            waveforms: generate_waveforms(&initial_state),
             state: initial_state,
-            project: xml,
+/*
+ *                O        O
+ *                      \_______
+ *      Timeline         __---"
+ *      wizard
+ */
         }
     }
 }
@@ -178,27 +216,38 @@ impl Layer for Timeline {
             color::Bg(color::Reset),
             color::Fg(color::White)).unwrap();
 
-        // PRINT TRACKS
+        // Print track sidebar
         for (i, track) in self.state.sequence.iter().enumerate() {
             let track_y: u16 = self.y + EXTRAS_H + 2 + (i as u16)*2;
 
-            // PRINT TRACK NUMBER
+            // Print track number on left
             write!(out, "{}{}",
                 cursor::Goto(self.x, track_y),
                 i+1).unwrap();
-
-            // PRINT REGIONS
-            for region in track.regions.iter() {
-                let id: u32 = region.asset_id;
-                // how many pairs? 
-                let pairs: Vec<(i32, i32)> = self.waveforms.get(&id).unwrap().to_vec();
-                out = waveform::render(out, &pairs, self.x+EXTRAS_W, track_y);
-            }
         }
 
-        // Render Title
+        // Print regions
         for i in 1..self.width+1 {
             write!(out, "{}─", cursor::Goto(i,self.y)).unwrap();
+
+            for (j, track) in self.state.sequence.iter().enumerate() {
+                let track_y: u16 = self.y + 10 + (j as u16 * 2);
+                eprintln!("track_y {}", track_y);
+
+                // PRINT REGIONS
+                for region in track.regions.iter() {
+                    let id: u32 = region.asset_id;
+                    let offset: u32 = region.offset;
+
+//pub fn beat_offset(delay: u32, sample_rate: u32, bpm: u16, zoom: usize) -> u32 {
+                    if beat_offset(offset, 
+                        self.state.sample_rate.clone(),
+                        self.state.tempo,
+                        self.state.zoom) == (i + self.state.scroll_x).into() {
+                            out = waveform::render(out, &self.waveforms[&id], self.x+i, track_y);
+                        }
+                }
+            }
         }
         let name_len: u16 = self.state.name.len() as u16;
         let name_x: u16 = self.x + (self.width/2) - (name_len/2);

@@ -13,7 +13,7 @@ pub fn render(mut out: RawTerminal<Stdout>,
     width: u16,
     height: u16,
     time_beat: usize,
-    zoom: i32,
+    zoom: usize,
     scroll: u16, 
     playhead: u16,
 ) -> RawTerminal<Stdout>{
