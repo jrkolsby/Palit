@@ -12,7 +12,7 @@ use std::io::{Write, Stdout, BufReader};
 use std::collections::HashMap;
 
 use crate::components::{waveform, tempo, button, ruler};
-use crate::common::{Action, Asset, Track, Region, Color, Rate};
+use crate::common::{Action, Asset, Track, Region, Color, Rate, TimelineState};
 use crate::common::{read_document, beat_offset, file_to_pairs};
 use crate::views::{Layer};
 
@@ -29,34 +29,11 @@ pub struct Timeline {
     y: u16,
     height: u16,
     width: u16,
-    project: Element,
+    project_src: String,
     waveforms: HashMap<u32, Vec<(i32, i32)>>,
     state: TimelineState,
 }
 
-// DYNAMIC PROPERTIES
-#[derive(Clone, Debug)]
-pub struct TimelineState {
-    pub name: String,
-    pub tempo: u16,             // TEMPO
-    pub time_beat: usize,       // TOP 
-    pub time_note: usize,       // BOTTOM
-    pub duration_measure: usize,
-    pub duration_beat: usize,
-    pub zoom: usize,              // BEATS per tick
-    pub loop_mode: bool,        // TRUE FOR LOOP
-    pub sequence: Vec<Track>,   // TRACKS
-    pub assets: Vec<Asset>,      // FILES
-    pub sample_rate: Rate,
-
-    pub tick: bool,
-
-    pub scroll_x: u16,
-    pub scroll_y: u16,
-    pub focus: usize, 
-
-    pub playhead: u16,
-}
 
 fn reduce(state: TimelineState, action: Action) -> TimelineState {
     let playhead = match action {
@@ -116,65 +93,17 @@ fn generate_waveforms(state: &TimelineState)
 impl Timeline {
     pub fn new(x: u16, y: u16, width: u16, height: u16, project_src: String) -> Self {
 
-        let project: Element = read_document(project_src);
-
         // Initialize State
-        let initial_state: TimelineState = TimelineState {
-            name: "Wowee".to_string(),
-            tempo: 127,
-            time_beat: 4, // TOP 
-            time_note: 4, // BOTTOM
-            duration_beat: 0,
-            duration_measure: 15,
-            zoom: 1,
-            loop_mode: false,
-            sequence: vec![
-                Track {
-                    id: 0,
-                    color: Color::Yellow,
-                    regions: vec![
-                        Region {
-                            id: 0,
-                            asset_id: 0,
-                            offset: 448000,
-                            asset_in: 0,
-                            asset_out: 448000,
-                        }
-                    ]
-                }
-            ],
-            assets: vec![
-                Asset {
-                    id: 0,
-                    src: "/Users/jrkolsby/Work/Palit/storage/assets/Keyboard.wav".to_string(),
-                    sample_rate: 48000,
-                    duration: 448000,
-                    channels: 2
-                }
-
-            ],
-            focus: 0,
-            scroll_x: 0,
-            scroll_y: 0,
-            tick: true,
-            playhead: 0,
-            sample_rate: Rate::Fast,
-        };
+        let initial_state: TimelineState = read_document(project_src.clone()); 
 
         Timeline {
             x,
             y,
             width,
             height,
-            project,
+            project_src,
             waveforms: generate_waveforms(&initial_state),
             state: initial_state,
-/*
- *                O        O
- *                      \_______
- *      Timeline         __---"
- *      wizard
- */
         }
     }
 }
@@ -218,7 +147,7 @@ impl Layer for Timeline {
 
         // Print track sidebar
         for (i, track) in self.state.sequence.iter().enumerate() {
-            let track_y: u16 = self.y + EXTRAS_H + 2 + (i as u16)*2;
+            let track_y: u16 = self.y + EXTRAS_H + (i*2) as u16;
 
             // Print track number on left
             write!(out, "{}{}",
@@ -231,7 +160,7 @@ impl Layer for Timeline {
             write!(out, "{}─", cursor::Goto(i,self.y)).unwrap();
 
             for (j, track) in self.state.sequence.iter().enumerate() {
-                let track_y: u16 = self.y + 10 + (j as u16 * 2);
+		let track_y: u16 = self.y + EXTRAS_H + (i*2) as u16;
                 eprintln!("track_y {}", track_y);
 
                 // PRINT REGIONS
@@ -239,7 +168,6 @@ impl Layer for Timeline {
                     let id: u32 = region.asset_id;
                     let offset: u32 = region.offset;
 
-//pub fn beat_offset(delay: u32, sample_rate: u32, bpm: u16, zoom: usize) -> u32 {
                     if beat_offset(offset, 
                         self.state.sample_rate.clone(),
                         self.state.tempo,

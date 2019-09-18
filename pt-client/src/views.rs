@@ -7,7 +7,6 @@ pub use home::HomeState;
 
 mod timeline;
 pub use timeline::Timeline;
-pub use timeline::TimelineState;
 
 mod help;
 pub use help::Help;

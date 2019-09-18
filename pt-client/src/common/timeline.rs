@@ -13,7 +13,6 @@ use crate::common::{Color, Rate};
 pub struct Asset {
     pub id: u32,
     pub src: String,
-    pub sample_rate: u32,
     pub duration: u32,
     pub channels: usize
 }
@@ -34,8 +33,27 @@ pub struct Track {
     pub regions: Vec<Region>,
 }
 
-pub struct ProjectState {
-    pub saved: bool,
+#[derive(Clone, Debug)]
+pub struct TimelineState {
+    pub name: String,
+    pub tempo: u16,             // TEMPO
+    pub time_beat: usize,       // TOP 
+    pub time_note: usize,       // BOTTOM
+    pub duration_measure: usize,
+    pub duration_beat: usize,
+    pub zoom: usize,              // BEATS per tick
+    pub loop_mode: bool,        // TRUE FOR LOOP
+    pub sequence: Vec<Track>,   // TRACKS
+    pub assets: Vec<Asset>,      // FILES
+    pub sample_rate: Rate,
+
+    pub tick: bool,
+
+    pub scroll_x: u16,
+    pub scroll_y: u16,
+    pub focus: usize, 
+
+    pub playhead: u16,
 }
 
 fn sample_rate(rate: Rate) -> u32 {
@@ -86,7 +104,7 @@ pub fn write_document(out_file: File, state: TimelineState) {
 }
 */
 
-pub fn read_document(in_file: String) -> Element {
+pub fn read_document(in_file: String) -> TimelineState {
 
     /*
     let fd = OpenOptions::new()
@@ -105,6 +123,25 @@ pub fn read_document(in_file: String) -> Element {
     let assets: &Element = doc.get_child("assets").unwrap();
     let tracks: &Element = doc.get_child("tracks").unwrap();
 
+    let mut state = TimelineState {
+	name: "Wowee".to_string(),
+	tempo: 127,
+	time_beat: 4, // TOP 
+	time_note: 4, // BOTTOM
+	duration_beat: 0,
+	duration_measure: 15,
+	zoom: 1,
+	loop_mode: false,
+	focus: 0,
+	scroll_x: 0,
+	scroll_y: 0,
+	tick: true,
+	playhead: 0,
+	sample_rate: Rate::Fast,
+        sequence: vec![], // TRACKS
+        assets: vec![] // FILES
+    };
+
     // GET FORMAT
     let bitrate = format.attributes.get("bitrate").unwrap();
     let samplerate = format.attributes.get("samplerate").unwrap();
@@ -115,9 +152,14 @@ pub fn read_document(in_file: String) -> Element {
     let beat = tempo.attributes.get("beat").unwrap();
 
     // GET ASSETS
-    for asset in assets.children.iter() {
-        eprintln!("asset id {:}", asset.attributes.get("id").unwrap());
-        eprintln!("asset src {:}", asset.attributes.get("src").unwrap());
+    for (i, asset) in assets.children.iter().enumerate() {
+	let mut id: &str = asset.attributes.get("id").unwrap();
+	state.assets.push(Asset {
+	    id: id[1..].parse().unwrap(),
+	    src: asset.attributes.get("src").unwrap().parse().unwrap(),
+	    duration: 48000, 	// TODO
+	    channels: 2,	// TODO
+	})
     }
 
     // GET TRACKS
@@ -129,42 +171,5 @@ pub fn read_document(in_file: String) -> Element {
         }
     }
 
-    println!("HI");
-
-    doc
-
-    /*
-    TimelineState {
-        name: "Wowee".to_string(),
-        tempo: 127,
-        time_beat: 4, // TOP 
-        time_frac: 4, // BOTTOM
-        sequence: vec![
-            Track {
-                id: 0,
-                color: Color::Yellow,
-                regions: vec![
-                    Region {
-                        id: 0,
-                        asset_id: 0,
-                        asset_in: 0,
-                        asset_out: 448000,
-                        offset: 0,
-
-                    }
-                ]
-            }
-        ], // TRACKS
-        assets: vec![
-            Asset {
-                id: 0,
-                src: "Audio-1.wav".to_string(),
-                sample_rate: 44800,
-                duration: 448000,
-                channels: 2
-            }
-
-        ] // FILES
-    }
-    */
+    state
 }

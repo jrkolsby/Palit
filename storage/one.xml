@@ -5,9 +5,9 @@
     <format samplerate="48000" bitrate="12"/>
     <tempo bpm="127" beat="4" note="4" />
     <assets>
-		<asset id="a1" src="assets/Wav/Keyboard.wav" />
-		<asset id="a2" src="assets/Wav/Loop.wav" />
-		<asset id="a3" src="assets/Wav/Who.wav" />
+	<asset id="a1" src="/home/james/assets/Keyboard.wav" />
+	<asset id="a2" src="/home/james/assets/Loop.wav" />
+	<asset id="a3" src="/home/james/assets/Who.wav" />
     </assets>
     <tracks>
 		<track color="Yellow">

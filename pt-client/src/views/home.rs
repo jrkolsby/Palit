@@ -61,6 +61,7 @@ fn reduce(state: HomeState, action: Action) -> HomeState {
 
 impl Home {
     pub fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
+
         // Load logo asset
         let asset_file = File::open("src/assets/logo.txt").unwrap();
         let mut buf_reader = BufReader::new(asset_file);
