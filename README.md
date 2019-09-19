@@ -21,7 +21,7 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [X] UI-2: Splash screen with project listings
 - [ ] UI-3: Keyboard display with feedback for keypress events
 - [X] UI-4: Display empty timeline for new project
-- [ ] UI-5: Timeline Cursor
+- [X] UI-5: Timeline Cursor
 - [X] UI-6: Layered rendering
 - [X] UI-8: Multi Cursor
 
@@ -37,7 +37,7 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [X] INF-3: Implement view state
 - [X] INF-4: Remove cursive dep in favor of termion
 - [X] INF-7: Debug console
-- [ ] INF-8: Read XML file and update timeline state
+- [X] INF-8: Read XML file and update timeline state
 - [ ] INF-9: Update pt-client to loop which polls sdl2 keyboard and /tmp/pt-sound
 
 ### NOVEMBER 1
