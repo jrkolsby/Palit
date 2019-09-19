@@ -1,13 +1,15 @@
 extern crate wavefile;
 extern crate xmltree;
 
-use std::fs;
+use std::fs::{self, OpenOptions};
 
 use wavefile::WaveFile;
 use itertools::Itertools;
 use xmltree::Element;
 
 use crate::common::{Color, Rate};
+
+const PALIT_ROOT: &str = "/usr/local/palit/";
 
 #[derive(Debug, Clone)]
 pub struct Asset {
@@ -98,11 +100,12 @@ pub fn file_to_pairs(file: WaveFile, width: usize, samples_per_tick: u16) -> Vec
     pairs
 }
 
-/*
-pub fn write_document(out_file: File, state: TimelineState) {
-    println!("WRITING");
+pub fn write_document(out_file: String, state: TimelineState) {
+    let fd = OpenOptions::new()
+        .write(true)
+        .create(true)
+        .open(out_file).unwrap();
 }
-*/
 
 pub fn read_document(in_file: String) -> TimelineState {
 
@@ -114,61 +117,103 @@ pub fn read_document(in_file: String) -> TimelineState {
         .open("foo.xml").unwrap();
         */
 
-    let doc_str: String = fs::read_to_string(in_file).unwrap();
+    eprintln!("read_document: {}", in_file);
+
+    let doc_str: String = fs::read_to_string(format!("{}{}", PALIT_ROOT, in_file)).unwrap();
     let doc: Element = Element::parse(doc_str.as_bytes()).unwrap();
     
-    // SECTIONS
+    // sections
     let format: &Element = doc.get_child("format").unwrap();
     let tempo: &Element = doc.get_child("tempo").unwrap();
+    let meta: &Element = doc.get_child("meta").unwrap();
+    let duration: &Element = doc.get_child("duration").unwrap();
     let assets: &Element = doc.get_child("assets").unwrap();
     let tracks: &Element = doc.get_child("tracks").unwrap();
 
-    let mut state = TimelineState {
-	name: "Wowee".to_string(),
-	tempo: 127,
-	time_beat: 4, // TOP 
-	time_note: 4, // BOTTOM
-	duration_beat: 0,
-	duration_measure: 15,
-	zoom: 1,
-	loop_mode: false,
-	focus: 0,
-	scroll_x: 0,
-	scroll_y: 0,
-	tick: true,
-	playhead: 0,
-	sample_rate: Rate::Fast,
-        sequence: vec![], // TRACKS
-        assets: vec![] // FILES
-    };
-
-    // GET FORMAT
+    // get format
     let bitrate = format.attributes.get("bitrate").unwrap();
     let samplerate = format.attributes.get("samplerate").unwrap();
 
-    // GET TEMPO
+    // get tempo
     let bpm = tempo.attributes.get("bpm").unwrap();
     let note = tempo.attributes.get("note").unwrap();
     let beat = tempo.attributes.get("beat").unwrap();
 
+    // get metadata 
+    let title = meta.attributes.get("title").unwrap();
+
+    // get duration
+    let duration_measure = duration.attributes.get("measure").unwrap();
+    let duration_beat = duration.attributes.get("beat").unwrap();
+
+    let mut state = TimelineState {
+        name: title.to_string(),
+        tempo: bpm.parse().unwrap(),
+        time_beat: beat.parse().unwrap(), // TOP 
+        time_note: note.parse().unwrap(), // BOTTOM
+        duration_measure: duration_measure.parse().unwrap(),
+        duration_beat: duration_beat.parse().unwrap(),
+        zoom: 1,
+        loop_mode: false,
+        focus: 0,
+        scroll_x: 0,
+        scroll_y: 0,
+        tick: true,
+        playhead: 0,
+        sample_rate: Rate::Fast,
+        sequence: vec![], // TRACKS
+        assets: vec![] // FILES
+    };
+
     // GET ASSETS
     for (i, asset) in assets.children.iter().enumerate() {
-	let mut id: &str = asset.attributes.get("id").unwrap();
-	state.assets.push(Asset {
-	    id: id[1..].parse().unwrap(),
-	    src: asset.attributes.get("src").unwrap().parse().unwrap(),
-	    duration: 48000, 	// TODO
-	    channels: 2,	// TODO
-	})
+        let mut id: &str = asset.attributes.get("id").unwrap();
+        let duration: &str = asset.attributes.get("size").unwrap();
+        state.assets.push(Asset {
+            id: id[1..].parse().unwrap(),
+            src: asset.attributes.get("src").unwrap().parse().unwrap(),
+            duration: duration.parse().unwrap(),
+            channels: 2,	// TODO
+        })
     }
 
     // GET TRACKS
     for track in tracks.children.iter() {
-        eprintln!("color {:}", track.attributes.get("color").unwrap());
+        let mut t_id: &str = track.attributes.get("id").unwrap();
+        let col: &str = track.attributes.get("color").unwrap();
+        // Match color type
+        let color: Color = match col {
+            "yellow" => Color::Yellow,
+            "pink" => Color::Pink,
+            "blue" => Color::Blue,
+            "green" => Color::Green,
+            _ => Color::Red,
+        };
+        // Create new region array and populate
+        let mut regions: Vec<Region> = vec![];
         for region in track.children.iter() {
-            eprintln!("asset {:}", region.attributes.get("asset").unwrap());
-            eprintln!("offset {:}", region.attributes.get("offset").unwrap());
+
+            // Get region info
+            let r_id: &str = region.attributes.get("id").unwrap();
+            let a_id: &str = region.attributes.get("asset").unwrap();
+            let offset: &str = region.attributes.get("offset").unwrap();
+            let a_in: &str = region.attributes.get("in").unwrap();
+            let a_out: &str = region.attributes.get("out").unwrap();
+
+            regions.push(Region {
+                id: r_id[1..].parse().unwrap(),
+                asset_id: a_id[1..].parse().unwrap(),
+                asset_in: a_in.parse().unwrap(),
+                asset_out: a_out.parse().unwrap(),
+                offset: offset.parse().unwrap(),
+            });
         }
+
+        state.sequence.push(Track {
+            id: t_id[1..].parse().unwrap(),
+            color,
+            regions,
+        })
     }
 
     state

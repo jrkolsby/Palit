@@ -11,3 +11,7 @@ pub use timeline::Timeline;
 mod help;
 pub use help::Help;
 pub use help::HelpState;
+
+mod title;
+pub use title::Title;
+pub use title::TitleState;

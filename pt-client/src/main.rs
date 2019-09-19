@@ -16,13 +16,9 @@ mod views;
 mod common;
 mod components; 
 
-use views::{Layer, Home, Timeline, Help};
+use views::{Layer, Home, Timeline, Help, Title};
 
 use common::{Action, Region, Asset, Track};
-
-// struct State {}
-
-const HOME_DIR: &str = "~/.palit/";
 
 fn render(mut stdout: RawTerminal<Stdout>, layers: &Vec<Box<Layer>>) -> RawTerminal<Stdout> {
     /*
@@ -85,14 +81,23 @@ fn main() -> std::io::Result<()> {
             Key::Char('q') => break,
             Key::Char('1') => Action::Help,
             Key::Char('2') => Action::Back,
-	        Key::Char('p') => Action::Play,
-	        Key::Char('s') => Action::Stop,
+	        Key::Char('[') => Action::Play,
+	        Key::Char(']') => Action::Stop,
             Key::Char(' ') => Action::SelectR,
-            Key::Char('v') => Action::SelectG,
-            Key::Char(',') => Action::SelectY,
-            Key::Char('t') => Action::SelectP,
+            Key::Char('m') => Action::SelectG,
+            Key::Char('r') => Action::SelectY,
+            Key::Char('v') => Action::SelectP,
             Key::Char('i') => Action::SelectB,
             Key::Char('-') => Action::Tick,
+            Key::Char('a') => Action::NoteC1,
+            Key::Char('s') => Action::NoteD1,
+            Key::Char('d') => Action::NoteE1,
+            Key::Char('f') => Action::NoteF1,
+            Key::Char('g') => Action::NoteG1,
+            Key::Char('h') => Action::NoteA1,
+            Key::Char('j') => Action::NoteB1,
+            Key::Char('k') => Action::NoteC2,
+            Key::Char('l') => Action::NoteD2,
             Key::Up => Action::Up,
             Key::Down => Action::Down,
             Key::Left => Action::Left,
@@ -121,18 +126,17 @@ fn main() -> std::io::Result<()> {
 
         // Dispatch root action if returned from layer
         match talkback {
-            Action::CreateProject => {
-                ipc_out.write(b"NEW_PROJECT\n");
-
-                layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, "/home/james/Work/Palit/storage/one.xml".to_string())));
+            Action::InputTitle => {
+                layers.push(Box::new(Title::new(23, 5, 36, 23)));
             },
-            Action::OpenProject(s) => {
-                let fname = HOME_DIR.to_owned() + &s;
-
+            Action::CreateProject(title) => {
+                ipc_out.write(b"NEW_PROJECT\n");
+                layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
+            },
+            Action::OpenProject(title) => {
                 ipc_out.write(b"OPEN_PROJECT\n");
-                ipc_out.write(fname.as_bytes());
-
-                layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, fname)));
+                ipc_out.write(title.as_bytes());
+                layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
             },
             Action::Back => { layers.pop(); }, 
             Action::Pepper => {

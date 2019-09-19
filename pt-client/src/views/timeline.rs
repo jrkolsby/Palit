@@ -20,7 +20,7 @@ use crate::views::{Layer};
 
 const MARGIN: (u16, u16) = (3, 3);
 const EXTRAS_W: u16 = 6;
-const EXTRAS_H: u16 = 5;
+const EXTRAS_H: u16 = 7;
 const ASSET_PREFIX: &str = "storage/";
 
 // STATIC PROPERTIES THROUGHOUT VIEW'S LIFETIME
@@ -83,6 +83,8 @@ fn generate_waveforms(state: &TimelineState)
             state.tempo,
             state.zoom) as usize;
 
+        eprintln!("num {}", num_pairs);
+
         let pairs: Vec<(i32, i32)> = file_to_pairs(asset_file, num_pairs, 4);
 
         waveforms.insert(asset.id, pairs);
@@ -127,17 +129,8 @@ impl Layer for Timeline {
 
         out = button::render(out, 60, self.height-3, 19, 
             "IMPORT", Color::Pink, true);
-
-        // PRINT TEMPO
-        out = ruler::render(out, 5, 6, 
-            self.width-4,
-            self.height,
-            self.state.time_beat,
-            self.state.zoom,
-            self.state.scroll_x,
-            self.state.playhead);
             
-        // SAVE AND QUIT
+        // save and quit
         write!(out, "{}{}{}  Save and quit  {}{}",
             cursor::Goto(self.x+2, self.y+1),
             color::Bg(color::Yellow),
@@ -160,8 +153,7 @@ impl Layer for Timeline {
             write!(out, "{}─", cursor::Goto(i,self.y)).unwrap();
 
             for (j, track) in self.state.sequence.iter().enumerate() {
-		let track_y: u16 = self.y + EXTRAS_H + (i*2) as u16;
-                eprintln!("track_y {}", track_y);
+		        let track_y: u16 = self.y + EXTRAS_H + (j*2) as u16;
 
                 // PRINT REGIONS
                 for region in track.regions.iter() {
@@ -172,7 +164,8 @@ impl Layer for Timeline {
                         self.state.sample_rate.clone(),
                         self.state.tempo,
                         self.state.zoom) == (i + self.state.scroll_x).into() {
-                            out = waveform::render(out, &self.waveforms[&id], self.x+i, track_y);
+                            out = waveform::render(out, 
+                                &self.waveforms[&id], self.x+EXTRAS_W+i, track_y);
                         }
                 }
             }
@@ -182,6 +175,15 @@ impl Layer for Timeline {
         write!(out, "{} {} ",
             cursor::Goto(name_x,self.y),
             self.state.name).unwrap();
+
+        // print tempo
+        out = ruler::render(out, 5, 6, 
+            self.width-4,
+            self.height,
+            self.state.time_beat,
+            self.state.zoom,
+            self.state.scroll_x,
+            self.state.playhead);
 
         write!(out, "{}", color::Bg(color::Reset)).unwrap();
 
