@@ -21,6 +21,8 @@ use crate::views::{Layer};
 const MARGIN: (u16, u16) = (3, 3);
 const EXTRAS_W: u16 = 6;
 const EXTRAS_H: u16 = 7;
+const SCROLL_R: u16 = 40;
+const SCROLL_L: u16 = 10;
 const ASSET_PREFIX: &str = "storage/";
 
 // STATIC PROPERTIES THROUGHOUT VIEW'S LIFETIME
@@ -38,6 +40,8 @@ pub struct Timeline {
 fn reduce(state: TimelineState, action: Action) -> TimelineState {
     let playhead = match action {
         Action::Tick => state.playhead + 1,
+        Action::Right => state.playhead + 1,
+        Action::Left => if state.playhead == 0 { 0 } else { state.playhead - 1 },
         _ => state.playhead.clone(),
     };
     TimelineState {
@@ -55,11 +59,9 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         sequence: state.sequence.clone(),
         loop_mode: state.loop_mode.clone(),
         focus: state.focus.clone(),
-        scroll_x: match action {
-            Action::Right => (state.scroll_x + 1),
-            Action::Left => (if state.scroll_x == 0 { 0 } else { state.scroll_x - 1 }),
-            _ => state.scroll_x.clone(),
-        },
+        scroll_x: if playhead-state.scroll_x > SCROLL_R { state.scroll_x+1 }
+            else if state.scroll_x > 0 && playhead-state.scroll_x < SCROLL_L { state.scroll_x-1 }
+            else { state.scroll_x },
         scroll_y: state.scroll_y.clone(), 
         tick: (playhead % 2) == 0,
         duration_beat: state.duration_beat.clone(),
@@ -144,7 +146,7 @@ impl Layer for Timeline {
 
             // Print track number on left
             write!(out, "{}{}",
-                cursor::Goto(self.x, track_y),
+                cursor::Goto(self.x+1, track_y),
                 i+1).unwrap();
         }
 

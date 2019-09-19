@@ -172,9 +172,6 @@ impl Layer for Home {
                 NUM_PROJECTS
             } else { num_projects % NUM_PROJECTS }
         };
-        eprintln!("num_choices: {}", num_choices);
-        eprintln!("scroll_x: {}", self.state.scroll_x+1);
-        eprintln!("len: {}", self.state.projects.len());
         match action {
             Action::SelectR => { Action::InputTitle }
             Action::SelectY => {
