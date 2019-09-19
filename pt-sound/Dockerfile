@@ -26,13 +26,15 @@ RUN sudo apt-add-repository "deb https://apt.llvm.org/xenial/ llvm-toolchain-xen
 RUN sudo apt-get update
 RUN sudo apt-get install -y clang-3.8 lldb-3.8
 
+# Install faust
 RUN mkdir faust
 WORKDIR /usr/local/faust/
-
-# Install faust
 RUN git clone https://github.com/grame-cncm/faustinstaller.git .
 RUN echo "2\n" > ./install.docker.sh
 RUN ./install.compiler.sh
+
+# Install Rust
+RUN curl https://sh.rustup.rs -sSf | sh -s -- -y
 
 WORKDIR /usr/local/pt-sound/
 # RUN faust2api -alsa midisynth.dsp

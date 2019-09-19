@@ -14,42 +14,49 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 ### OCTOBER 1
 - [X] SOUND-1: build a dsp file
 - [X] SOUND-2: Implement play and stop to ALSA output
-- [ ] SOUND-3: Faust synth output from keyboard MIDI
-- [ ] SOUND-4: Recording from ALSA input
 - [X] SOUND-5: Multitrack mixing
 - [X] SOUND-6: Receive Midi events in sound
-- [ ] SOUND-7: Send midi events from client
-- [ ] SOUND-8: Fix audio underruns
 
 - [X] UI-1: Display the splash graphic
 - [X] UI-2: Splash screen with project listings
 - [ ] UI-3: Keyboard display with feedback for keypress events
 - [X] UI-4: Display empty timeline for new project
-- [ ] UI-5: Timeline Cursor
+- [X] UI-5: Timeline Cursor
 - [X] UI-6: Layered rendering
-- [ ] UI-7: Loading screen
 - [X] UI-8: Multi Cursor
-- [ ] UI-9: Fix termion light/dark colors
 
 - [X] HARD-1: Acquire Lenovo Thinkpad T400
-- [ ] HARD-2: Rewire Green function key (Fn) to a keyboard-event producing key
-- [ ] HARD-3: Purchase functional android phone
-- [ ] HARD-4: Replace laptop sreen with android phone
-- [ ] HARD-5: Document undetectable keybed note combinations and map to chords
-- [ ] HARD-6: Determine a set of keys which require redundant connections to unused keys in order to maximize chord combinations for the top (polyphonic) keybed.
 
 - [X] DG-1: First iteration mockup for user flow 
 - [X] DG-1: Acquire vinyl paints in four-function colors and SELECT RED
 - [X] DG-2: Paint top keybed using glossy white and black nail polish
 - [ ] DG-3: Paint four function keys
-- [ ] DG-4: Paint bottom keybed
-- [ ] DG-5: Paint laptop casing and general keys CLASSIC BEIGE
+- [X] DG-4: Paint bottom keybed
 
-- [ ] INF-1: Implement testing suite which takes keyboard input and project files and outputs UI sequences and stored audio files
 - [X] INF-2: Design project filetype around .xml or .json (Hopefully compatible with android)
 - [X] INF-3: Implement view state
 - [X] INF-4: Remove cursive dep in favor of termion
+- [X] INF-7: Debug console
+- [X] INF-8: Read XML file and update timeline state
+- [ ] INF-9: Update pt-client to loop which polls sdl2 keyboard and /tmp/pt-sound
+
+### NOVEMBER 1
+
+- [ ] SOUND-3: Faust synth output from keyboard MIDI
+- [ ] SOUND-4: Recording from ALSA input
+- [ ] SOUND-7: Send midi events from client
+- [ ] SOUND-8: Fix audio underruns
+
+- [ ] UI-7: Loading screen
+- [ ] UI-9: Fix termion light/dark colors
+
+- [ ] HARD-3: Purchase functional android phone
+- [ ] HARD-4: Replace laptop sreen with android phone
+- [ ] HARD-5: Document undetectable keybed note combinations and map to chords
+- [ ] HARD-6: Determine a set of keys which require redundant connections to unused keys in order to maximize chord combinations for the top (polyphonic) keybed.
+
+- [ ] DG-5: Paint laptop casing and general keys CLASSIC BEIGE
+
+- [ ] INF-1: Implement testing suite which takes keyboard input and project files and outputs UI sequences and stored audio files
 - [ ] INF-5: Unicode Support in linux TTY
 - [ ] INF-6: Migrate state to root structs
-- [X] INF-7: Debug console
-- [ ] INF-8: Read XML file and update timeline state

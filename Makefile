@@ -12,3 +12,11 @@ dev:
 .PHONY : run
 run:
 	cd ./pt-client && ./scripts/run
+
+.PHONY : tick
+tick:
+	watch -n .1 "echo TICK > /tmp/pt-client"
+
+.PHONY : sound
+sound:
+	cd pt-sound && cargo run --release NVidia 48000 128

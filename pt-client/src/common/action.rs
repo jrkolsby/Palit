@@ -33,9 +33,23 @@ pub enum Action {
     VolumeUp,
     VolumeDown,
     Help,
+    Tick,
+
+    NoteC1,
+    NoteD1,
+    NoteE1,
+    NoteF1,
+    NoteG1,
+    NoteA1,
+    NoteB1,
+    NoteC2,
+    NoteD2,
 
     // ABSTRACT ACTIONS
     OpenProject(String),
+    CreateProject(String),
+    Pepper,
+    InputTitle,
 
     Noop,
 }

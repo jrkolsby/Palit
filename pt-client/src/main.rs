@@ -3,7 +3,7 @@ extern crate termion;
 
 use std::io::{Write, Stdout, stdout, stdin};
 use std::io::prelude::*;
-use std::fs::{OpenOptions};
+use std::fs::{File, OpenOptions};
 use std::os::unix::fs::OpenOptionsExt;
 
 use termion::{clear, cursor, terminal_size};
@@ -16,13 +16,9 @@ mod views;
 mod common;
 mod components; 
 
-use views::{Layer, Home, Timeline, Help};
+use views::{Layer, Home, Timeline, Help, Title};
 
 use common::{Action, Region, Asset, Track};
-
-// struct State {}
-
-fn back() {} // Pop a layer
 
 fn render(mut stdout: RawTerminal<Stdout>, layers: &Vec<Box<Layer>>) -> RawTerminal<Stdout> {
     /*
@@ -77,7 +73,7 @@ fn main() -> std::io::Result<()> {
     stdout = render(stdout, &layers);
     stdout.flush().unwrap();
 
-    // Loops until break
+    // MAIN LOOP
     for c in stdin.keys() {
 
         // Map keypress to Action
@@ -85,13 +81,23 @@ fn main() -> std::io::Result<()> {
             Key::Char('q') => break,
             Key::Char('1') => Action::Help,
             Key::Char('2') => Action::Back,
-	    Key::Char('p') => Action::Play,
-	    Key::Char('s') => Action::Stop,
+	        Key::Char('[') => Action::Play,
+	        Key::Char(']') => Action::Stop,
             Key::Char(' ') => Action::SelectR,
-            Key::Char('v') => Action::SelectG,
-            Key::Char(',') => Action::SelectY,
-            Key::Char('t') => Action::SelectP,
+            Key::Char('m') => Action::SelectG,
+            Key::Char('r') => Action::SelectY,
+            Key::Char('v') => Action::SelectP,
             Key::Char('i') => Action::SelectB,
+            Key::Char('-') => Action::Tick,
+            Key::Char('a') => Action::NoteC1,
+            Key::Char('s') => Action::NoteD1,
+            Key::Char('d') => Action::NoteE1,
+            Key::Char('f') => Action::NoteF1,
+            Key::Char('g') => Action::NoteG1,
+            Key::Char('h') => Action::NoteA1,
+            Key::Char('j') => Action::NoteB1,
+            Key::Char('k') => Action::NoteC2,
+            Key::Char('l') => Action::NoteD2,
             Key::Up => Action::Up,
             Key::Down => Action::Down,
             Key::Left => Action::Left,
@@ -99,24 +105,18 @@ fn main() -> std::io::Result<()> {
             _ => Action::Noop,
         };
 
-        // Dispatch Action and capture talkback
-	let mut talkback: Action = match action {
-	    Action::Play => {
-		ipc_out.write(b"PLAY");
-		Action::Noop
-	    }
-	    Action::Stop => {
-		ipc_out.write(b"STOP");
-		Action::Noop
-	    }
+        // Catch root actions else dispatch to top layer
+        let mut talkback: Action = match action {
+            Action::Play => { ipc_out.write(b"PLAY"); Action::Noop }
+            Action::Stop => { ipc_out.write(b"STOP"); Action::Noop }
             Action::Help => { 
-		layers.push(Box::new(Help::new(10, 10, 44, 15))); 
-		Action::Noop
-	    },
+                layers.push(Box::new(Help::new(10, 10, 44, 15))); 
+                Action::Noop
+            },
             Action::Back => { 
-		layers.pop(); 
-		Action::Noop
-	    }, 
+                layers.pop(); 
+                Action::Noop
+            }, 
             _ => {
                 // Dispatch action to front layer and match talkback action
                 let target = layers.last_mut().unwrap();
@@ -124,16 +124,26 @@ fn main() -> std::io::Result<()> {
             }
         };
 
-	match talkback {
-	    Action::OpenProject(s) => {
-		eprintln!("OPEN {}", s);
-		layers.push(Box::new(Timeline::new(0, 3, size.1, size.0)));
-		ipc_out.write(b"OPEN_PROJECT");
-		ipc_out.write(s.as_bytes());
-	    },
-	    Action::Back => { layers.pop(); }, 
-	    _ => {}
-	};	
+        // Dispatch root action if returned from layer
+        match talkback {
+            Action::InputTitle => {
+                layers.push(Box::new(Title::new(23, 5, 36, 23)));
+            },
+            Action::CreateProject(title) => {
+                ipc_out.write(b"NEW_PROJECT\n");
+                layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
+            },
+            Action::OpenProject(title) => {
+                ipc_out.write(b"OPEN_PROJECT\n");
+                ipc_out.write(title.as_bytes());
+                layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
+            },
+            Action::Back => { layers.pop(); }, 
+            Action::Pepper => {
+                layers.push(Box::new(Help::new(10, 10, 44, 15))); 
+            },
+            _ => {}
+        };	
 
         // Clears screen
         write!(stdout, "{}", clear::All).unwrap();
