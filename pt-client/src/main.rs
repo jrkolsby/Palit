@@ -1,5 +1,6 @@
 extern crate libc;
 extern crate termion;
+extern crate linux_raw_input_rs;
 
 use std::io::{Write, Stdout, stdout, stdin};
 use std::io::prelude::*;
@@ -10,6 +11,8 @@ use termion::{clear, cursor, terminal_size};
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::{IntoRawMode, RawTerminal};
+
+use linux_raw_input_rs::{InputReader, get_input_devices};
 
 // NOTE: These need to be here
 mod views;
@@ -59,6 +62,10 @@ fn main() -> std::io::Result<()> {
     let stdin = stdin();
     let mut stdout = stdout().into_raw_mode().unwrap();
 
+    // Configure keyboard input
+    let device_path : String = get_input_devices().iter().nth(0).expect("Problem with iterator").to_string();
+    let mut reader = InputReader::new(device_path);
+
     // Configure margins and sizes
     let size: (u16, u16) = terminal_size().unwrap();
 
@@ -74,8 +81,14 @@ fn main() -> std::io::Result<()> {
     stdout.flush().unwrap();
 
     // MAIN LOOP
-    for c in stdin.keys() {
+    loop {
 
+        let input = reader.current_state();
+        if input.is_key_event(){
+            println!("Key {:?} now has state {:?}", input.get_key(), input.event_type());
+        }	
+
+	/*
         // Map keypress to Action
         let action: Action = match c.unwrap() {
             Key::Char('q') => break,
@@ -151,6 +164,7 @@ fn main() -> std::io::Result<()> {
 
         // Renders layers
         stdout = render(stdout, &layers);
+	*/
     }
 
     // CLEAN UP
