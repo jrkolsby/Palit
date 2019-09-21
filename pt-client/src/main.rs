@@ -83,15 +83,14 @@ fn main() -> std::io::Result<()> {
     // MAIN LOOP
     loop {
 
+	// Get keyboard state
         let input = reader.current_state();
-        if input.is_key_event(){
-            println!("Key {:?} now has state {:?}", input.get_key(), input.event_type());
-        }	
+	let event = (input.get_key(), input.event_type());
 
-	/*
         // Map keypress to Action
-        let action: Action = match c.unwrap() {
-            Key::Char('q') => break,
+        let action: Action = match event {
+	    /*
+            (_, _) => break,
             Key::Char('1') => Action::Help,
             Key::Char('2') => Action::Back,
 	        Key::Char('[') => Action::Play,
@@ -115,6 +114,7 @@ fn main() -> std::io::Result<()> {
             Key::Down => Action::Down,
             Key::Left => Action::Left,
             Key::Right => Action::Right,
+	    */
             _ => Action::Noop,
         };
 
@@ -164,7 +164,6 @@ fn main() -> std::io::Result<()> {
 
         // Renders layers
         stdout = render(stdout, &layers);
-	*/
     }
 
     // CLEAN UP
