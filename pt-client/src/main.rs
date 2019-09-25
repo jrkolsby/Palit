@@ -53,10 +53,11 @@ fn main() -> std::io::Result<()> {
     // should it really continue? 
     println!("Waiting for pt-sound...");
 
-    // Configure pt-sound IPC
-    let mut ipc_sound = OpenOptions::new()
-        .write(true)
-        .open("/tmp/pt-sound").unwrap();
+    let mut ipc_in = OpenOptions::new()
+        .custom_flags(libc::O_NONBLOCK)
+	.read(true)
+	.open("/tmp/pt-sound").unwrap();
+    let mut ipc_in_buf = String::new();
 
     // Configure raw_mode stdout
     let mut stdout = stdout().into_raw_mode().unwrap();
