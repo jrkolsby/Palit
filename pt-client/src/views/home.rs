@@ -1,9 +1,9 @@
-use std::io::{self, stdout, stdin, Write, Stdout, BufReader};
+use std::io::{self, Write, Stdout, BufReader};
 use std::io::prelude::*;
-use std::fs::{self, DirEntry, File};
+use std::fs::{self, File};
 use std::path::Path;
 
-use termion::{clear, color, cursor, terminal_size};
+use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 
 use crate::common::{Action, Color};
@@ -48,7 +48,6 @@ pub struct HomeState {
 }
 
 fn reduce(state: HomeState, action: Action) -> HomeState {
-    let len = state.projects.len();
     let scroll_max = match state.projects.len()/4 {
         0 => 1,
         x => x+1,
@@ -130,8 +129,8 @@ impl Layer for Home {
 	// Project Listing
 	let mut col: [u16; 2] = [4,4];
         for (i, project) in self.state.projects.iter().enumerate() {
-	    if (i >= self.state.scroll_x * NUM_PROJECTS && 
-		i < (self.state.scroll_x+1) * NUM_PROJECTS) {
+	    if i >= self.state.scroll_x * NUM_PROJECTS && 
+		i < (self.state.scroll_x+1) * NUM_PROJECTS {
 		let j: u16 = (i % NUM_PROJECTS) as u16;
 		let row: usize = (j % 2) as usize;
 		write!(out, "{}", cursor::Goto(self.x+col[row] as u16, 

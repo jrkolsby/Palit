@@ -1,9 +1,6 @@
-use std::io::{stdout, stdin, Write, Stdout, BufReader};
-use std::io::prelude::*;
-use std::fs::{File};
-use std::env;
+use std::io::{Write, Stdout};
 
-use termion::{clear, color, cursor, terminal_size};
+use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 
 use crate::common::{Action, Color};

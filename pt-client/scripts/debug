@@ -1,4 +1,2 @@
-rm -f /tmp/pt-debug && mkfifo /tmp/pt-debug && 
 tmux split -v "cat /tmp/pt-debug" && 
-cargo run 2> /tmp/pt-debug && 
-rm /tmp/pt-debug
+/home/james/.cargo/bin/cargo build && ./target/debug/DAW 2> /tmp/pt-debug

@@ -2,17 +2,17 @@ extern crate libc;
 extern crate termion;
 extern crate linux_raw_input_rs;
 
-use std::io::{Write, Stdout, stdout, stdin};
+use std::io::{BufReader, Write, Stdout, stdout, stdin};
 use std::io::prelude::*;
-use std::fs::{File, OpenOptions};
+use std::fs::{OpenOptions, read_to_string};
 use std::os::unix::fs::OpenOptionsExt;
 
 use termion::{clear, cursor, terminal_size};
-use termion::event::Key;
-use termion::input::TermRead;
 use termion::raw::{IntoRawMode, RawTerminal};
 
 use linux_raw_input_rs::{InputReader, get_input_devices};
+use linux_raw_input_rs::keys::Keys;
+use linux_raw_input_rs::input::EventType;
 
 // NOTE: These need to be here
 mod views;
@@ -21,7 +21,7 @@ mod components;
 
 use views::{Layer, Home, Timeline, Help, Title};
 
-use common::{Action, Region, Asset, Track};
+use common::{Action};
 
 fn render(mut stdout: RawTerminal<Stdout>, layers: &Vec<Box<Layer>>) -> RawTerminal<Stdout> {
     /*
@@ -54,12 +54,12 @@ fn main() -> std::io::Result<()> {
 	.open("/tmp/pt-client").unwrap();
 
     let mut ipc_in = OpenOptions::new()
-	.custom_flags(libc::O_NONBLOCK)
+        .custom_flags(libc::O_NONBLOCK)
 	.read(true)
 	.open("/tmp/pt-sound").unwrap();
+    let mut ipc_in_buf = String::new();
 
-    // Configure stdin and raw_mode stdout
-    let stdin = stdin();
+    // Configure raw_mode stdout
     let mut stdout = stdout().into_raw_mode().unwrap();
 
     // Configure keyboard input
@@ -71,7 +71,7 @@ fn main() -> std::io::Result<()> {
 
     // Configure UI layers
     let mut layers: Vec<Box<Layer>> = Vec::new();
-    layers.push(Box::new(Home::new(0, 1, size.0, size.1)));
+    layers.push(Box::new(Home::new(1, 1, size.0, size.1)));
 
     // Hide cursor and clear screen
     write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
@@ -85,41 +85,46 @@ fn main() -> std::io::Result<()> {
 
 	// Get keyboard state
         let input = reader.current_state();
-	let event = (input.get_key(), input.event_type());
+	let event = (input.event_type(), input.get_key());
+
+        ipc_in.read_to_string(&mut ipc_in_buf).unwrap();
+        if ipc_in_buf.len() > 0 {
+            eprintln!("ipc_in {}", ipc_in_buf);
+        }
 
         // Map keypress to Action
         let action: Action = match event {
-	    /*
-            (_, _) => break,
-            Key::Char('1') => Action::Help,
-            Key::Char('2') => Action::Back,
-	        Key::Char('[') => Action::Play,
-	        Key::Char(']') => Action::Stop,
-            Key::Char(' ') => Action::SelectR,
-            Key::Char('m') => Action::SelectG,
-            Key::Char('r') => Action::SelectY,
-            Key::Char('v') => Action::SelectP,
-            Key::Char('i') => Action::SelectB,
-            Key::Char('-') => Action::Tick,
-            Key::Char('a') => Action::NoteC1,
-            Key::Char('s') => Action::NoteD1,
-            Key::Char('d') => Action::NoteE1,
-            Key::Char('f') => Action::NoteF1,
-            Key::Char('g') => Action::NoteG1,
-            Key::Char('h') => Action::NoteA1,
-            Key::Char('j') => Action::NoteB1,
-            Key::Char('k') => Action::NoteC2,
-            Key::Char('l') => Action::NoteD2,
-            Key::Up => Action::Up,
-            Key::Down => Action::Down,
-            Key::Left => Action::Left,
-            Key::Right => Action::Right,
-	    */
-            _ => Action::Noop,
+            (EventType::Push, Keys::KEY_Q) => break,
+            (EventType::Push, Keys::KEY_1) => Action::Help,
+            (EventType::Push, Keys::KEY_2) => Action::Back,
+            (EventType::Push, Keys::KEY_LEFTBRACE) => Action::Play,
+            (EventType::Push, Keys::KEY_RIGHTBRACE) => Action::Stop,
+
+            (EventType::Push, Keys::KEY_M) => Action::SelectG,
+            (EventType::Push, Keys::KEY_R) => Action::SelectY,
+            (EventType::Push, Keys::KEY_V) => Action::SelectP,
+            (EventType::Push, Keys::KEY_I) => Action::SelectB,
+            (EventType::Push, Keys::KEY_SPACE) => Action::SelectR,
+
+            (EventType::Push, Keys::KEY_A) => Action::NoteC1,
+            (EventType::Push, Keys::KEY_S) => Action::NoteD1,
+            (EventType::Push, Keys::KEY_D) => Action::NoteE1,
+            (EventType::Push, Keys::KEY_F) => Action::NoteF1,
+            (EventType::Push, Keys::KEY_G) => Action::NoteG1,
+            (EventType::Push, Keys::KEY_H) => Action::NoteA1,
+            (EventType::Push, Keys::KEY_J) => Action::NoteB1,
+            (EventType::Push, Keys::KEY_K) => Action::NoteC2,
+            (EventType::Push, Keys::KEY_L) => Action::NoteD2,
+            (EventType::Push, Keys::KEY_UP) => Action::Up,
+            (EventType::Push, Keys::KEY_DOWN) => Action::Down,
+            (EventType::Push, Keys::KEY_LEFT) => Action::Left,
+            (EventType::Push, Keys::KEY_RIGHT) => Action::Right,
+
+            (_, _) => Action::Noop,
         };
 
         // Catch root actions else dispatch to top layer
-        let mut talkback: Action = match action {
+        let talkback: Action = match action {
             Action::Play => { ipc_out.write(b"PLAY"); Action::Noop }
             Action::Stop => { ipc_out.write(b"STOP"); Action::Noop }
             Action::Help => { 

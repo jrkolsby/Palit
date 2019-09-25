@@ -1,6 +1,5 @@
 use termion::raw::{RawTerminal};
 use termion::{color, cursor};
-use std::io::prelude::*;
 
 use std::io::{Write, Stdout};
 
@@ -33,7 +32,7 @@ pub fn render(mut out: RawTerminal<Stdout>,
 		    (false, false, true, false) => "─",
 		    _ => " "
 		}).unwrap();
-	    if (right || bottom) {
+	    if right || bottom {
 		write!(out, "{}{}  ",
 		    cursor::Goto(origin_x+x+1, origin_y+y+1),
 		    color::Bg(color::LightBlue)).unwrap();

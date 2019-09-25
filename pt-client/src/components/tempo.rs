@@ -1,6 +1,5 @@
 use termion::raw::{RawTerminal};
 use termion::{color, cursor};
-use std::io::prelude::*;
 
 use std::io::{Write, Stdout};
 
@@ -18,8 +17,8 @@ pub fn render(mut out: RawTerminal<Stdout>,
     metronome: bool,
     focus: bool,
 ) -> RawTerminal<Stdout> {
-        for mut i in 0..WIDTH+1 as u16 {
-            for mut j in 1..HEIGHT+1 as u16 {
+        for i in 0..WIDTH+1 as u16 {
+            for j in 1..HEIGHT+1 as u16 {
                 if focus {
                     write!(out, "{}{}{} ",
                         cursor::Goto(origin_x-i, origin_y+j),
@@ -48,7 +47,7 @@ pub fn render(mut out: RawTerminal<Stdout>,
                         };
                     },
                     (2, 2) => {
-                        match (metronome) {
+                        match metronome {
                             true => write!(out, "/"),
                             false => write!(out, "\\"),
                         };

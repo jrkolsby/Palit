@@ -5,14 +5,11 @@ use wavefile::WaveFile;
 use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 
-use xmltree::Element;
-
-use std::fs::File;
-use std::io::{Write, Stdout, BufReader};
+use std::io::{Write, Stdout};
 use std::collections::HashMap;
 
 use crate::components::{waveform, tempo, button, ruler};
-use crate::common::{Action, Asset, Track, Region, Color, Rate, TimelineState};
+use crate::common::{Action, Color, TimelineState};
 use crate::common::{read_document, beat_offset, file_to_pairs};
 use crate::views::{Layer};
 
@@ -141,7 +138,7 @@ impl Layer for Timeline {
             color::Fg(color::White)).unwrap();
 
         // Print track sidebar
-        for (i, track) in self.state.sequence.iter().enumerate() {
+        for (i, _track) in self.state.sequence.iter().enumerate() {
             let track_y: u16 = self.y + EXTRAS_H + (i*2) as u16;
 
             // Print track number on left

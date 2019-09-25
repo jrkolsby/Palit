@@ -1,6 +1,5 @@
 use termion::raw::{RawTerminal};
 use termion::{color, cursor};
-use std::io::prelude::*;
 
 use std::io::{Write, Stdout};
 
@@ -24,7 +23,7 @@ pub fn render(mut out: RawTerminal<Stdout>,
         let beat = if (i+scroll+1) % time_beat as u16 == 0 { "!" } else { "." };
         let space = {
             let mut a: String = " ".to_string();
-            for i in 0..zoom {
+            for _i in 0..zoom {
                 a = format!("{}{}", a, a).to_string();
             }
             a
@@ -37,9 +36,9 @@ pub fn render(mut out: RawTerminal<Stdout>,
         } else {
             write!(out, "{}", color::Fg(color::White));
         }
-        write!(out, "{}{}",
+        write!(out, "{}{}{}",
             cursor::Goto(origin_x+i, origin_y),
-            beat).unwrap()
+            beat, space).unwrap()
     }
     out
 }
