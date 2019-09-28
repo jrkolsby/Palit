@@ -1,2 +1,1 @@
-tmux split -v "cat /tmp/pt-debug" && 
-/home/james/.cargo/bin/cargo build && ./target/debug/DAW 2> /tmp/pt-debug
+cargo build && tmux split -v "sudo cat /tmp/pt-debug" && sudo ./target/debug/DAW 2&> /tmp/pt-debug

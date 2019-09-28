@@ -40,6 +40,9 @@ impl Iterator for Timeline<'_> {
     type Item = SF;
     fn next(&mut self) -> Option<Self::Item> {
 	self.playhead += 1;
+        if self.playhead % 65536 == 0 {
+            println!("tick");
+        }
 	let mut z: f64 = 0.0;
 	// see iter() iter_mut() and into_iter()
 	for region in self.regions.iter_mut() {
