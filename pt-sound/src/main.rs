@@ -43,7 +43,6 @@ fn main() -> Result<(), Box<error::Error>> {
 
     // Blocked by pt-client reader
     let mut ipc_out = OpenOptions::new()
-	.custom_flags(libc::O_NONBLOCK)
 	.write(true)
 	.open("/tmp/pt-sound").unwrap();
 
@@ -90,6 +89,7 @@ fn main() -> Result<(), Box<error::Error>> {
 		wave: wav1.iter(),
 	    }
 	],
+        out: ipc_out,
     };
 
     // Create an array of file descriptors to poll
@@ -112,7 +112,6 @@ fn main() -> Result<(), Box<error::Error>> {
     */
   
     let mut playing: bool = false;
-    let mut playhead: u32 = 0;
 
     loop {
 	if playing {
@@ -121,7 +120,6 @@ fn main() -> Result<(), Box<error::Error>> {
 	    } else if let Some(ref mut io) = io {
 		if write_samples_io(&audio_dev, io, &mut tl)? { continue; }
 	    }
-            playhead = playhead+1;
 	}
 
 	if read_midi_event(&mut midi_input, &mut synth)? { continue; }
@@ -136,9 +134,6 @@ fn main() -> Result<(), Box<error::Error>> {
 	    _ => {}
 	}
 
-        if tl.playhead % 65536 == 0 {
-            ipc_out.write(b"TICK");
-        }
 
         // Nothing to do, let's sleep until woken up by the kernel.
         alsa::poll::poll(&mut fds, 100)?;

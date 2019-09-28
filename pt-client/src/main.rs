@@ -100,13 +100,12 @@ fn main() -> std::io::Result<()> {
 
         let mut buf = String::new();
 
-        println!("reading ipc_sound...");
 	ipc_sound.read_to_string(&mut buf);
+        eprintln!("buf: {}", buf);
 
         // Map keypress to Action
-        let action: Action = if buf.len() > 0 { println!("buf: {}", buf);
-            match &buf[..] {
-            "TICK" => { eprintln!("TICK!"); Action::Tick },
+        let action: Action = if buf.len() > 0 { match &buf[..] {
+            "TICK" => { println!("TICK!"); Action::Tick },
             _ => Action::Noop,
         }} else { match event {
             // (EventType::Release, _) => Action::Go,
