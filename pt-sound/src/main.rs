@@ -36,14 +36,16 @@ fn arm<'a>(wav: &'a WaveFile, timeline: &'a mut Timeline<'a>) {
 fn main() -> Result<(), Box<error::Error>> {
 
     // Configure pt-client IPC
-    let mut ipc_in = OpenOptions::new()
-	.custom_flags(libc::O_NONBLOCK)
-	.read(true)
-	.open("/tmp/pt-client").unwrap();
+    println!("Waiting for pt-client...");
 
     // Blocked by pt-client reader
     let mut ipc_out = OpenOptions::new()
 	.write(true)
+	.open("/tmp/pt-client").unwrap();
+
+    let mut ipc_in = OpenOptions::new()
+	.custom_flags(libc::O_NONBLOCK)
+	.read(true)
 	.open("/tmp/pt-sound").unwrap();
 
     let mut buf = String::new();
@@ -133,7 +135,6 @@ fn main() -> Result<(), Box<error::Error>> {
 	    "NOOP" => {},
 	    _ => {}
 	}
-
 
         // Nothing to do, let's sleep until woken up by the kernel.
         alsa::poll::poll(&mut fds, 100)?;

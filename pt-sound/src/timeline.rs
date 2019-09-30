@@ -44,7 +44,6 @@ impl Iterator for Timeline<'_> {
     fn next(&mut self) -> Option<Self::Item> {
 	self.playhead += 1;
         if self.playhead % 65536 == 0 {
-            println!("tick");
             self.out.write(b"TICK");
         }
 	let mut z: f64 = 0.0;

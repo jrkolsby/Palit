@@ -1,19 +1,14 @@
 extern crate libc;
 extern crate termion;
-extern crate linux_raw_input_rs;
 
 use std::io::{BufReader, Write, Stdout, stdout, stdin};
 use std::io::prelude::*;
 use std::fs::{OpenOptions, read_to_string};
 use std::os::unix::fs::OpenOptionsExt;
-use std::os::unix::io::{IntoRawFd, RawFd};
+use std::ffi::CString;
 
 use termion::{clear, cursor, terminal_size};
 use termion::raw::{IntoRawMode, RawTerminal};
-
-use linux_raw_input_rs::{InputReader, get_input_devices};
-use linux_raw_input_rs::keys::Keys;
-use linux_raw_input_rs::input::EventType;
 
 // NOTE: These need to be here
 mod views;
@@ -53,29 +48,34 @@ fn render(mut stdout: RawTerminal<Stdout>, layers: &Vec<Box<Layer>>) -> RawTermi
 
 fn main() -> std::io::Result<()> {
 
-    // Configure pt-sound IPC
-    println!("Awaiting pt-sound...");
-
-    // Blocked by pt-sound reader
-    let mut ipc_out = OpenOptions::new()
-	.write(true)
-	.open("/tmp/pt-client").unwrap();
-
-    let mut ipc_sound = OpenOptions::new()
+    // Public action fifo /tmp/pt-client
+    let mut ipc_in = OpenOptions::new()
         .custom_flags(libc::O_NONBLOCK)
 	.read(true)
-	.open("/tmp/pt-sound").unwrap();
+	.open("/tmp/pt-client").unwrap();
 
-    // Configure polling fds array
-    // ? should this be std::os::raw::pollfd ?
-    // let fds: Vec<libc::pollfd> = vec![ipc_sound.into_raw_fd() as libc::pollfd];
+    // Blocked by pt-sound reader
+    // If a process runs and nobody is around to hear it,
+    // should it really continue? 
+    println!("Waiting for pt-sound...");
+
+    // Configure pt-sound IPC
+    let mut ipc_sound = OpenOptions::new()
+	.write(true)
+	.open("/tmp/pt-sound").unwrap();
 
     // Configure raw_mode stdout
     let mut stdout = stdout().into_raw_mode().unwrap();
 
-    // Configure keyboard input
-    let device_path : String = get_input_devices().iter().nth(0).expect("Problem with iterator").to_string();
-    let mut reader = InputReader::new(device_path);
+    // Configure input polling array
+    let sound_f = CString::new("/tmp/pt-client").unwrap();
+    let mut fds: Vec<libc::pollfd> = unsafe {vec![
+        libc::pollfd { 
+            fd: libc::open(sound_f.as_ptr(), libc::O_RDONLY),
+            events: libc::POLLIN,
+            revents: 0,
+        },
+    ]};
 
     // Configure margins and sizes
     let size: (u16, u16) = terminal_size().unwrap();
@@ -91,107 +91,117 @@ fn main() -> std::io::Result<()> {
     stdout = render(stdout, &layers);
     stdout.flush().unwrap();
 
+    // Action queue
+    let mut events: Vec<Action> = Vec::new();
+
     // MAIN LOOP
     loop {
 
-	// Get keyboard state
-        let input = reader.current_state();
-	let event = (input.event_type(), input.get_key());
-
-        let mut buf = String::new();
-
-	ipc_sound.read_to_string(&mut buf);
-        eprintln!("buf: {}", buf);
-
-        // Map keypress to Action
-        let action: Action = if buf.len() > 0 { match &buf[..] {
-            "TICK" => { println!("TICK!"); Action::Tick },
-            _ => Action::Noop,
-        }} else { match event {
-            // (EventType::Release, _) => Action::Go,
-            (EventType::Push, Keys::KEY_Q) => break,
-            (EventType::Push, Keys::KEY_1) => Action::Help,
-            (EventType::Push, Keys::KEY_2) => Action::Back,
-
-            (EventType::Push, Keys::KEY_LEFTBRACE) => Action::Play,
-            (EventType::Push, Keys::KEY_RIGHTBRACE) => Action::Stop,
-
-            (EventType::Push, Keys::KEY_M) => Action::SelectG,
-            (EventType::Push, Keys::KEY_R) => Action::SelectY,
-            (EventType::Push, Keys::KEY_V) => Action::SelectP,
-            (EventType::Push, Keys::KEY_I) => Action::SelectB,
-            (EventType::Push, Keys::KEY_SPACE) => Action::SelectR,
-
-            (EventType::Push, Keys::KEY_A) => Action::NoteC1,
-            (EventType::Push, Keys::KEY_S) => Action::NoteD1,
-            (EventType::Push, Keys::KEY_D) => Action::NoteE1,
-            (EventType::Push, Keys::KEY_F) => Action::NoteF1,
-            (EventType::Push, Keys::KEY_G) => Action::NoteG1,
-            (EventType::Push, Keys::KEY_H) => Action::NoteA1,
-            (EventType::Push, Keys::KEY_J) => Action::NoteB1,
-            (EventType::Push, Keys::KEY_K) => Action::NoteC2,
-            (EventType::Push, Keys::KEY_L) => Action::NoteD2,
-
-            (EventType::Push, Keys::KEY_UP) => Action::Up,
-            (EventType::Push, Keys::KEY_DOWN) => Action::Down,
-            (EventType::Push, Keys::KEY_LEFT) => Action::Left,
-            (EventType::Push, Keys::KEY_RIGHT) => Action::Right,
-
-            (_, _) => Action::Noop,
-        }};
-
-        // Execute toplevel actions, capture default from view
-        let default: Action = match action {
-            Action::Play => { ipc_out.write(b"PLAY"); Action::Noop }
-            Action::Stop => { ipc_out.write(b"STOP"); Action::Noop }
-            Action::Help => { 
-                layers.push(Box::new(Help::new(10, 10, 44, 15))); 
-                Action::Noop
-            },
-            Action::Back => { 
-                layers.pop(); 
-                Action::Noop
-            }, 
-            // Dispatch toplevel action to front layer
-            _ => {
-                let target = layers.last_mut().unwrap();
-                target.dispatch(action)
-            }
-        };
-
-        // capture default action if returned from layer
-        match default {
-            Action::InputTitle => {
-                layers.push(Box::new(Title::new(23, 5, 36, 23)));
-            },
-            Action::CreateProject(title) => {
-                ipc_out.write(b"NEW_PROJECT");
-                layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
-            },
-            Action::OpenProject(title) => {
-                ipc_out.write(b"OPEN_PROJECT");
-                ipc_out.write(title.as_bytes());
-                layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
-            },
-            Action::Back => { layers.pop(); }, 
-            Action::Pepper => {
-                layers.push(Box::new(Help::new(10, 10, 44, 15))); 
-            },
-            _ => {}
-        };	
-
-        // Clears screen
-        write!(stdout, "{}", clear::All).unwrap();
-        stdout.flush().unwrap();
-
-        // Renders layers
-        stdout = render(stdout, &layers);
-
-        /*
         unsafe{
-            libc::poll(&mut fds[0] as *mut libc::pollfd, fds.len() as libc::nfds_t, timeout)
+            libc::poll(&mut fds[0] as *mut libc::pollfd, fds.len() as libc::nfds_t, 100);
         }
-        */
+
+
+        let action = if fds[0].revents > 0 {
+            eprintln!("polled {}", fds[0].revents);
+
+            let mut buf = String::new();
+            ipc_in.read_to_string(&mut buf);
+
+            if buf.len() > 0 { match &buf[..] {
+                "TICK" => Action::Tick,
+                "?" => Action::Noop,
+
+                "EXIT" => break,
+                "1" => Action::Help,
+                "2" => Action::Back,
+
+                "PLAY" => Action::Play,
+                "STOP" => Action::Stop,
+
+                "M" => Action::SelectG,
+                "R" => Action::SelectY,
+                "V" => Action::SelectP,
+                "I" => Action::SelectB,
+                "SPC" => Action::SelectR,
+
+                "A" => Action::NoteC1,
+                "S" => Action::NoteD1,
+                "D" => Action::NoteE1,
+                "F" => Action::NoteF1,
+                "G" => Action::NoteG1,
+                "H" => Action::NoteA1,
+                "J" => Action::NoteB1,
+                "K" => Action::NoteC1,
+                "L" => Action::NoteD1,
+
+                "UP" => Action::Up,
+                "DN" => Action::Down,
+                "LT" => Action::Left,
+                "RT" => Action::Right,
+
+                a => { eprintln!("{}", a); Action::Noop },
+
+            }} else { continue; }
+        } else { continue; };
+
+        match action {
+            Action::Noop => { eprintln!("GOT NONE"); }
+            Action::Up => { eprintln!("GOT UP"); }
+            a => { events.push(a); }
+        }
+
+        while let Some(next) = events.pop() {
+            println!("Doing Action!");
+            // Execute toplevel actions, capture default from view
+            let default: Action = match next {
+                Action::Play => { ipc_sound.write(b"PLAY"); Action::Noop }
+                Action::Stop => { ipc_sound.write(b"STOP"); Action::Noop }
+                Action::Help => { 
+                    layers.push(Box::new(Help::new(10, 10, 44, 15))); 
+                    Action::Noop
+                },
+                Action::Back => { 
+                    layers.pop(); 
+                    Action::Noop
+                }, 
+                // Dispatch toplevel action to front layer
+                a => {
+                    let target = layers.last_mut().unwrap();
+                    target.dispatch(a)
+                }
+            };
+
+            // capture default action if returned from layer
+            match default {
+                Action::InputTitle => {
+                    layers.push(Box::new(Title::new(23, 5, 36, 23)));
+                },
+                Action::CreateProject(title) => {
+                    ipc_sound.write(b"NEW_PROJECT");
+                    layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
+                },
+                Action::OpenProject(title) => {
+                    ipc_sound.write(b"OPEN_PROJECT");
+                    ipc_sound.write(title.as_bytes());
+                    layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
+                },
+                Action::Back => { layers.pop(); }, 
+                Action::Pepper => {
+                    layers.push(Box::new(Help::new(10, 10, 44, 15))); 
+                },
+                _ => {}
+            };	
+
+            // Clears screen
+            write!(stdout, "{}", clear::All).unwrap();
+            stdout.flush().unwrap();
+
+            // Renders layers
+            stdout = render(stdout, &layers);
+
+        }
+
     }
 
     // CLEAN UP
