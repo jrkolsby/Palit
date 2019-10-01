@@ -9,13 +9,13 @@ dev:
 	docker-compose -f compose.yml up -d -V --build
 	docker exec -it palit_pt-sound-dev_1 /bin/bash
 
-.PHONY : run
+.PHONY : debug
 run:
-	cd ./pt-client && ./scripts/run
+	cd ./pt-client && ./scripts/debug
 
 .PHONY : tick
 tick:
-	watch -n .1 "echo TICK > /tmp/pt-client"
+	watch -n .1 'printf %s TICK > /tmp/pt-client'
 
 .PHONY : sound
 sound:
