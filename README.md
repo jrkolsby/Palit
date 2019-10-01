@@ -16,7 +16,7 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [X] SOUND-2: Implement play and stop to ALSA output
 - [X] SOUND-5: Multitrack mixing
 - [X] SOUND-6: Receive Midi events in pt-sound
-- [ ] SOUND-7: Send midi events from pt-client
+- [ ] SOUND-7: Send midi events from pt-input
 
 - [X] UI-1: Display the splash graphic
 - [X] UI-2: Splash screen with project listings
@@ -24,7 +24,7 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [X] UI-5: Timeline Cursor
 - [X] UI-6: Layered rendering
 - [X] UI-8: Multi Cursor
-- [ ] UI-9: Receive ticks from pt-sound playback
+- [X] UI-9: Receive ticks from pt-sound playback
 
 - [X] HARD-1: Acquire Lenovo Thinkpad T400
 
@@ -48,7 +48,15 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 - [ ] UI-3: Keyboard display with feedback for keypress events
 - [ ] UI-7: Loading screen
-- [ ] UI-9: Fix termion light/dark colors
+- [ ] UI-10: Render partial waveforms
+- [ ] UI-11: Fix termion light/dark colors in raw tty
+- [ ] UI-12: Error Screen
+- [ ] UI-13: Synth modal
+- [ ] UI-14: Network setup
+- [ ] UI-15: Keyboard setup
+- [ ] UI-16: Add track modal
+- [ ] UI-17: Select instrument modal
+- [ ] UI-18: Routes view
 
 - [ ] HARD-3: Purchase functional android phone
 - [ ] HARD-4: Replace laptop sreen with android phone
