@@ -16,7 +16,7 @@ pub fn render(mut out: RawTerminal<Stdout>,
     zoom: usize,
     scroll: u16, 
     playhead: u16,
-) -> RawTerminal<Stdout>{
+) -> RawTerminal<Stdout> {
     if scroll == 0 {
         write!(out, "{}{{{{", cursor::Goto(origin_x-2, origin_y)).unwrap()
     }

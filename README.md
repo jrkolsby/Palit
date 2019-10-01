@@ -24,6 +24,7 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [X] UI-5: Timeline Cursor
 - [X] UI-6: Layered rendering
 - [X] UI-8: Multi Cursor
+- [ ] UI-10: Display partial waveforms 
 
 - [X] HARD-1: Acquire Lenovo Thinkpad T400
 
@@ -38,7 +39,8 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [X] INF-4: Remove cursive dep in favor of termion
 - [X] INF-7: Debug console
 - [X] INF-8: Read XML file and update timeline state
-- [ ] INF-9: Update pt-client to loop which polls sdl2 keyboard and /tmp/pt-sound
+- [ ] INF-9: Update pt-client to loop which polls keyboard and /tmp/pt-sound
+- [ ] INF-10: Catch error codes and display error view
 
 ### NOVEMBER 1
 

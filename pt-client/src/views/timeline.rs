@@ -161,14 +161,27 @@ impl Layer for Timeline {
                 for region in track.regions.iter() {
                     let id: u32 = region.asset_id;
                     let offset: u32 = region.offset;
+                    let playhead = i + self.state.scroll_x;
 
-                    if beat_offset(offset, 
+                    let offset = beat_offset(region.offset, 
                         self.state.sample_rate.clone(),
                         self.state.tempo,
-                        self.state.zoom) == (i + self.state.scroll_x).into() {
-                            out = waveform::render(out, 
-                                &self.waveforms[&id], self.x+EXTRAS_W+i, track_y);
-                        }
+                        self.state.zoom) as u16;
+                    let asset_in = beat_offset(region.asset_in, 
+                        self.state.sample_rate.clone(),
+                        self.state.tempo,
+                        self.state.zoom) as u16;
+                    let asset_out = beat_offset(region.asset_out, 
+                        self.state.sample_rate.clone(),
+                        self.state.tempo,
+                        self.state.zoom) as u16;
+
+                    if playhead >= offset || playhead <= (offset+asset_out-asset_in) {
+                        out = waveform::render(out, 
+                            &self.waveforms
+                                [&id][asset_in as usize..asset_out as usize], 
+                                self.x+EXTRAS_W+i, track_y);
+                    }
                 }
             }
         }
