@@ -1,4 +1,3 @@
-use termion::color;
 use crate::common::action::Action;
 
 pub struct MultiFocus {

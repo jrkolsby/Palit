@@ -1,6 +1,5 @@
 use termion::raw::{RawTerminal};
 use termion::{color, cursor};
-use std::io::prelude::*;
 
 use std::io::{Write, Stdout};
 

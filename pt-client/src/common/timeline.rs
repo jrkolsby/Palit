@@ -166,8 +166,8 @@ pub fn read_document(in_file: String) -> TimelineState {
     };
 
     // GET ASSETS
-    for (i, asset) in assets.children.iter().enumerate() {
-        let mut id: &str = asset.attributes.get("id").unwrap();
+    for asset in assets.children.iter() {
+        let id: &str = asset.attributes.get("id").unwrap();
         let duration: &str = asset.attributes.get("size").unwrap();
         state.assets.push(Asset {
             id: id[1..].parse().unwrap(),
@@ -179,7 +179,7 @@ pub fn read_document(in_file: String) -> TimelineState {
 
     // GET TRACKS
     for track in tracks.children.iter() {
-        let mut t_id: &str = track.attributes.get("id").unwrap();
+        let t_id: &str = track.attributes.get("id").unwrap();
         let col: &str = track.attributes.get("color").unwrap();
         // Match color type
         let color: Color = match col {
