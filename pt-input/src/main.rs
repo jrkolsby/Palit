@@ -20,9 +20,16 @@ fn main() -> std::io::Result<()> {
     println!("Waiting for pt-client...");
 
     // Blocked by pt-client reader
-    let mut ipc_out = OpenOptions::new()
+    let mut ipc_client = OpenOptions::new()
 	.write(true)
 	.open("/tmp/pt-client").unwrap();
+
+    println!("Waiting for pt-sound...");
+
+    // Blocked by pt-client reader
+    let mut ipc_sound = OpenOptions::new()
+	.write(true)
+	.open("/tmp/pt-sound").unwrap();
 
     eprintln!("keyboard device: {}", keybd_path);
     let mut reader = InputReader::new(keybd_path.clone());
@@ -33,41 +40,63 @@ fn main() -> std::io::Result<()> {
         // Block on keyboard input
         let input = reader.current_state();
         let event = (input.event_type(), input.get_key());
-        match event {
-            (EventType::Release, _) => { /* ipc_out.write(b"GO"); */ },
+
+        let client_buf: &str = match event {
+            /* (EventType::Release, _) => "GO", */
             (EventType::Push, k) => match k {
-                Keys::KEY_Q => { ipc_out.write(b"EXIT"); break; },
-                Keys::KEY_1 => { ipc_out.write(b"1"); println!("1"); },
-                Keys::KEY_2 => { ipc_out.write(b"2"); println!("2"); },
+                Keys::KEY_Q => "EXIT",
+                Keys::KEY_1 => "1",
+                Keys::KEY_2 => "2",
 
-                Keys::KEY_LEFTBRACE => { ipc_out.write(b"PLAY"); println!("["); },
-                Keys::KEY_RIGHTBRACE => { ipc_out.write(b"STOP"); println!("]"); },
+                Keys::KEY_LEFTBRACE => "PLAY",
+                Keys::KEY_RIGHTBRACE => "STOP",
 
-                Keys::KEY_M => { ipc_out.write(b"M"); println!("M"); },
-                Keys::KEY_R => { ipc_out.write(b"R"); println!("R"); },
-                Keys::KEY_V => { ipc_out.write(b"V"); println!("V"); },
-                Keys::KEY_I => { ipc_out.write(b"I"); println!("I"); },
-                Keys::KEY_SPACE => { ipc_out.write(b"SPC"); println!(" "); },
+                Keys::KEY_M => "M",
+                Keys::KEY_R => "R",
+                Keys::KEY_V => "V",
+                Keys::KEY_I => "I",
+                Keys::KEY_SPACE => "SPC",
 
-                Keys::KEY_A => { ipc_out.write(b"A"); println!("A"); },
-                Keys::KEY_S => { ipc_out.write(b"S"); println!("S"); },
-                Keys::KEY_D => { ipc_out.write(b"D"); println!("D"); },
-                Keys::KEY_F => { ipc_out.write(b"F"); println!("F"); },
-                Keys::KEY_G => { ipc_out.write(b"G"); println!("G"); },
-                Keys::KEY_H => { ipc_out.write(b"H"); println!("H"); },
-                Keys::KEY_J => { ipc_out.write(b"J"); println!("J"); },
-                Keys::KEY_K => { ipc_out.write(b"K"); println!("K"); },
-                Keys::KEY_L => { ipc_out.write(b"L"); println!("L"); },
-
-                Keys::KEY_UP => { ipc_out.write(b"UP"); println!("UP"); },
-                Keys::KEY_DOWN => { ipc_out.write(b"DN"); println!("DN"); },
-                Keys::KEY_LEFT => { ipc_out.write(b"LT"); println!("LT"); },
-                Keys::KEY_RIGHT => { ipc_out.write(b"RT"); println!("RT"); }
-                _ => {}
+                Keys::KEY_UP => "UP",
+                Keys::KEY_DOWN => "DN",
+                Keys::KEY_LEFT => "LT",
+                Keys::KEY_RIGHT => "RT",
+                _ => ""
             }
-            (_, _) => {}
+            (_, _) => ""
         };
-    }
+
+        let sound_buf: &str = match event {
+            (EventType::Release, k) => match k {
+                Keys::KEY_A => "C1_OFF",
+                Keys::KEY_S => "D1_OFF",
+                Keys::KEY_D => "E1_OFF",
+                Keys::KEY_F => "F1_OFF",
+                Keys::KEY_G => "G1_OFF",
+                Keys::KEY_H => "A1_OFF",
+                Keys::KEY_J => "B1_OFF",
+                Keys::KEY_K => "C2_OFF",
+                Keys::KEY_L => "D2_OFF",
+                _ => ""
+            },
+            (EventType::Push, k) => match k {
+                Keys::KEY_A => "C1_ON",
+                Keys::KEY_S => "D1_ON",
+                Keys::KEY_D => "E1_ON",
+                Keys::KEY_F => "F1_ON",
+                Keys::KEY_G => "G1_ON",
+                Keys::KEY_H => "A1_ON",
+                Keys::KEY_J => "B1_ON",
+                Keys::KEY_K => "C2_ON",
+                Keys::KEY_L => "D2_ON",
+                _ => ""
+            }
+            (_, _) => ""
+        };
+
+        if client_buf.len() > 0 { ipc_client.write(client_buf.as_bytes()); }
+        if sound_buf.len() > 0 { ipc_sound.write(sound_buf.as_bytes()); }
+    };
 
     Ok(())
 }

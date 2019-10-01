@@ -68,10 +68,10 @@ fn main() -> std::io::Result<()> {
     let mut stdout = stdout().into_raw_mode().unwrap();
 
     // Configure input polling array
-    let sound_f = CString::new("/tmp/pt-client").unwrap();
+    let in_src = CString::new("/tmp/pt-client").unwrap();
     let mut fds: Vec<libc::pollfd> = unsafe {vec![
         libc::pollfd { 
-            fd: libc::open(sound_f.as_ptr(), libc::O_RDONLY),
+            fd: libc::open(in_src.as_ptr(), libc::O_RDONLY),
             events: libc::POLLIN,
             revents: 0,
         },
@@ -102,6 +102,8 @@ fn main() -> std::io::Result<()> {
         }
 
 
+        if fds[0].revents & libc::POLLHUP == libc::POLLHUP { break; }
+
         let action = if fds[0].revents > 0 {
             eprintln!("polled {}", fds[0].revents);
 
@@ -110,6 +112,7 @@ fn main() -> std::io::Result<()> {
 
             if buf.len() > 0 { match &buf[..] {
                 "TICK" => Action::Tick,
+
                 "?" => Action::Noop,
 
                 "EXIT" => break,
@@ -147,7 +150,6 @@ fn main() -> std::io::Result<()> {
 
         match action {
             Action::Noop => { eprintln!("GOT NONE"); }
-            Action::Up => { eprintln!("GOT UP"); }
             a => { events.push(a); }
         }
 

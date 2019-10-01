@@ -35,11 +35,11 @@ fn arm<'a>(wav: &'a WaveFile, timeline: &'a mut Timeline<'a>) {
 
 fn main() -> Result<(), Box<error::Error>> {
 
-    // Configure pt-client IPC
+    // Blocked by pt-client reader
     println!("Waiting for pt-client...");
 
-    // Blocked by pt-client reader
-    let mut ipc_out = OpenOptions::new()
+    // Configure pt-client IPC
+    let mut ipc_client = OpenOptions::new()
 	.write(true)
 	.open("/tmp/pt-client").unwrap();
 
@@ -91,7 +91,7 @@ fn main() -> Result<(), Box<error::Error>> {
 		wave: wav1.iter(),
 	    }
 	],
-        out: ipc_out,
+        out: ipc_client,
     };
 
     // Create an array of file descriptors to poll
@@ -106,21 +106,14 @@ fn main() -> Result<(), Box<error::Error>> {
         Some(audio_dev.io_i16()?)
     } else { None };
 
-    // Play minor 7
-    /*
-    synth.add_note(86, 0.5);
-    synth.add_note(89, 0.5);
-    synth.add_note(92, 0.5);
-    */
-  
-    let mut playing: bool = false;
+    let mut playing: bool = true;
 
     loop {
 	if playing {
 	    if let Ok(ref mut mmap) = mmap {
-		if write_samples_direct(&audio_dev, mmap, &mut tl)? { continue; }
+		if write_samples_direct(&audio_dev, mmap, &mut synth)? { continue; }
 	    } else if let Some(ref mut io) = io {
-		if write_samples_io(&audio_dev, io, &mut tl)? { continue; }
+		if write_samples_io(&audio_dev, io, &mut synth)? { continue; }
 	    }
 	}
 
@@ -130,9 +123,14 @@ fn main() -> Result<(), Box<error::Error>> {
 	ipc_in.read_to_string(&mut buf);
 	match &buf[..] {
 	    "OPEN_PROJECT" => { println!("OPEN"); },
-	    "PLAY" => { println!("PLAY"); playing = true; },
-	    "STOP" => { println!("STOP"); playing = false; }
-	    "NOOP" => {},
+	    "PLAY" => { playing = true; },
+	    "STOP" => { playing = false; }
+            "C1_ON" =>  { synth.add_note(86, 0.5); }
+            "D1_ON" =>  { synth.add_note(89, 0.5); }
+            "E1_ON" =>  { synth.add_note(92, 0.5); }
+            "C1_OFF" => { synth.remove_note(86); }
+            "D1_OFF" => { synth.remove_note(89); }
+            "E1_OFF" => { synth.remove_note(92); }
 	    _ => {}
 	}
 
