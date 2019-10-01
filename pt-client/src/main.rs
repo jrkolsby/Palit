@@ -19,12 +19,6 @@ use views::{Layer, Home, Timeline, Help, Title};
 
 use common::{Action};
 
-fn rpoll(fds: &mut [libc::pollfd], timeout: libc::c_int) -> libc::c_int {
-    unsafe {
-        libc::poll(&mut fds[0] as *mut libc::pollfd, fds.len() as libc::nfds_t, timeout)
-    }
-}
-
 fn render(mut stdout: RawTerminal<Stdout>, layers: &Vec<Box<Layer>>) -> RawTerminal<Stdout> {
     /*
         LAYERS:
@@ -51,8 +45,8 @@ fn main() -> std::io::Result<()> {
     // Public action fifo /tmp/pt-client
     let mut ipc_in = OpenOptions::new()
         .custom_flags(libc::O_NONBLOCK)
-	.read(true)
-	.open("/tmp/pt-client").unwrap();
+	    .read(true)
+	    .open("/tmp/pt-client").unwrap();
 
     // Blocked by pt-sound reader
     // If a process runs and nobody is around to hear it,
@@ -61,8 +55,8 @@ fn main() -> std::io::Result<()> {
 
     // Configure pt-sound IPC
     let mut ipc_sound = OpenOptions::new()
-	.write(true)
-	.open("/tmp/pt-sound").unwrap();
+        .write(true)
+        .open("/tmp/pt-sound").unwrap();
 
     // Configure raw_mode stdout
     let mut stdout = stdout().into_raw_mode().unwrap();
@@ -154,7 +148,6 @@ fn main() -> std::io::Result<()> {
         }
 
         while let Some(next) = events.pop() {
-            println!("Doing Action!");
             // Execute toplevel actions, capture default from view
             let default: Action = match next {
                 Action::Play => { ipc_sound.write(b"PLAY"); Action::Noop }
