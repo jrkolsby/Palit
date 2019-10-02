@@ -53,11 +53,9 @@ fn main() -> std::io::Result<()> {
     // should it really continue? 
     println!("Waiting for pt-sound...");
 
-    let mut ipc_in = OpenOptions::new()
-        .custom_flags(libc::O_NONBLOCK)
-	.read(true)
+    let mut ipc_sound = OpenOptions::new()
+	.write(true)
 	.open("/tmp/pt-sound").unwrap();
-    let mut ipc_in_buf = String::new();
 
     // Configure raw_mode stdout
     let mut stdout = stdout().into_raw_mode().unwrap();
@@ -100,8 +98,6 @@ fn main() -> std::io::Result<()> {
         if fds[0].revents & libc::POLLHUP == libc::POLLHUP { break; }
 
         let action = if fds[0].revents > 0 {
-            eprintln!("polled {}", fds[0].revents);
-
             let mut buf = String::new();
             ipc_in.read_to_string(&mut buf);
 
@@ -138,13 +134,13 @@ fn main() -> std::io::Result<()> {
                 "LT" => Action::Left,
                 "RT" => Action::Right,
 
-                a => { eprintln!("{}", a); Action::Noop },
+                a => { Action::Noop },
 
             }} else { continue; }
         } else { continue; };
 
         match action {
-            Action::Noop => { eprintln!("GOT NONE"); }
+            Action::Noop => {}
             a => { events.push(a); }
         }
 
