@@ -67,30 +67,44 @@ fn main() -> std::io::Result<()> {
         };
 
         let sound_buf: &str = match event {
-            (EventType::Release, k) => match k {
-                Keys::KEY_A => "C1_OFF",
-                Keys::KEY_S => "D1_OFF",
-                Keys::KEY_D => "E1_OFF",
-                Keys::KEY_F => "F1_OFF",
-                Keys::KEY_G => "G1_OFF",
-                Keys::KEY_H => "A1_OFF",
-                Keys::KEY_J => "B1_OFF",
-                Keys::KEY_K => "C2_OFF",
-                Keys::KEY_L => "D2_OFF",
+            (EventType::Push, k) => match k {
+                Keys::KEY_A => "C1_ON",  
+                Keys::KEY_W => "C1#_ON", 
+                Keys::KEY_S => "D1_ON",  
+                Keys::KEY_E => "D1#_ON", 
+                Keys::KEY_D => "E1_ON",
+                Keys::KEY_F => "F1_ON",  
+                Keys::KEY_T => "F1#_ON", 
+                Keys::KEY_G => "G1_ON",  
+                Keys::KEY_Y => "G1#_ON", 
+                Keys::KEY_H => "A1_ON",  
+                Keys::KEY_U => "A1#_ON", 
+                Keys::KEY_J => "B1_ON",  
+                Keys::KEY_K => "C2_ON",  
+                Keys::KEY_O => "C2#_ON", 
+                Keys::KEY_L => "D2_ON",  
+                Keys::KEY_P => "D2#_ON", 
                 _ => ""
             },
-            (EventType::Push, k) => match k {
-                Keys::KEY_A => "C1_ON",
-                Keys::KEY_S => "D1_ON",
-                Keys::KEY_D => "E1_ON",
-                Keys::KEY_F => "F1_ON",
-                Keys::KEY_G => "G1_ON",
-                Keys::KEY_H => "A1_ON",
-                Keys::KEY_J => "B1_ON",
-                Keys::KEY_K => "C2_ON",
-                Keys::KEY_L => "D2_ON",
-                _ => ""
-            }
+            (EventType::Release, k) => match k {
+                Keys::KEY_A => "C1_OFF",  
+                Keys::KEY_W => "C1#_OFF", 
+                Keys::KEY_S => "D1_OFF",  
+                Keys::KEY_E => "D1#_OFF", 
+                Keys::KEY_D => "E1_OFF",
+                Keys::KEY_F => "F1_OFF",  
+                Keys::KEY_T => "F1#_OFF", 
+                Keys::KEY_G => "G1_OFF",  
+                Keys::KEY_Y => "G1#_OFF", 
+                Keys::KEY_H => "A1_OFF",  
+                Keys::KEY_U => "A1#_OFF", 
+                Keys::KEY_J => "B1_OFF",  
+                Keys::KEY_K => "C2_OFF",  
+                Keys::KEY_O => "C2#_OFF", 
+                Keys::KEY_L => "D2_OFF",  
+                Keys::KEY_P => "D2#_OFF", 
+                _ => ""  
+            },           
             (_, _) => ""
         };
 
