@@ -45,6 +45,7 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [ ] SOUND-3: Faust synth output from keyboard MIDI
 - [ ] SOUND-4: Recording from ALSA input
 - [ ] SOUND-8: Fix audio underruns
+- [ ] SOUND-9: Root mixer for timelines and instruments
 
 - [ ] UI-3: Keyboard display with feedback for keypress events
 - [ ] UI-7: Loading screen

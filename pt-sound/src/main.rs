@@ -20,10 +20,12 @@ mod core;
 mod midi;
 mod synth;
 mod timeline;
+mod mixer;
 
 use crate::core::{SF, SigGen, write_samples_io, write_samples_direct, open_audio_dev};
 use crate::synth::{Synth};
 use crate::timeline::{Region, Timeline};
+use crate::mixer::{Mixer};
 use crate::midi::{open_midi_dev, read_midi_event, connect_midi_source_ports};
 
 fn arm<'a>(wav: &'a WaveFile, timeline: &'a mut Timeline<'a>) {
@@ -47,8 +49,6 @@ fn main() -> Result<(), Box<error::Error>> {
 	.custom_flags(libc::O_NONBLOCK)
 	.read(true)
 	.open("/tmp/pt-sound").unwrap();
-
-    let mut buf = String::new();
 
     let (audio_dev, rate) = open_audio_dev()?;
 
@@ -75,6 +75,7 @@ fn main() -> Result<(), Box<error::Error>> {
 	loop_in: 0,
 	loop_out: 0,
 	playhead: 0,
+        playing: false,
 	regions: vec![
 	    Region {
 		active: false,
@@ -106,99 +107,100 @@ fn main() -> Result<(), Box<error::Error>> {
         Some(audio_dev.io_i16()?)
     } else { None };
 
-    let mut playing: bool = true;
+    let mut root = Mixer {
+        timeline: tl,
+        synths: vec![synth],
+    };
 
     loop {
-	if playing {
-	    if let Ok(ref mut mmap) = mmap {
-		if write_samples_direct(&audio_dev, mmap, &mut synth)? { continue; }
-	    } else if let Some(ref mut io) = io {
-		if write_samples_io(&audio_dev, io, &mut synth)? { continue; }
-	    }
-	}
+        if let Ok(ref mut mmap) = mmap {
+            if write_samples_direct(&audio_dev, mmap, &mut root)? { continue; }
+        } else if let Some(ref mut io) = io {
+            if write_samples_io(&audio_dev, io, &mut root)? { continue; }
+        }
 
-	if read_midi_event(&mut midi_input, &mut synth)? { continue; }
+	if read_midi_event(&mut midi_input, &mut root.synths[0])? { continue; }
 
-	buf = String::new();
+	let mut buf: String = String::new();
 	ipc_in.read_to_string(&mut buf);
 	match &buf[..] {
 	    "OPEN_PROJECT" => { println!("OPEN"); },
 
-	    "PLAY" => { playing = true; },
-	    "STOP" => { playing = false; },
+	    "PLAY" => { root.timeline.playing = true; },
+	    "STOP" => { root.timeline.playing = false; },
 
-            "C1_ON" =>  { synth.add_note(69, 0.5); },
-            "C1#_ON" => { synth.add_note(70, 0.5); },
-            "D1_ON" => { synth.add_note(71, 0.5); },
-            "D1#_ON" => { synth.add_note(72, 0.5); },
-            "E1_ON" => { synth.add_note(73, 0.5); },
-            "F1_ON" => { synth.add_note(74, 0.5); },
-            "F1#_ON" => { synth.add_note(75, 0.5); },
-            "G1_ON" => { synth.add_note(76, 0.5); },
-            "G1#_ON" => { synth.add_note(77, 0.5); },
-            "A1_ON" => { synth.add_note(78, 0.5); },
-            "A1#_ON" => { synth.add_note(79, 0.5); },
-            "B1_ON" => { synth.add_note(80, 0.5); },
-            "C2_ON" =>  { synth.add_note(81, 0.5); },
-            "C2#_ON" => { synth.add_note(82, 0.5); },
-            "D2_ON" => { synth.add_note(83, 0.5); },
-            "D2#_ON" => { synth.add_note(84, 0.5); },
-            "E2_ON" => { synth.add_note(85, 0.5); },
-            "F2_ON" => { synth.add_note(86, 0.5); },
-            "F2#_ON" => { synth.add_note(87, 0.5); },
-            "G2_ON" => { synth.add_note(88, 0.5); },
-            "G2#_ON" => { synth.add_note(89, 0.5); },
-            "A2_ON" => { synth.add_note(90, 0.5); },
-            "A2#_ON" => { synth.add_note(91, 0.5); },
-            "B2_ON" => { synth.add_note(92, 0.5); },
-            "C3_ON" =>  { synth.add_note(93, 0.5); },
-            "C3#_ON" => { synth.add_note(94, 0.5); },
-            "D3_ON" => { synth.add_note(95, 0.5); },
-            "D3#_ON" => { synth.add_note(96, 0.5); },
-            "E3_ON" => { synth.add_note(97, 0.5); },
-            "F3_ON" => { synth.add_note(98, 0.5); },
-            "F3#_ON" => { synth.add_note(99, 0.5); },
-            "G3_ON" => { synth.add_note(100, 0.5); },
-            "G3#_ON" => { synth.add_note(101, 0.5); },
-            "A3_ON" => { synth.add_note(102, 0.5); },
-            "A3#_ON" => { synth.add_note(103, 0.5); },
-            "B3_ON" => { synth.add_note(104, 0.5); },
-            "C1_OFF" =>  { synth.remove_note(69); },
-            "C1#_OFF" => { synth.remove_note(70); },
-            "D1_OFF" => { synth.remove_note(71); },
-            "D1#_OFF" => { synth.remove_note(72); },
-            "E1_OFF" => { synth.remove_note(73); },
-            "F1_OFF" => { synth.remove_note(74); },
-            "F1#_OFF" => { synth.remove_note(75); },
-            "G1_OFF" => { synth.remove_note(76); },
-            "G1#_OFF" => { synth.remove_note(77); },
-            "A1_OFF" => { synth.remove_note(78); },
-            "A1#_OFF" => { synth.remove_note(79); },
-            "B1_OFF" => { synth.remove_note(80); },
-            "C2_OFF" =>  { synth.remove_note(81); },
-            "C2#_OFF" => { synth.remove_note(82); },
-            "D2_OFF" => { synth.remove_note(83); },
-            "D2#_OFF" => { synth.remove_note(84); },
-            "E2_OFF" => { synth.remove_note(85); },
-            "F2_OFF" => { synth.remove_note(86); },
-            "F2#_OFF" => { synth.remove_note(87); },
-            "G2_OFF" => { synth.remove_note(88); },
-            "G2#_OFF" => { synth.remove_note(89); },
-            "A2_OFF" => { synth.remove_note(90); },
-            "A2#_OFF" => { synth.remove_note(91); },
-            "B2_OFF" => { synth.remove_note(92); },
-            "C3_OFF" =>  { synth.remove_note(93); },
-            "C3#_OFF" => { synth.remove_note(94); },
-            "D3_OFF" => { synth.remove_note(95); },
-            "D3#_OFF" => { synth.remove_note(96); },
-            "E3_OFF" => { synth.remove_note(97); },
-            "F3_OFF" => { synth.remove_note(98); },
-            "F3#_OFF" => { synth.remove_note(99); },
-            "G3_OFF" => { synth.remove_note(100); },
-            "G3#_OFF" => { synth.remove_note(101); },
-            "A3_OFF" => { synth.remove_note(102); },
-            "A3#_OFF" => { synth.remove_note(103); },
-            "B3_OFF" => { synth.remove_note(104); },
+            "C1_ON" =>  { root.synths[0].add_note(69, 0.5); },
+            "C1#_ON" => { root.synths[0].add_note(70, 0.5); },
+            "D1_ON" => { root.synths[0].add_note(71, 0.5); },
+            "D1#_ON" => { root.synths[0].add_note(72, 0.5); },
+            "E1_ON" => { root.synths[0].add_note(73, 0.5); },
+            "F1_ON" => { root.synths[0].add_note(74, 0.5); },
+            "F1#_ON" => { root.synths[0].add_note(75, 0.5); },
+            "G1_ON" => { root.synths[0].add_note(76, 0.5); },
+            "G1#_ON" => { root.synths[0].add_note(77, 0.5); },
+            "A1_ON" => { root.synths[0].add_note(78, 0.5); },
+            "A1#_ON" => { root.synths[0].add_note(79, 0.5); },
+            "B1_ON" => { root.synths[0].add_note(80, 0.5); },
+            "C2_ON" =>  { root.synths[0].add_note(81, 0.5); },
+            "C2#_ON" => { root.synths[0].add_note(82, 0.5); },
+            "D2_ON" => { root.synths[0].add_note(83, 0.5); },
+            "D2#_ON" => { root.synths[0].add_note(84, 0.5); },
+            "E2_ON" => { root.synths[0].add_note(85, 0.5); },
+            "F2_ON" => { root.synths[0].add_note(86, 0.5); },
+            "F2#_ON" => { root.synths[0].add_note(87, 0.5); },
+            "G2_ON" => { root.synths[0].add_note(88, 0.5); },
+            "G2#_ON" => { root.synths[0].add_note(89, 0.5); },
+            "A2_ON" => { root.synths[0].add_note(90, 0.5); },
+            "A2#_ON" => { root.synths[0].add_note(91, 0.5); },
+            "B2_ON" => { root.synths[0].add_note(92, 0.5); },
+            "C3_ON" =>  { root.synths[0].add_note(93, 0.5); },
+            "C3#_ON" => { root.synths[0].add_note(94, 0.5); },
+            "D3_ON" => { root.synths[0].add_note(95, 0.5); },
+            "D3#_ON" => { root.synths[0].add_note(96, 0.5); },
+            "E3_ON" => { root.synths[0].add_note(97, 0.5); },
+            "F3_ON" => { root.synths[0].add_note(98, 0.5); },
+            "F3#_ON" => { root.synths[0].add_note(99, 0.5); },
+            "G3_ON" => { root.synths[0].add_note(100, 0.5); },
+            "G3#_ON" => { root.synths[0].add_note(101, 0.5); },
+            "A3_ON" => { root.synths[0].add_note(102, 0.5); },
+            "A3#_ON" => { root.synths[0].add_note(103, 0.5); },
+            "B3_ON" => { root.synths[0].add_note(104, 0.5); },
+            "C1_OFF" =>  { root.synths[0].remove_note(69); },
+            "C1#_OFF" => { root.synths[0].remove_note(70); },
+            "D1_OFF" => { root.synths[0].remove_note(71); },
+            "D1#_OFF" => { root.synths[0].remove_note(72); },
+            "E1_OFF" => { root.synths[0].remove_note(73); },
+            "F1_OFF" => { root.synths[0].remove_note(74); },
+            "F1#_OFF" => { root.synths[0].remove_note(75); },
+            "G1_OFF" => { root.synths[0].remove_note(76); },
+            "G1#_OFF" => { root.synths[0].remove_note(77); },
+            "A1_OFF" => { root.synths[0].remove_note(78); },
+            "A1#_OFF" => { root.synths[0].remove_note(79); },
+            "B1_OFF" => { root.synths[0].remove_note(80); },
+            "C2_OFF" =>  { root.synths[0].remove_note(81); },
+            "C2#_OFF" => { root.synths[0].remove_note(82); },
+            "D2_OFF" => { root.synths[0].remove_note(83); },
+            "D2#_OFF" => { root.synths[0].remove_note(84); },
+            "E2_OFF" => { root.synths[0].remove_note(85); },
+            "F2_OFF" => { root.synths[0].remove_note(86); },
+            "F2#_OFF" => { root.synths[0].remove_note(87); },
+            "G2_OFF" => { root.synths[0].remove_note(88); },
+            "G2#_OFF" => { root.synths[0].remove_note(89); },
+            "A2_OFF" => { root.synths[0].remove_note(90); },
+            "A2#_OFF" => { root.synths[0].remove_note(91); },
+            "B2_OFF" => { root.synths[0].remove_note(92); },
+            "C3_OFF" =>  { root.synths[0].remove_note(93); },
+            "C3#_OFF" => { root.synths[0].remove_note(94); },
+            "D3_OFF" => { root.synths[0].remove_note(95); },
+            "D3#_OFF" => { root.synths[0].remove_note(96); },
+            "E3_OFF" => { root.synths[0].remove_note(97); },
+            "F3_OFF" => { root.synths[0].remove_note(98); },
+            "F3#_OFF" => { root.synths[0].remove_note(99); },
+            "G3_OFF" => { root.synths[0].remove_note(100); },
+            "G3#_OFF" => { root.synths[0].remove_note(101); },
+            "A3_OFF" => { root.synths[0].remove_note(102); },
+            "A3#_OFF" => { root.synths[0].remove_note(103); },
+            "B3_OFF" => { root.synths[0].remove_note(104); },
 	    _ => {}
 	}
 
