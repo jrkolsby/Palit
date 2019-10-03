@@ -26,6 +26,7 @@ pub struct Timeline<'a> {
     pub playhead: u32, 
     pub regions: Vec<Region<'a>>,
     pub out: File,
+    pub playing: bool,
 }
 
 impl Timeline<'_> {
@@ -47,6 +48,10 @@ impl Iterator for Timeline<'_> {
             self.out.write(b"TICK");
         }
 	let mut z: f64 = 0.0;
+        if !self.playing {
+            let z: Option<SF> = Some(SF::from_sample(z));
+            return z
+        }
 	// see iter() iter_mut() and into_iter()
 	for region in self.regions.iter_mut() {
 	    if self.playhead == region.offset {
