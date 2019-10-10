@@ -1,9 +1,14 @@
 extern crate libc;
+extern crate termion;
 extern crate linux_raw_input_rs;
+
+use termion::event::Key;
+use termion::input::TermRead;
+use termion::raw::IntoRawMode;
 
 use std::io::{BufReader, Write, Stdout, stdout, stdin};
 use std::io::prelude::*;
-use std::fs::{OpenOptions, read_to_string};
+use std::fs::{OpenOptions, File, read_to_string};
 use std::os::unix::fs::OpenOptionsExt;
 use std::ffi::CString;
 
@@ -11,27 +16,63 @@ use linux_raw_input_rs::{InputReader, get_input_devices};
 use linux_raw_input_rs::keys::Keys;
 use linux_raw_input_rs::input::EventType;
 
-fn main() -> std::io::Result<()> {
+#[cfg(target_os = "macos")]
+fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> {
+
+    let stdin = stdin();
+    let mut stdout = stdout().into_raw_mode().unwrap();
+
+    write!(stdout,
+           "{}{}q to exit. Type stuff, use alt, and so on.{}",
+           termion::clear::All,
+           termion::cursor::Goto(1, 1),
+           termion::cursor::Hide)
+            .unwrap();
+
+    stdout.flush().unwrap();
+
+    for c in stdin.keys() {
+        let client_buf: &str = match c.unwrap() {
+            Key::Char('q') => "EXIT",
+            Key::Char('1') => "1",
+            Key::Char('2') => "2",
+
+            Key::Char('[') => "PLAY",
+            Key::Char(']') => "STOP",
+
+            Key::Char('m') => "M",
+            Key::Char('r') => "R",
+            Key::Char('v') => "V",
+            Key::Char('i') => "I",
+            Key::Char(' ') => "SPC",
+
+            Key::Up => "UP",
+            Key::Down => "DN",
+            Key::Left => "LT",
+            Key::Right => "RT",
+
+            _ => "",
+        };
+
+        write!(stdout, "{}{}{}",
+            termion::clear::All,
+            termion::cursor::Goto(2, 1),
+            client_buf).unwrap();
+
+        if client_buf.len() > 0 { ipc_client.write(client_buf.as_bytes()); }
+
+        if client_buf == "EXIT" { break; }
+    }
+
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> {
 
     // Configure keyboard input
     let keybd_path : String = get_input_devices().iter().nth(0).expect("Problem with iterator").to_string();
-
-    // Configure pt-client IPC
-    println!("Waiting for pt-client...");
-
-    // Blocked by pt-client reader
-    let mut ipc_client = OpenOptions::new()
-	.write(true)
-	.open("/tmp/pt-client").unwrap();
-
-    println!("Waiting for pt-sound...");
-
-    // Blocked by pt-client reader
-    let mut ipc_sound = OpenOptions::new()
-	.write(true)
-	.open("/tmp/pt-sound").unwrap();
-
-    eprintln!("keyboard device: {}", keybd_path);
+    println!("keyboard device: {}", keybd_path);
     let mut reader = InputReader::new(keybd_path.clone());
 
     // Keyboard Event Loop
@@ -111,6 +152,27 @@ fn main() -> std::io::Result<()> {
         if client_buf.len() > 0 { ipc_client.write(client_buf.as_bytes()); }
         if sound_buf.len() > 0 { ipc_sound.write(sound_buf.as_bytes()); }
     };
+}
+
+fn main() -> std::io::Result<()> {
+
+    // Configure pt-client IPC
+    println!("Waiting for pt-client...");
+
+    // Blocked by pt-client reader
+    let mut ipc_client = OpenOptions::new()
+	.write(true)
+	.open("/tmp/pt-client").unwrap();
+
+    println!("Waiting for pt-sound...");
+
+    // Blocked by pt-client reader
+    let mut ipc_sound = OpenOptions::new()
+	.write(true)
+	.open("/tmp/pt-sound").unwrap();
+
+    println!("GO");
+    event_loop(ipc_client, ipc_sound);
 
     Ok(())
 }
