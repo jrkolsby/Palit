@@ -6,3 +6,4 @@ pub mod logo;
 pub mod tempo;
 pub mod ruler;
 pub mod casette;
+pub mod artist;

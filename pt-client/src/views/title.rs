@@ -71,8 +71,8 @@ impl Layer for Title {
     fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
 
+        // Render components
 	    out = popup::render(out, self.x, self.y, self.width, self.height, &self.state.title);
-
         out = casette::render(out, self.x+2, self.y);
 
         write!(out, "{}\"{}{}\"", cursor::Goto(self.x+7, self.y+5), self.state.title_val, self.state.letter as char).unwrap();

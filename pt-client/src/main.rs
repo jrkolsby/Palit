@@ -15,7 +15,7 @@ mod views;
 mod common;
 mod components; 
 
-use views::{Layer, Home, Timeline, Help, Title};
+use views::{Layer, Home, Timeline, Help, Title, Pepper};
 
 use common::{Action};
 
@@ -147,8 +147,16 @@ fn main() -> std::io::Result<()> {
         while let Some(next) = events.pop() {
             // Execute toplevel actions, capture default from view
             let default: Action = match next {
-                Action::Play => { ipc_sound.write(b"PLAY"); Action::Noop }
-                Action::Stop => { ipc_sound.write(b"STOP"); Action::Noop }
+                Action::Play => { match ipc_sound.write(b"PLAY").unwrap() {
+                        0 => Action::Error("Ipc sound failed".to_string()),
+                        _ => Action::Noop 
+                    }
+                },
+                Action::Stop => { match ipc_sound.write(b"STOP").unwrap() {
+                        0 => Action::Error("Ipc sound failed".to_string()),
+                        _ => Action::Noop
+                    }
+                },
                 Action::Help => { 
                     layers.push(Box::new(Help::new(10, 10, 44, 15))); 
                     Action::Noop
@@ -180,7 +188,7 @@ fn main() -> std::io::Result<()> {
                 },
                 Action::Back => { layers.pop(); }, 
                 Action::Pepper => {
-                    layers.push(Box::new(Help::new(10, 10, 44, 15))); 
+                    layers.push(Box::new(Pepper::new(1, 1, size.0, size.1))); 
                 },
                 _ => {}
             };	

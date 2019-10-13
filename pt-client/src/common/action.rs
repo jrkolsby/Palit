@@ -1,5 +1,6 @@
 #[derive(Debug, Clone)]
 pub enum Action {
+    Error(String),
     // KEYBOARD ACTIONS
     Up,
     Down,

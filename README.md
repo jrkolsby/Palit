@@ -57,6 +57,7 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [ ] UI-16: Add track modal
 - [ ] UI-17: Select instrument modal
 - [ ] UI-18: Routes view
+- [ ] UI-19: Pepper
 
 - [ ] HARD-3: Purchase functional android phone
 - [ ] HARD-4: Replace laptop sreen with android phone
