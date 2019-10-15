@@ -1,13 +1,18 @@
+#[cfg(target_os = "linux")]
 extern crate alsa;
+
 extern crate sample;
 
-use std::{iter, error};
+#[cfg(target_os = "linux")]
 use alsa::{seq, pcm};
+
+use std::{iter, error};
 use std::ffi::CString;
 use sample::signal;
 
 use crate::synth::Synth;
 
+#[cfg(target_os = "linux")]
 pub fn connect_midi_source_ports(s: &alsa::Seq, our_port: i32) -> Result<(), Box<error::Error>> {
     // Iterate over clients and clients' ports
     let our_id = s.client_id()?;
@@ -34,6 +39,7 @@ pub fn connect_midi_source_ports(s: &alsa::Seq, our_port: i32) -> Result<(), Box
     Ok(())
 } 
 
+#[cfg(target_os = "linux")]
 pub fn open_midi_dev() -> Result<alsa::Seq, Box<error::Error>> {
     // Open the sequencer.
     let s = alsa::Seq::open(None, Some(alsa::Direction::Capture), true)?;
@@ -54,6 +60,16 @@ pub fn open_midi_dev() -> Result<alsa::Seq, Box<error::Error>> {
     Ok(s)
 }
 
+#[cfg(target_os = "macos")]
+pub fn open_midi_dev() -> Result<(), Box<error::Error>> { Ok(()) }
+
+#[cfg(target_os = "macos")]
+pub fn read_midi_event() -> Result<(), Box<error::Error>> { Ok(()) }
+
+#[cfg(target_os = "macos")]
+pub fn connect_midi_source_ports() -> Result<(), Box<error::Error>> { Ok(()) }
+
+#[cfg(target_os = "linux")]
 pub fn read_midi_event(input: &mut seq::Input, synth: &mut Synth) -> Result<bool, Box<error::Error>> {
     if input.event_input_pending(true)? == 0 { return Ok(false); }
     let ev = input.event_input()?;

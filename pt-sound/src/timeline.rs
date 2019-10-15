@@ -25,7 +25,7 @@ pub struct Timeline<'a> {
     pub duration: u32,
     pub playhead: u32, 
     pub regions: Vec<Region<'a>>,
-    pub out: File,
+    //pub out: File,
     pub playing: bool,
 }
 
@@ -45,7 +45,8 @@ impl Iterator for Timeline<'_> {
     fn next(&mut self) -> Option<Self::Item> {
 	self.playhead += 1;
         if self.playhead % 65536 == 0 {
-            self.out.write(b"TICK");
+            println!("tick!");
+            //self.out.write(b"TICK");
         }
 	let mut z: f64 = 0.0;
         if !self.playing {
