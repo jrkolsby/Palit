@@ -19,6 +19,7 @@ mod midi;
 mod synth;
 mod timeline;
 mod mixer;
+mod action;
 
 use crate::core::{event_loop, DspNode, Frequency};
 use crate::synth::{Synth};
@@ -99,21 +100,31 @@ fn main() -> Result<(), Box<error::Error>> {
     // Construct our dsp graph.
     let mut graph = Graph::new();
 
-    // Construct our fancy Synth and add it to the graph!
-    let synth = graph.add_node(DspNode::Synth);
+    // Construct master node
+    let master = graph.add_node(DspNode::Master);
 
     // Connect a few oscillators to the synth.
-    let (_, oscillator_a) = graph.add_input(DspNode::Oscillator(0.0, A5_HZ, 0.2), synth);
-    graph.add_input(DspNode::Oscillator(0.0, D5_HZ, 0.1), synth);
-    graph.add_input(DspNode::Oscillator(0.0, F5_HZ, 0.15), synth);
+    let (_, oscillator_a) = graph.add_input(DspNode::Oscillator(0.0, A5_HZ, 0.2), master);
+    graph.add_input(DspNode::Oscillator(0.0, D5_HZ, 0.1), master);
+    graph.add_input(DspNode::Oscillator(0.0, F5_HZ, 0.15), master);
 
-    // If adding a connection between two nodes would create a cycle, Graph will return an Err.
-    if let Err(err) = graph.add_connection(synth, oscillator_a) {
+    /*
+    // Pasting some useful stuff here
+    if let Err(err) = graph.add_connection(master, oscillator_a) {
         println!(
             "Testing for cycle error: {:?}",
             std::error::Error::description(&err)
         );
     }
 
-    event_loop(ipc_in, ipc_client, graph, synth)
+    let mut inputs = patch.inputs(master);
+    while let Some(input_idx) = inputs.next_node(&patch) {
+        if let DspNode::Oscillator(_, ref mut pitch, _) = patch[input_idx] {
+            // Pitch down our oscillators for fun.
+            *pitch -= 0.1;
+        }
+    }
+    */
+
+    event_loop(ipc_in, ipc_client, graph, master)
 }
