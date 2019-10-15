@@ -1,7 +1,5 @@
-// A quickly made Hammond organ.
-
+extern crate dsp;
 extern crate libc;
-extern crate alsa;
 extern crate sample;
 extern crate wavefile;
 
@@ -12,9 +10,9 @@ use std::io::prelude::*;
 
 use sample::signal;
 
-use alsa::PollDescriptors;
-
 use wavefile::{WaveFile, WaveFileIterator};
+
+use dsp::{sample::ToFrameSliceMut, Frame, FromSample, Graph, Node, Sample, Walker};
 
 mod core;
 mod midi;
@@ -22,11 +20,10 @@ mod synth;
 mod timeline;
 mod mixer;
 
-use crate::core::{SF, SigGen, write_samples_io, write_samples_direct, open_audio_dev};
+use crate::core::{event_loop, DspNode, Frequency};
 use crate::synth::{Synth};
 use crate::timeline::{Region, Timeline};
 use crate::mixer::{Mixer};
-use crate::midi::{open_midi_dev, read_midi_event, connect_midi_source_ports};
 
 fn arm<'a>(wav: &'a WaveFile, timeline: &'a mut Timeline<'a>) {
     let wav1: WaveFile = WaveFile::open("Who.wav").unwrap();
@@ -34,6 +31,10 @@ fn arm<'a>(wav: &'a WaveFile, timeline: &'a mut Timeline<'a>) {
 	region.wave = wav.iter();
     }
 }
+
+const A5_HZ: Frequency = 440.0;
+const D5_HZ: Frequency = 587.33;
+const F5_HZ: Frequency = 698.46;
 
 fn main() -> Result<(), Box<error::Error>> {
 
@@ -50,161 +51,69 @@ fn main() -> Result<(), Box<error::Error>> {
 	.read(true)
 	.open("/tmp/pt-sound").unwrap();
 
-    let (audio_dev, rate) = open_audio_dev()?;
-
-    let midi_dev = open_midi_dev()?;
-    let mut midi_input = midi_dev.input();
-
     let wav1: WaveFile = WaveFile::open("Who.wav").unwrap();
     //let wav2: WaveFile = WaveFile::open("When.wav").unwrap();
 
-    // 256 Voices synth
+    // Hammond synth
     let mut synth = Synth {
         sigs: iter::repeat(None).take(256).collect(),
-        sample_rate: signal::rate(f64::from(rate)),
+        sample_rate: signal::rate(f64::from(48000)),
         stored_sample: None,
         bar_values: [1., 1., 1., 0.75, 0.5, 0., 0., 0., 0.],
     };
 
     let mut tl = Timeline {
-	bpm: 127,
-	duration: 960000,
-	time_beat: 4,
-	time_note: 4,
-	loop_on: false,
-	loop_in: 0,
-	loop_out: 0,
-	playhead: 0,
+        bpm: 127,
+        duration: 960000,
+        time_beat: 4,
+        time_note: 4,
+        loop_on: false,
+        loop_in: 0,
+        loop_out: 0,
+        playhead: 0,
         playing: false,
-	regions: vec![
-	    Region {
-		active: false,
-		offset: 100,
-		gain: 1.0,
-		duration: 480000,
-		wave: wav1.iter(),
-	    },
-	    Region {
-		active: false,
-		gain: 1.0,
-		offset: 1320000,
-		duration: 480000,
-		wave: wav1.iter(),
-	    }
-	],
-        out: ipc_client,
+        regions: vec![
+            Region {
+                active: false,
+                offset: 100,
+                gain: 1.0,
+                duration: 480000,
+                wave: wav1.iter(),
+            },
+            Region {
+                active: false,
+                gain: 1.0,
+                offset: 1320000,
+                duration: 480000,
+                wave: wav1.iter(),
+            }
+        ],
+        //out: ipc_client,
     };
-
-    // Create an array of file descriptors to poll
-    let mut fds = audio_dev.get()?;
-    fds.append(&mut (&midi_dev, Some(alsa::Direction::Capture)).get()?); 
-    
-    // Use direct-mode memory mapping for minimum overhead
-    let mut mmap = audio_dev.direct_mmap_playback::<SF>();
-    
-    // if direct-mode unavailable, use mmap emulation instead
-    let mut io = if mmap.is_err() {
-        Some(audio_dev.io_i16()?)
-    } else { None };
 
     let mut root = Mixer {
         timeline: tl,
         synths: vec![synth],
     };
+    
+    // Construct our dsp graph.
+    let mut graph = Graph::new();
 
-    loop {
-        if let Ok(ref mut mmap) = mmap {
-            if write_samples_direct(&audio_dev, mmap, &mut root)? { continue; }
-        } else if let Some(ref mut io) = io {
-            if write_samples_io(&audio_dev, io, &mut root)? { continue; }
-        }
+    // Construct our fancy Synth and add it to the graph!
+    let synth = graph.add_node(DspNode::Synth);
 
-	if read_midi_event(&mut midi_input, &mut root.synths[0])? { continue; }
+    // Connect a few oscillators to the synth.
+    let (_, oscillator_a) = graph.add_input(DspNode::Oscillator(0.0, A5_HZ, 0.2), synth);
+    graph.add_input(DspNode::Oscillator(0.0, D5_HZ, 0.1), synth);
+    graph.add_input(DspNode::Oscillator(0.0, F5_HZ, 0.15), synth);
 
-	let mut buf: String = String::new();
-	ipc_in.read_to_string(&mut buf);
-	match &buf[..] {
-	    "OPEN_PROJECT" => { println!("OPEN"); },
-
-	    "PLAY" => { root.timeline.playing = true; },
-	    "STOP" => { root.timeline.playing = false; },
-
-            "C1_ON" =>  { root.synths[0].add_note(69, 0.5); },
-            "C1#_ON" => { root.synths[0].add_note(70, 0.5); },
-            "D1_ON" => { root.synths[0].add_note(71, 0.5); },
-            "D1#_ON" => { root.synths[0].add_note(72, 0.5); },
-            "E1_ON" => { root.synths[0].add_note(73, 0.5); },
-            "F1_ON" => { root.synths[0].add_note(74, 0.5); },
-            "F1#_ON" => { root.synths[0].add_note(75, 0.5); },
-            "G1_ON" => { root.synths[0].add_note(76, 0.5); },
-            "G1#_ON" => { root.synths[0].add_note(77, 0.5); },
-            "A1_ON" => { root.synths[0].add_note(78, 0.5); },
-            "A1#_ON" => { root.synths[0].add_note(79, 0.5); },
-            "B1_ON" => { root.synths[0].add_note(80, 0.5); },
-            "C2_ON" =>  { root.synths[0].add_note(81, 0.5); },
-            "C2#_ON" => { root.synths[0].add_note(82, 0.5); },
-            "D2_ON" => { root.synths[0].add_note(83, 0.5); },
-            "D2#_ON" => { root.synths[0].add_note(84, 0.5); },
-            "E2_ON" => { root.synths[0].add_note(85, 0.5); },
-            "F2_ON" => { root.synths[0].add_note(86, 0.5); },
-            "F2#_ON" => { root.synths[0].add_note(87, 0.5); },
-            "G2_ON" => { root.synths[0].add_note(88, 0.5); },
-            "G2#_ON" => { root.synths[0].add_note(89, 0.5); },
-            "A2_ON" => { root.synths[0].add_note(90, 0.5); },
-            "A2#_ON" => { root.synths[0].add_note(91, 0.5); },
-            "B2_ON" => { root.synths[0].add_note(92, 0.5); },
-            "C3_ON" =>  { root.synths[0].add_note(93, 0.5); },
-            "C3#_ON" => { root.synths[0].add_note(94, 0.5); },
-            "D3_ON" => { root.synths[0].add_note(95, 0.5); },
-            "D3#_ON" => { root.synths[0].add_note(96, 0.5); },
-            "E3_ON" => { root.synths[0].add_note(97, 0.5); },
-            "F3_ON" => { root.synths[0].add_note(98, 0.5); },
-            "F3#_ON" => { root.synths[0].add_note(99, 0.5); },
-            "G3_ON" => { root.synths[0].add_note(100, 0.5); },
-            "G3#_ON" => { root.synths[0].add_note(101, 0.5); },
-            "A3_ON" => { root.synths[0].add_note(102, 0.5); },
-            "A3#_ON" => { root.synths[0].add_note(103, 0.5); },
-            "B3_ON" => { root.synths[0].add_note(104, 0.5); },
-            "C1_OFF" =>  { root.synths[0].remove_note(69); },
-            "C1#_OFF" => { root.synths[0].remove_note(70); },
-            "D1_OFF" => { root.synths[0].remove_note(71); },
-            "D1#_OFF" => { root.synths[0].remove_note(72); },
-            "E1_OFF" => { root.synths[0].remove_note(73); },
-            "F1_OFF" => { root.synths[0].remove_note(74); },
-            "F1#_OFF" => { root.synths[0].remove_note(75); },
-            "G1_OFF" => { root.synths[0].remove_note(76); },
-            "G1#_OFF" => { root.synths[0].remove_note(77); },
-            "A1_OFF" => { root.synths[0].remove_note(78); },
-            "A1#_OFF" => { root.synths[0].remove_note(79); },
-            "B1_OFF" => { root.synths[0].remove_note(80); },
-            "C2_OFF" =>  { root.synths[0].remove_note(81); },
-            "C2#_OFF" => { root.synths[0].remove_note(82); },
-            "D2_OFF" => { root.synths[0].remove_note(83); },
-            "D2#_OFF" => { root.synths[0].remove_note(84); },
-            "E2_OFF" => { root.synths[0].remove_note(85); },
-            "F2_OFF" => { root.synths[0].remove_note(86); },
-            "F2#_OFF" => { root.synths[0].remove_note(87); },
-            "G2_OFF" => { root.synths[0].remove_note(88); },
-            "G2#_OFF" => { root.synths[0].remove_note(89); },
-            "A2_OFF" => { root.synths[0].remove_note(90); },
-            "A2#_OFF" => { root.synths[0].remove_note(91); },
-            "B2_OFF" => { root.synths[0].remove_note(92); },
-            "C3_OFF" =>  { root.synths[0].remove_note(93); },
-            "C3#_OFF" => { root.synths[0].remove_note(94); },
-            "D3_OFF" => { root.synths[0].remove_note(95); },
-            "D3#_OFF" => { root.synths[0].remove_note(96); },
-            "E3_OFF" => { root.synths[0].remove_note(97); },
-            "F3_OFF" => { root.synths[0].remove_note(98); },
-            "F3#_OFF" => { root.synths[0].remove_note(99); },
-            "G3_OFF" => { root.synths[0].remove_note(100); },
-            "G3#_OFF" => { root.synths[0].remove_note(101); },
-            "A3_OFF" => { root.synths[0].remove_note(102); },
-            "A3#_OFF" => { root.synths[0].remove_note(103); },
-            "B3_OFF" => { root.synths[0].remove_note(104); },
-	    _ => {}
-	}
-
-        // Nothing to do, let's sleep until woken up by the kernel.
-        alsa::poll::poll(&mut fds, 100)?;
+    // If adding a connection between two nodes would create a cycle, Graph will return an Err.
+    if let Err(err) = graph.add_connection(synth, oscillator_a) {
+        println!(
+            "Testing for cycle error: {:?}",
+            std::error::Error::description(&err)
+        );
     }
+
+    event_loop(ipc_in, ipc_client, graph, synth)
 }
