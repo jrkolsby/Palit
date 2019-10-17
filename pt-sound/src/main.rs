@@ -102,11 +102,13 @@ fn main() -> Result<(), Box<error::Error>> {
 
     // Construct master node
     let master = graph.add_node(DspNode::Master);
+    let my_osc = DspNode::Oscillator(0.0, F5_HZ, 0.15);
 
     // Connect a few oscillators to the synth.
     let (_, oscillator_a) = graph.add_input(DspNode::Oscillator(0.0, A5_HZ, 0.2), master);
     graph.add_input(DspNode::Oscillator(0.0, D5_HZ, 0.1), master);
-    graph.add_input(DspNode::Oscillator(0.0, F5_HZ, 0.15), master);
+    graph.add_input(my_osc, master);
+
 
     /*
     // Pasting some useful stuff here
@@ -126,5 +128,8 @@ fn main() -> Result<(), Box<error::Error>> {
     }
     */
 
-    event_loop(ipc_in, ipc_client, graph, master)
+    event_loop(ipc_in, ipc_client, graph, master, |a| {
+        println!("{:?}", a);
+        a
+    })
 }

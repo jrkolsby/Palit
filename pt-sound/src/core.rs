@@ -136,11 +136,13 @@ pub fn write_samples_io(
 }
 
 #[cfg(target_os = "macos")]
-pub fn event_loop(
+pub fn event_loop<F: 'static>(
         mut ipc_in: File, 
         mut ipc_client: File, 
         mut patch: Graph<[Output; CHANNELS], DspNode>, 
-        master: NodeIndex) -> Result<(), Box<error::Error>> {
+        master: NodeIndex,
+        mut dispatch_f: F) -> Result<(), Box<error::Error>> 
+    where F: FnMut(Action) -> Action {
 
     // Set the master node for the graph.
     patch.set_master(Some(master));
@@ -153,7 +155,11 @@ pub fn event_loop(
 
         let a: Action = dispatch(&ipc_in);
 
-        pa::Continue
+        match dispatch_f(a) {
+            Action::Stop => pa::Complete,
+            _ => pa::Continue
+        }
+
     };
 
     // Construct PortAudio and the stream.
@@ -179,6 +185,13 @@ pub enum DspNode {
     /// Oscillator will be our generator type of node, meaning that we will override
     /// the way it provides audio via its `audio_requested` method.
     Oscillator(Phase, Frequency, Volume),
+}
+
+impl DspNode {
+    pub fn dispatch(&mut self, a: Action) -> Action {
+        println!("dispatching!");
+        a
+    }
 }
 
 impl Node<[Output; CHANNELS]> for DspNode {
