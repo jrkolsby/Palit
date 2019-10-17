@@ -11,6 +11,7 @@ use std::ffi::CString;
 use sample::signal;
 
 use crate::synth::Synth;
+use crate::action::Action;
 
 #[cfg(target_os = "linux")]
 pub fn connect_midi_source_ports(s: &alsa::Seq, our_port: i32) -> Result<(), Box<error::Error>> {

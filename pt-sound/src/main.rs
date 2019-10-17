@@ -18,13 +18,12 @@ mod core;
 mod midi;
 mod synth;
 mod timeline;
-mod mixer;
 mod action;
 
-use crate::core::{event_loop, DspNode, Frequency};
+use crate::core::{event_loop, Frequency, Module, Output, CHANNELS };
 use crate::synth::{Synth};
 use crate::timeline::{Region, Timeline};
-use crate::mixer::{Mixer};
+use crate::action::Action;
 
 fn arm<'a>(wav: &'a WaveFile, timeline: &'a mut Timeline<'a>) {
     let wav1: WaveFile = WaveFile::open("Who.wav").unwrap();
@@ -63,6 +62,9 @@ fn main() -> Result<(), Box<error::Error>> {
         bar_values: [1., 1., 1., 0.75, 0.5, 0., 0., 0., 0.],
     };
 
+    // Construct our dsp graph.
+    let mut graph = Graph::new();
+
     let mut tl = Timeline {
         bpm: 127,
         duration: 960000,
@@ -89,24 +91,18 @@ fn main() -> Result<(), Box<error::Error>> {
                 wave: wav1.iter(),
             }
         ],
-        //out: ipc_client,
     };
 
-    let mut root = Mixer {
-        timeline: tl,
-        synths: vec![synth],
-    };
-    
-    // Construct our dsp graph.
-    let mut graph = Graph::new();
+    let master: Graph<[Output; CHANNELS], Box<Module>> = graph.add_node(Box::new(tl));
 
-    // Construct master node
-    let master = graph.add_node(DspNode::Master);
-
-    // Connect a few oscillators to the synth.
-    let (_, oscillator_a) = graph.add_input(DspNode::Oscillator(0.0, A5_HZ, 0.2), master);
-    graph.add_input(DspNode::Oscillator(0.0, D5_HZ, 0.1), master);
-    graph.add_input(DspNode::Oscillator(0.0, F5_HZ, 0.15), master);
+    event_loop(ipc_in, ipc_client, graph, master, |a: Action| {
+        match a {
+            Action::AddRoute => { Action::Noop },
+            Action::RemoveRoute => { Action::Noop },
+            Action::SwapNode => { Action::Noop },
+            _ => Action::Noop,
+        }
+    })
 
     /*
     // Pasting some useful stuff here
@@ -126,5 +122,4 @@ fn main() -> Result<(), Box<error::Error>> {
     }
     */
 
-    event_loop(ipc_in, ipc_client, graph, master)
 }

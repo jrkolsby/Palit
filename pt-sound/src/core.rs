@@ -24,6 +24,7 @@ use sample::signal;
 
 use crate::midi::{open_midi_dev, read_midi_event, connect_midi_source_ports};
 use crate::action::Action;
+use crate::timeline::Timeline;
 
 // SAMPLE FORMAT ALSA
 pub type SF = i16;
@@ -36,9 +37,9 @@ pub type Phase = f64;
 pub type Frequency = f64;
 pub type Volume = f32;
 
-const CHANNELS: usize = 2;
-const FRAMES: u32 = 64;
-const SAMPLE_HZ: f64 = 44_100.0;
+pub const CHANNELS: usize = 2;
+pub const FRAMES: u32 = 64;
+pub const SAMPLE_HZ: f64 = 44_100.0;
 
 #[cfg(target_os = "linux")]
 pub fn open_audio_dev() -> Result<(alsa::PCM, u32), Box<error::Error>> {
@@ -49,7 +50,8 @@ pub fn open_audio_dev() -> Result<(alsa::PCM, u32), Box<error::Error>> {
     }
     let req_devname = format!("hw:{}", args[1]);
     let req_samplerate = args.get(2).map(|x| x.parse()).unwrap_or(Ok(48000))?;
-    let req_bufsize = args.get(3).map(|x| x.parse()).unwrap_or(Ok(256))?; // A few ms latency by default, that should be nice 
+    // A few ms latency by default, that should be nice 
+    let req_bufsize = args.get(3).map(|x| x.parse()).unwrap_or(Ok(256))?; 
     
     // Open the device
     let p = alsa::PCM::new(&req_devname, alsa::Direction::Playback, false)?;
@@ -139,9 +141,9 @@ pub fn write_samples_io(
 pub fn event_loop(
         mut ipc_in: File, 
         mut ipc_client: File, 
-        mut patch: Graph<[Output; CHANNELS], DspNode>, 
-        master: NodeIndex) -> Result<(), Box<error::Error>> {
-
+        mut patch: Graph<[Output; CHANNELS], Box<Module>>, 
+        master: NodeIndex,
+        f: fn(Action) -> Action) -> Result<(), Box<error::Error>> {
     // Set the master node for the graph.
     patch.set_master(Some(master));
 
@@ -151,9 +153,12 @@ pub fn event_loop(
         dsp::slice::equilibrium(buffer);
         patch.audio_requested(buffer, SAMPLE_HZ);
 
-        let a: Action = dispatch(&ipc_in);
+        let a: Action = f(dispatch(&ipc_in));
 
-        pa::Continue
+        match a {
+             //Action::NoteOn => 
+            _ => pa::Continue
+        }
     };
 
     // Construct PortAudio and the stream.
@@ -171,39 +176,13 @@ pub fn event_loop(
     Ok(())
 }
 
-/// Our type for which we will implement the `Dsp` trait.
-#[derive(Debug)]
-pub enum DspNode {
-    /// Synth will be our demonstration of a master GraphNode.
-    Master,
-    /// Oscillator will be our generator type of node, meaning that we will override
-    /// the way it provides audio via its `audio_requested` method.
-    Oscillator(Phase, Frequency, Volume),
-}
-
-impl Node<[Output; CHANNELS]> for DspNode {
-    /// Here we'll override the audio_requested method and generate a sine wave.
-    fn audio_requested(&mut self, buffer: &mut [[Output; CHANNELS]], sample_hz: f64) {
-        match *self {
-            DspNode::Master => (),
-            DspNode::Oscillator(ref mut phase, frequency, volume) => {
-                dsp::slice::map_in_place(buffer, |_| {
-                    let val = sine_wave(*phase, volume);
-                    *phase += frequency / sample_hz;
-                    Frame::from_fn(|_| val)
-                });
-            }
-        }
-    }
-}
-
-/// Return a sine wave for the given phase.
-fn sine_wave<S: Sample>(phase: Phase, volume: Volume) -> S
-where
-    S: Sample + FromSample<f32>,
-{
-    use std::f64::consts::PI;
-    ((phase * PI * 2.0).sin() as f32 * volume).to_sample::<S>()
+// objects of structs which implement EventNode don't necessarily 
+// need to be DspNodes. Their owners could be the main event_loop
+// if they are to dispatch ipc-received actions, or another EventNode
+// if that node dispatches its own actions (arpeggiator). The ownership
+// of dispatch functions is a directed acyclic graph
+pub trait Module: Node<[Output; CHANNELS]> {
+    fn dispatch(&mut self, a: Action, outputs: Vec<Box<Module>>) -> Action;
 }
 
 fn dispatch(mut ipc_in: &File) -> Action {
@@ -296,7 +275,7 @@ fn dispatch(mut ipc_in: &File) -> Action {
 pub fn event_loop(
         mut ipc_in: File, 
         mut ipc_client: File, 
-        mut patch: Graph<[Output; CHANNELS], DspNode>, 
+        mut patch: Graph<[Output; CHANNELS], Module>, 
         master: NodeIndex) -> Result<(), Box<error::Error>> {
     
     // Get audio devices

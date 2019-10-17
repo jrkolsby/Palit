@@ -1,6 +1,6 @@
 #[derive(Debug, Clone)]
 pub enum Action {
-    // KEYBOARD ACTIONS
+
     LoopMode(bool),
 
     PitchUp,
@@ -20,6 +20,11 @@ pub enum Action {
 
     Play,
     Stop,
+
+    // MAIN DISPATCH 
+    SwapNode,
+    RemoveRoute,
+    AddRoute,
 
     Noop,
 }
