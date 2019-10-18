@@ -21,7 +21,7 @@ mod timeline;
 mod mixer;
 mod action;
 
-use crate::core::{event_loop, DspNode, Frequency};
+use crate::core::{event_loop, Module, Frequency};
 use crate::synth::{Synth};
 use crate::timeline::{Region, Timeline};
 use crate::mixer::{Mixer};
@@ -101,14 +101,16 @@ fn main() -> Result<(), Box<error::Error>> {
     let mut graph = Graph::new();
 
     // Construct master node
-    let master = graph.add_node(DspNode::Master);
-    let my_osc = DspNode::Oscillator(0.0, F5_HZ, 0.15);
+    let master = graph.add_node(Module::Master);
+    let keys = graph.add_node(Module::Keys);
+    let midi_keys = graph.add_node(Module::MidiKeys);
+
+    let my_osc = Module::Oscillator(0.0, F5_HZ, 0.15);
 
     // Connect a few oscillators to the synth.
-    let (_, oscillator_a) = graph.add_input(DspNode::Oscillator(0.0, A5_HZ, 0.2), master);
-    graph.add_input(DspNode::Oscillator(0.0, D5_HZ, 0.1), master);
+    let (_, oscillator_a) = graph.add_input(Module::Oscillator(0.0, A5_HZ, 0.2), master);
+    graph.add_input(Module::Oscillator(0.0, D5_HZ, 0.1), master);
     graph.add_input(my_osc, master);
-
 
     /*
     // Pasting some useful stuff here
@@ -121,14 +123,14 @@ fn main() -> Result<(), Box<error::Error>> {
 
     let mut inputs = patch.inputs(master);
     while let Some(input_idx) = inputs.next_node(&patch) {
-        if let DspNode::Oscillator(_, ref mut pitch, _) = patch[input_idx] {
+        if let Module::Oscillator(_, ref mut pitch, _) = patch[input_idx] {
             // Pitch down our oscillators for fun.
             *pitch -= 0.1;
         }
     }
     */
 
-    event_loop(ipc_in, ipc_client, graph, master, |a| {
+    event_loop(ipc_in, ipc_client, graph, master, keys, midi_keys, |a| {
         println!("{:?}", a);
         a
     })

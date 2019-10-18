@@ -16,6 +16,7 @@ use alsa::pcm::State;
 use alsa::PollDescriptors;
 
 use dsp::{sample::ToFrameSliceMut, NodeIndex, Frame, FromSample, Graph, Node, Sample, Walker};
+use dsp::daggy::petgraph::Bfs;
 
 #[cfg(target_os = "macos")]
 use portaudio as pa;
@@ -139,7 +140,9 @@ pub fn write_samples_io(
 pub fn event_loop<F: 'static>(
         mut ipc_in: File, 
         mut ipc_client: File, 
-        mut patch: Graph<[Output; CHANNELS], DspNode>, 
+        mut patch: Graph<[Output; CHANNELS], Module>, 
+        midi_keys: NodeIndex,
+        keys: NodeIndex,
         master: NodeIndex,
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
     where F: FnMut(Action) -> Action {
@@ -153,13 +156,30 @@ pub fn event_loop<F: 'static>(
         dsp::slice::equilibrium(buffer);
         patch.audio_requested(buffer, SAMPLE_HZ);
 
-        let a: Action = dispatch(&ipc_in);
+        // DO A BFS FROM SOME SPECIAL NODES: 
+        // Keyboard, Midi, Controller
 
-        match dispatch_f(a) {
+        let ipc_action: Action = from_str(&ipc_in);
+        //let midi_action: Action = ...
+
+        match ipc_action {
+            Action::Noop => pa::Continue,
+            // Give params directly to their node
+            Action::SetParam(nid, pid, val) => {
+                patch[nid].dispatch(ipc_action);
+                pa::Continue
+            },
+            // Give notes to the outputs of keyboard
+            Action::NoteOn(_,_) | Action::NoteOff(_) => {
+                let mut outputs = patch.outputs(master);
+                while let Some(oid) = outputs.next_node(&patch) {
+                    patch[oid].dispatch(ipc_action.clone());
+                }
+                pa::Continue
+            },
             Action::Stop => pa::Complete,
-            _ => pa::Continue
+            _ => pa::Continue,
         }
-
     };
 
     // Construct PortAudio and the stream.
@@ -179,33 +199,40 @@ pub fn event_loop<F: 'static>(
 
 /// Our type for which we will implement the `Dsp` trait.
 #[derive(Debug)]
-pub enum DspNode {
+pub enum Module {
     /// Synth will be our demonstration of a master GraphNode.
     Master,
     /// Oscillator will be our generator type of node, meaning that we will override
     /// the way it provides audio via its `audio_requested` method.
     Oscillator(Phase, Frequency, Volume),
+    Keys,
+    MidiKeys,
 }
 
-impl DspNode {
+impl Module {
     pub fn dispatch(&mut self, a: Action) -> Action {
+        match *self {
+            Module::Master => {}
+            _ => {}
+        };
         println!("dispatching!");
         a
     }
 }
 
-impl Node<[Output; CHANNELS]> for DspNode {
+impl Node<[Output; CHANNELS]> for Module {
     /// Here we'll override the audio_requested method and generate a sine wave.
     fn audio_requested(&mut self, buffer: &mut [[Output; CHANNELS]], sample_hz: f64) {
         match *self {
-            DspNode::Master => (),
-            DspNode::Oscillator(ref mut phase, frequency, volume) => {
+            Module::Master => (),
+            Module::Oscillator(ref mut phase, frequency, volume) => {
                 dsp::slice::map_in_place(buffer, |_| {
                     let val = sine_wave(*phase, volume);
                     *phase += frequency / sample_hz;
                     Frame::from_fn(|_| val)
                 });
             }
+            _ => {}
         }
     }
 }
@@ -219,7 +246,7 @@ where
     ((phase * PI * 2.0).sin() as f32 * volume).to_sample::<S>()
 }
 
-fn dispatch(mut ipc_in: &File) -> Action {
+fn from_str(mut ipc_in: &File) -> Action {
     let mut buf: String = String::new();
     ipc_in.read_to_string(&mut buf);
     match &buf[..] {
@@ -309,7 +336,7 @@ fn dispatch(mut ipc_in: &File) -> Action {
 pub fn event_loop(
         mut ipc_in: File, 
         mut ipc_client: File, 
-        mut patch: Graph<[Output; CHANNELS], DspNode>, 
+        mut patch: Graph<[Output; CHANNELS], Module>, 
         master: NodeIndex) -> Result<(), Box<error::Error>> {
     
     // Get audio devices
@@ -340,7 +367,7 @@ pub fn event_loop(
 
         if read_midi_event(&mut midi_input, &mut root.synths[0])? { continue; }
 
-        let a: Action = dispatch(&ipc_in);
+        let a: Action = from_str(&ipc_in);
 
         // Nothing to do, let's sleep until woken up by the kernel.
         alsa::poll::poll(&mut fds, 100)?;

@@ -1,3 +1,5 @@
+use dsp::NodeIndex;
+
 #[derive(Debug, Clone)]
 pub enum Action {
     // KEYBOARD ACTIONS
@@ -17,6 +19,8 @@ pub enum Action {
 
     NoteOn(u8, f64),
     NoteOff(u8),
+
+    SetParam(NodeIndex, u8, f64),
 
     Play,
     Stop,
