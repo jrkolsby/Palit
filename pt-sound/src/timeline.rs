@@ -32,10 +32,10 @@ pub struct Timeline<'a> {
 impl Timeline<'_> {
     //fn new() -> Self {}
     fn arm(&mut self, t: u32) {
-	self.playhead == t;
-	for region in self.regions.iter_mut() {
-	    //if region.offset < t and 
-	}
+	    self.playhead == t;
+        for region in self.regions.iter_mut() {
+            //if region.offset < t and 
+        }
     }
     fn stop() {}
 }
@@ -43,36 +43,35 @@ impl Timeline<'_> {
 impl Iterator for Timeline<'_> { 
     type Item = SF;
     fn next(&mut self) -> Option<Self::Item> {
-	self.playhead += 1;
+	    self.playhead += 1;
         if self.playhead % 65536 == 0 {
             println!("tick!");
             //self.out.write(b"TICK");
         }
-	let mut z: f64 = 0.0;
+        let mut z: f64 = 0.0;
         if !self.playing {
             let z: Option<SF> = Some(SF::from_sample(z));
             return z
         }
-	// see iter() iter_mut() and into_iter()
-	for region in self.regions.iter_mut() {
-	    if self.playhead == region.offset {
-		println!("play");
-		region.active = true;
-	    }
-	    if region.active {
-		if self.playhead >= region.offset + region.duration {
-		    println!("stop");
-		    region.active = false;
-		} else {
-		    let x: f64 = 
-			region.wave.next().unwrap()[0] as f64 * 0.000001;
-		    z += x * region.gain;
-		}
-	    }
-	}
+        // see iter() iter_mut() and into_iter()
+        for region in self.regions.iter_mut() {
+            if self.playhead == region.offset {
+                println!("play");
+                region.active = true;
+            }
+            if region.active {
+                if self.playhead >= region.offset + region.duration {
+                    println!("stop");
+                    region.active = false;
+                } else {
+                    let x: f64 = 
+                    region.wave.next().unwrap()[0] as f64 * 0.000001;
+                    z += x * region.gain;
+                }
+            }
+        }
         let z = z.min(0.999).max(-0.999);
         let z: Option<SF> = Some(SF::from_sample(z));
         z
     }
 }
-

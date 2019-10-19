@@ -15,7 +15,8 @@ use alsa::pcm::State;
 #[cfg(target_os = "linux")]
 use alsa::PollDescriptors;
 
-use dsp::{sample::ToFrameSliceMut, NodeIndex, Frame, FromSample, Graph, Node, Sample, Walker};
+use dsp::{sample::ToFrameSliceMut, NodeIndex, Frame, FromSample};
+use dsp::{Outputs, Graph, Node, Sample, Walker};
 use dsp::daggy::petgraph::Bfs;
 
 #[cfg(target_os = "macos")]
@@ -165,9 +166,10 @@ pub fn event_loop<F: 'static>(
         // TODO: find a way for nodes to dispatch to ipc
         let mut walk = patch.visit_order_rev();
         while let Some(n) = walk.next(&patch) {
-            if let Some(a) = patch[n].request_action() {
+            let mut outputs = patch.outputs(master);
+            if let Some(a) = patch[n].request_dispatch(outputs, &ipc_client) {
                 match a {
-                    Action::Tick => { ipc_client.write(b"TICK"); },
+                    Action::Tick => { ipc_client.write(b"TICK "); },
                     _ => {}
                 }
             }
@@ -238,8 +240,12 @@ impl Module {
         println!("dispatching!");
         a
     }
-    pub fn request_action(&mut self) -> Option<Action> {
-        None
+    pub fn request_dispatch(&mut self, 
+        neighbors: dsp::Outputs<[Output; CHANNELS], Module>, ipc_client: &File) -> Option<Action> {
+        match *self {
+            Module::Master => Some(Action::Tick),
+            _ => None
+        }
     }
 }
 
