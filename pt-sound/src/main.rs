@@ -100,17 +100,15 @@ fn main() -> Result<(), Box<error::Error>> {
     // Construct our dsp graph.
     let mut graph = Graph::new();
 
-    // Construct master node
+    // Construct special nodes
     let master = graph.add_node(Module::Master);
     let keys = graph.add_node(Module::Keys);
     let midi_keys = graph.add_node(Module::MidiKeys);
 
-    let my_osc = Module::Oscillator(0.0, F5_HZ, 0.15);
-
     // Connect a few oscillators to the synth.
-    let (_, oscillator_a) = graph.add_input(Module::Oscillator(0.0, A5_HZ, 0.2), master);
+    graph.add_input(Module::Oscillator(0.0, A5_HZ, 0.2), master);
     graph.add_input(Module::Oscillator(0.0, D5_HZ, 0.1), master);
-    graph.add_input(my_osc, master);
+    graph.add_input(Module::Oscillator(0.0, F5_HZ, 0.15), master);
 
     /*
     // Pasting some useful stuff here

@@ -1,4 +1,4 @@
-use dsp::NodeIndex;
+use dsp::{NodeIndex, EdgeIndex};
 
 #[derive(Debug, Clone)]
 pub enum Action {
@@ -7,8 +7,12 @@ pub enum Action {
 
     PitchUp,
     PitchDown,
+
     VolumeUp,
     VolumeDown,
+
+    AddRoute(NodeIndex, u8, NodeIndex, u8),
+    DeleteRoute(EdgeIndex),
 
     // ABSTRACT ACTIONS
     OpenProject(String),
@@ -24,6 +28,8 @@ pub enum Action {
 
     Play,
     Stop,
+
+    Tick,
 
     Noop,
 }

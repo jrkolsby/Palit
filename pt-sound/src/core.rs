@@ -159,14 +159,34 @@ pub fn event_loop<F: 'static>(
         // DO A BFS FROM SOME SPECIAL NODES: 
         // Keyboard, Midi, Controller
 
-        let ipc_action: Action = from_str(&ipc_in);
+        let ipc_action: Action = ipc_action(&ipc_in);
         //let midi_action: Action = ...
+
+        // TODO: find a way for nodes to dispatch to ipc
+        let mut walk = patch.visit_order_rev();
+        while let Some(n) = walk.next(&patch) {
+            if let Some(a) = patch[n].request_action() {
+                match a {
+                    Action::Tick => { ipc_client.write(b"TICK"); },
+                    _ => {}
+                }
+            }
+        }
 
         match ipc_action {
             Action::Noop => pa::Continue,
-            // Give params directly to their node
+            // Can mutate graph here
+            Action::AddRoute(nid_o, oid, nid_i, iid) => {
+                println!("Mutating graph!");
+                pa::Continue
+            },
+            Action::DeleteRoute(eid) => {
+                println!("deleting edge!");
+                pa::Continue
+            },
+            // Give params directly to the affected node
             Action::SetParam(nid, pid, val) => {
-                patch[nid].dispatch(ipc_action);
+                patch[nid].dispatch(ipc_action.clone());
                 pa::Continue
             },
             // Give notes to the outputs of keyboard
@@ -218,10 +238,13 @@ impl Module {
         println!("dispatching!");
         a
     }
+    pub fn request_action(&mut self) -> Option<Action> {
+        None
+    }
 }
 
 impl Node<[Output; CHANNELS]> for Module {
-    /// Here we'll override the audio_requested method and generate a sine wave.
+    // Here we'll override the audio_requested method and generate a sine wave.
     fn audio_requested(&mut self, buffer: &mut [[Output; CHANNELS]], sample_hz: f64) {
         match *self {
             Module::Master => (),
@@ -246,7 +269,7 @@ where
     ((phase * PI * 2.0).sin() as f32 * volume).to_sample::<S>()
 }
 
-fn from_str(mut ipc_in: &File) -> Action {
+fn ipc_action(mut ipc_in: &File) -> Action {
     let mut buf: String = String::new();
     ipc_in.read_to_string(&mut buf);
     match &buf[..] {
@@ -367,7 +390,7 @@ pub fn event_loop(
 
         if read_midi_event(&mut midi_input, &mut root.synths[0])? { continue; }
 
-        let a: Action = from_str(&ipc_in);
+        let a: Action = ipc_action(&ipc_in);
 
         // Nothing to do, let's sleep until woken up by the kernel.
         alsa::poll::poll(&mut fds, 100)?;
