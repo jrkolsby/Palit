@@ -26,6 +26,7 @@ use sample::signal;
 
 use crate::midi::{open_midi_dev, read_midi_event, connect_midi_source_ports};
 use crate::action::Action;
+use crate::synth;
 
 // SAMPLE FORMAT ALSA
 pub type SF = i16;
@@ -161,35 +162,25 @@ pub fn event_loop<F: 'static>(
         // Keyboard, Midi, Controller
 
         let ipc_action: Action = ipc_action(&ipc_in);
-        //let midi_action: Action = ...
+        //let midi_action: Action = alsa blah blah...
 
-        // TODO: find a way for nodes to dispatch to ipc
         let mut walk = patch.visit_order_rev();
         while let Some(n) = walk.next(&patch) {
             let mut outputs = patch.outputs(n);
-            if let Some(a) = patch[n].dispatch_requested(outputs, &ipc_client) {
-                match a {
-                    Action::Tick => { ipc_client.write(b"TICK "); },
-                    _ => {}
-                }
-            }
+            patch[n].dispatch_requested(outputs, &ipc_client);
         }
 
         match ipc_action {
-            Action::Noop => pa::Continue,
             // Can mutate graph here
             Action::AddRoute(nid_o, oid, nid_i, iid) => {
                 println!("Mutating graph!");
-                pa::Continue
             },
             Action::DeleteRoute(eid) => {
                 println!("deleting edge!");
-                pa::Continue
             },
             // Give params directly to the affected node
             Action::SetParam(nid, pid, val) => {
                 patch[nid].dispatch(ipc_action.clone());
-                pa::Continue
             },
             // Give notes to the outputs of keyboard
             Action::NoteOn(_,_) | Action::NoteOff(_) => {
@@ -197,11 +188,12 @@ pub fn event_loop<F: 'static>(
                 while let Some(oid) = outputs.next_node(&patch) {
                     patch[oid].dispatch(ipc_action.clone());
                 }
-                pa::Continue
             },
-            Action::Stop => pa::Complete,
-            _ => pa::Continue,
-        }
+            Action::Stop => { return pa::Complete },
+            _ => {}
+        };
+
+        pa::Continue
     };
 
     // Construct PortAudio and the stream.
@@ -220,7 +212,6 @@ pub fn event_loop<F: 'static>(
 }
 
 // Our type for which we will implement the `Dsp` trait.
-#[derive(Debug)]
 pub enum Module {
     /// Synth will be our demonstration of a master GraphNode.
     Master,
@@ -228,12 +219,14 @@ pub enum Module {
     /// the way it provides audio via its `audio_requested` method.
     Oscillator(Phase, Frequency, Volume),
     Keyboard,
+    Synth(synth::Store),
 }
 
 impl Module {
     pub fn dispatch(&mut self, a: Action) -> Action {
         match *self {
             Module::Master => {}
+            Module::Synth(ref mut store) => synth::dispatch(store, a.clone()),
             _ => {}
         };
         println!("dispatching!");
@@ -244,6 +237,7 @@ impl Module {
             ipc_client: &File) -> Option<Action> {
         match *self {
             Module::Master => Some(Action::Tick),
+            //Module::Synth(ref mut store) => synth::
             _ => None
         }
     }
@@ -357,6 +351,7 @@ fn ipc_action(mut ipc_in: &File) -> Action {
         "A3_OFF" => Action::NoteOff(102),
         "A3#_OFF" => Action::NoteOff(103),
         "B3_OFF" => Action::NoteOff(104),
+
         _ => Action::Noop,
     }
 }

@@ -21,7 +21,6 @@ mod timeline;
 mod action;
 
 use crate::core::{event_loop, Module, Frequency};
-use crate::synth::{Synth};
 use crate::timeline::{Region, Timeline};
 
 fn arm<'a>(wav: &'a WaveFile, timeline: &'a mut Timeline<'a>) {
@@ -52,14 +51,6 @@ fn main() -> Result<(), Box<error::Error>> {
 
     let wav1: WaveFile = WaveFile::open("Who.wav").unwrap();
     //let wav2: WaveFile = WaveFile::open("When.wav").unwrap();
-
-    // Hammond synth
-    let mut synth = Synth {
-        sigs: iter::repeat(None).take(256).collect(),
-        sample_rate: signal::rate(f64::from(48000)),
-        stored_sample: None,
-        bar_values: [1., 1., 1., 0.75, 0.5, 0., 0., 0., 0.],
-    };
 
     let mut tl = Timeline {
         bpm: 127,
@@ -98,6 +89,13 @@ fn main() -> Result<(), Box<error::Error>> {
     let keys = graph.add_node(Module::Keyboard);
     let midi_keys = graph.add_node(Module::Keyboard);
 
+    let synth = graph.add_node(Module::Synth(synth::Store {
+        sigs: iter::repeat(None).take(256).collect(),
+        sample_rate: signal::rate(f64::from(48000)),
+        stored_sample: None,
+        bar_values: [1., 1., 1., 0.75, 0.5, 0., 0., 0., 0.],
+    }));
+
     // Connect a few oscillators to the synth.
     graph.add_input(Module::Oscillator(0.0, A5_HZ, 0.2), master);
     graph.add_input(Module::Oscillator(0.0, D5_HZ, 0.1), master);
@@ -121,8 +119,5 @@ fn main() -> Result<(), Box<error::Error>> {
     }
     */
 
-    event_loop(ipc_in, ipc_client, graph, master, keys, midi_keys, |a| {
-        println!("{:?}", a);
-        a
-    })
+    event_loop(ipc_in, ipc_client, graph, master, keys, midi_keys, |a| { a })
 }
