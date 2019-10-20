@@ -166,8 +166,8 @@ pub fn event_loop<F: 'static>(
         // TODO: find a way for nodes to dispatch to ipc
         let mut walk = patch.visit_order_rev();
         while let Some(n) = walk.next(&patch) {
-            let mut outputs = patch.outputs(master);
-            if let Some(a) = patch[n].request_dispatch(outputs, &ipc_client) {
+            let mut outputs = patch.outputs(n);
+            if let Some(a) = patch[n].dispatch_requested(outputs, &ipc_client) {
                 match a {
                     Action::Tick => { ipc_client.write(b"TICK "); },
                     _ => {}
@@ -193,7 +193,7 @@ pub fn event_loop<F: 'static>(
             },
             // Give notes to the outputs of keyboard
             Action::NoteOn(_,_) | Action::NoteOff(_) => {
-                let mut outputs = patch.outputs(master);
+                let mut outputs = patch.outputs(keys);
                 while let Some(oid) = outputs.next_node(&patch) {
                     patch[oid].dispatch(ipc_action.clone());
                 }
@@ -219,7 +219,7 @@ pub fn event_loop<F: 'static>(
     Ok(())
 }
 
-/// Our type for which we will implement the `Dsp` trait.
+// Our type for which we will implement the `Dsp` trait.
 #[derive(Debug)]
 pub enum Module {
     /// Synth will be our demonstration of a master GraphNode.
@@ -227,8 +227,7 @@ pub enum Module {
     /// Oscillator will be our generator type of node, meaning that we will override
     /// the way it provides audio via its `audio_requested` method.
     Oscillator(Phase, Frequency, Volume),
-    Keys,
-    MidiKeys,
+    Keyboard,
 }
 
 impl Module {
@@ -240,8 +239,9 @@ impl Module {
         println!("dispatching!");
         a
     }
-    pub fn request_dispatch(&mut self, 
-        neighbors: dsp::Outputs<[Output; CHANNELS], Module>, ipc_client: &File) -> Option<Action> {
+    pub fn dispatch_requested(&mut self, 
+            neighbors: dsp::Outputs<[Output; CHANNELS], Module>, 
+            ipc_client: &File) -> Option<Action> {
         match *self {
             Module::Master => Some(Action::Tick),
             _ => None

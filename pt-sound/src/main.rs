@@ -18,13 +18,11 @@ mod core;
 mod midi;
 mod synth;
 mod timeline;
-mod mixer;
 mod action;
 
 use crate::core::{event_loop, Module, Frequency};
 use crate::synth::{Synth};
 use crate::timeline::{Region, Timeline};
-use crate::mixer::{Mixer};
 
 fn arm<'a>(wav: &'a WaveFile, timeline: &'a mut Timeline<'a>) {
     let wav1: WaveFile = WaveFile::open("Who.wav").unwrap();
@@ -92,18 +90,13 @@ fn main() -> Result<(), Box<error::Error>> {
         //out: ipc_client,
     };
 
-    let mut root = Mixer {
-        timeline: tl,
-        synths: vec![synth],
-    };
-    
     // Construct our dsp graph.
     let mut graph = Graph::new();
 
     // Construct special nodes
     let master = graph.add_node(Module::Master);
-    let keys = graph.add_node(Module::Keys);
-    let midi_keys = graph.add_node(Module::MidiKeys);
+    let keys = graph.add_node(Module::Keyboard);
+    let midi_keys = graph.add_node(Module::Keyboard);
 
     // Connect a few oscillators to the synth.
     graph.add_input(Module::Oscillator(0.0, A5_HZ, 0.2), master);
