@@ -171,15 +171,16 @@ pub fn event_loop<F: 'static>(
                 Action::DeleteRoute(eid) => {
                     println!("deleting edge!");
                 },
+                Action::SetParam(nid, _, _) => {
+                    let id = NodeIndex::new(*nid);
+                    patch[id].dispatch(action.clone());
+                },
                 // Give notes to the outputs of keyboard
                 Action::NoteOn(_,_) | Action::NoteOff(_) => {
-                    let mut outputs = patch.outputs(keys);
-                    while let Some(oid) = outputs.next_node(&patch) {
-                        patch[oid].dispatch(action.clone());
-                    }
+                    patch[keys].dispatch(action.clone());
                 },
                 Action::Stop => { return pa::Complete },
-                _ => {}
+                _ => { println!("Got action, {:?}", action);}
             };
         }
 
@@ -187,17 +188,7 @@ pub fn event_loop<F: 'static>(
         // Must travel opposite the direciton of audio in an acyclic graph
         let mut walk = patch.visit_order_rev();
         while let Some(n) = walk.next(&patch) {
-            let mut outputs = patch.outputs(n);
-            patch[n].dispatch_requested(outputs, &ipc_client);
-            for action in ipc_actions.iter() {
-                match action {
-                    Action::SetParam(nid, _, _) 
-                        if *nid == n.index() => { 
-                            patch[n].dispatch(action.clone()); 
-                        },
-                    _ => { continue; }
-                }
-            }
+            let (in_a, out_a, client_a) = patch[n].dispatch_requested();
         }
 
         pa::Continue
@@ -227,25 +218,31 @@ pub enum Module {
     Oscillator(Phase, Frequency, Volume),
     Keyboard,
     Synth(synth::Store),
+    Passthru(Vec<Action>),
 }
 
 impl Module {
     pub fn dispatch(&mut self, a: Action) -> Action {
         match *self {
             Module::Master => {}
+            Module::Passthru(ref mut queue) => { queue.push(a.clone()) }
             Module::Synth(ref mut store) => synth::dispatch(store, a.clone()),
             _ => {}
         };
         println!("dispatching!");
         a
     }
-    pub fn dispatch_requested(&mut self, 
-            neighbors: dsp::Outputs<[Output; CHANNELS], Module>, 
-            ipc_client: &File) -> Option<Action> {
+    pub fn dispatch_requested(&mut self) -> (
+        Option<Vec<Action>>, // Actions for outputs
+        Option<Vec<Action>>, // Actions for inputs
+        Option<Vec<Action>> // Actions for client
+        ) {
+
         match *self {
-            Module::Master => Some(Action::Tick),
+            Module::Passthru(ref mut queue) => (Some(queue.clone()), None, None),
+            Module::Master => (None, None, None),
             //Module::Synth(ref mut store) => synth::
-            _ => None
+            _ => (None, None, None)
         }
     }
 }
@@ -285,12 +282,16 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
 
     while let Some(action_raw) = ipc_iter.next() {
         let argv: Vec<&str> = action_raw.split(":").collect();
+        println!("argv len {}", argv.len());
 
         let action = match argv[0] {
             //"OPEN_PROJECT" => { println!("OPEN"); },
 
             "PLAY" => Action::Play,
             "STOP" => Action::Stop,
+
+            "NOTEON" => 
+                Action::NoteOn(argv[1].parse::<u8>().unwrap(), argv[2].parse::<f64>().unwrap()),
 
             "C1_ON" => Action::NoteOn(69, 0.5),
             "C1#_ON" => Action::NoteOn(70, 0.5),
@@ -369,7 +370,10 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             _ => Action::Noop,
         };
 
-        events.push(action);
+        match action {
+            Action::Noop => {},
+            _ => { events.push(action); }
+        };
     };
 
     events
