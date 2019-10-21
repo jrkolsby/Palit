@@ -24,7 +24,7 @@ pub enum Action {
     NoteOn(u8, f64),
     NoteOff(u8),
 
-    SetParam(NodeIndex, u8, f64),
+    SetParam(usize, u8, f64),
 
     Play,
     Stop,

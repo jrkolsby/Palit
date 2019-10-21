@@ -158,40 +158,47 @@ pub fn event_loop<F: 'static>(
         dsp::slice::equilibrium(buffer);
         patch.audio_requested(buffer, SAMPLE_HZ);
 
-        // DO A BFS FROM SOME SPECIAL NODES: 
-        // Keyboard, Midi, Controller
-
-        let ipc_action: Action = ipc_action(&ipc_in);
+        let ipc_actions: Vec<Action> = ipc_action(&ipc_in);
         //let midi_action: Action = alsa blah blah...
 
+        for action in ipc_actions.iter() {
+
+            match action {
+                // Can mutate graph here
+                Action::AddRoute(nid_o, oid, nid_i, iid) => {
+                    println!("Mutating graph!");
+                },
+                Action::DeleteRoute(eid) => {
+                    println!("deleting edge!");
+                },
+                // Give notes to the outputs of keyboard
+                Action::NoteOn(_,_) | Action::NoteOff(_) => {
+                    let mut outputs = patch.outputs(keys);
+                    while let Some(oid) = outputs.next_node(&patch) {
+                        patch[oid].dispatch(action.clone());
+                    }
+                },
+                Action::Stop => { return pa::Complete },
+                _ => {}
+            };
+        }
+
+        // Nodes dispatch actions to neighbors or to client. Midi signals
+        // Must travel opposite the direciton of audio in an acyclic graph
         let mut walk = patch.visit_order_rev();
         while let Some(n) = walk.next(&patch) {
             let mut outputs = patch.outputs(n);
             patch[n].dispatch_requested(outputs, &ipc_client);
-        }
-
-        match ipc_action {
-            // Can mutate graph here
-            Action::AddRoute(nid_o, oid, nid_i, iid) => {
-                println!("Mutating graph!");
-            },
-            Action::DeleteRoute(eid) => {
-                println!("deleting edge!");
-            },
-            // Give params directly to the affected node
-            Action::SetParam(nid, pid, val) => {
-                patch[nid].dispatch(ipc_action.clone());
-            },
-            // Give notes to the outputs of keyboard
-            Action::NoteOn(_,_) | Action::NoteOff(_) => {
-                let mut outputs = patch.outputs(keys);
-                while let Some(oid) = outputs.next_node(&patch) {
-                    patch[oid].dispatch(ipc_action.clone());
+            for action in ipc_actions.iter() {
+                match action {
+                    Action::SetParam(nid, _, _) 
+                        if *nid == n.index() => { 
+                            patch[n].dispatch(action.clone()); 
+                        },
+                    _ => { continue; }
                 }
-            },
-            Action::Stop => { return pa::Complete },
-            _ => {}
-        };
+            }
+        }
 
         pa::Continue
     };
@@ -269,91 +276,103 @@ where
     ((phase * PI * 2.0).sin() as f32 * volume).to_sample::<S>()
 }
 
-fn ipc_action(mut ipc_in: &File) -> Action {
+fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
     let mut buf: String = String::new();
     ipc_in.read_to_string(&mut buf);
-    match &buf[..] {
-        //"OPEN_PROJECT" => { println!("OPEN"); },
+    let mut ipc_iter = buf.split(" ");
 
-        "PLAY" => Action::Play,
-        "STOP" => Action::Stop,
+    let mut events: Vec<Action> = Vec::new();
 
-        "C1_ON" => Action::NoteOn(69, 0.5),
-        "C1#_ON" => Action::NoteOn(70, 0.5),
-        "D1_ON" => Action::NoteOn(71, 0.5),
-        "D1#_ON" => Action::NoteOn(72, 0.5),
-        "E1_ON" => Action::NoteOn(73, 0.5),
-        "F1_ON" => Action::NoteOn(74, 0.5),
-        "F1#_ON" => Action::NoteOn(75, 0.5),
-        "G1_ON" => Action::NoteOn(76, 0.5),
-        "G1#_ON" => Action::NoteOn(77, 0.5),
-        "A1_ON" => Action::NoteOn(78, 0.5),
-        "A1#_ON" => Action::NoteOn(79, 0.5),
-        "B1_ON" => Action::NoteOn(80, 0.5),
-        "C2_ON" =>  Action::NoteOn(81, 0.5),
-        "C2#_ON" => Action::NoteOn(82, 0.5),
-        "D2_ON" => Action::NoteOn(83, 0.5),
-        "D2#_ON" => Action::NoteOn(84, 0.5),
-        "E2_ON" => Action::NoteOn(85, 0.5),
-        "F2_ON" => Action::NoteOn(86, 0.5),
-        "F2#_ON" => Action::NoteOn(87, 0.5),
-        "G2_ON" => Action::NoteOn(88, 0.5),
-        "G2#_ON" => Action::NoteOn(89, 0.5),
-        "A2_ON" => Action::NoteOn(90, 0.5),
-        "A2#_ON" => Action::NoteOn(91, 0.5),
-        "B2_ON" => Action::NoteOn(92, 0.5),
-        "C3_ON" =>  Action::NoteOn(93, 0.5),
-        "C3#_ON" => Action::NoteOn(94, 0.5),
-        "D3_ON" => Action::NoteOn(95, 0.5),
-        "D3#_ON" => Action::NoteOn(96, 0.5),
-        "E3_ON" => Action::NoteOn(97, 0.5),
-        "F3_ON" => Action::NoteOn(98, 0.5),
-        "F3#_ON" => Action::NoteOn(99, 0.5),
-        "G3_ON" => Action::NoteOn(100, 0.5),
-        "G3#_ON" => Action::NoteOn(101, 0.5),
-        "A3_ON" => Action::NoteOn(102, 0.5),
-        "A3#_ON" => Action::NoteOn(103, 0.5),
-        "B3_ON" => Action::NoteOn(104, 0.5),
+    while let Some(action_raw) = ipc_iter.next() {
+        let argv: Vec<&str> = action_raw.split(":").collect();
 
-        "C1_OFF" =>  Action::NoteOff(69),
-        "C1#_OFF" => Action::NoteOff(70),
-        "D1_OFF" => Action::NoteOff(71),
-        "D1#_OFF" => Action::NoteOff(72),
-        "E1_OFF" => Action::NoteOff(73),
-        "F1_OFF" => Action::NoteOff(74),
-        "F1#_OFF" => Action::NoteOff(75),
-        "G1_OFF" => Action::NoteOff(76),
-        "G1#_OFF" => Action::NoteOff(77),
-        "A1_OFF" => Action::NoteOff(78),
-        "A1#_OFF" => Action::NoteOff(79),
-        "B1_OFF" => Action::NoteOff(80),
-        "C2_OFF" =>  Action::NoteOff(81),
-        "C2#_OFF" => Action::NoteOff(82),
-        "D2_OFF" => Action::NoteOff(83),
-        "D2#_OFF" => Action::NoteOff(84),
-        "E2_OFF" => Action::NoteOff(85),
-        "F2_OFF" => Action::NoteOff(86),
-        "F2#_OFF" => Action::NoteOff(87),
-        "G2_OFF" => Action::NoteOff(88),
-        "G2#_OFF" => Action::NoteOff(89),
-        "A2_OFF" => Action::NoteOff(90),
-        "A2#_OFF" => Action::NoteOff(91),
-        "B2_OFF" => Action::NoteOff(92),
-        "C3_OFF" =>  Action::NoteOff(93),
-        "C3#_OFF" => Action::NoteOff(94),
-        "D3_OFF" => Action::NoteOff(95),
-        "D3#_OFF" => Action::NoteOff(96),
-        "E3_OFF" => Action::NoteOff(97),
-        "F3_OFF" => Action::NoteOff(98),
-        "F3#_OFF" => Action::NoteOff(99),
-        "G3_OFF" => Action::NoteOff(100),
-        "G3#_OFF" => Action::NoteOff(101),
-        "A3_OFF" => Action::NoteOff(102),
-        "A3#_OFF" => Action::NoteOff(103),
-        "B3_OFF" => Action::NoteOff(104),
+        let action = match argv[0] {
+            //"OPEN_PROJECT" => { println!("OPEN"); },
 
-        _ => Action::Noop,
-    }
+            "PLAY" => Action::Play,
+            "STOP" => Action::Stop,
+
+            "C1_ON" => Action::NoteOn(69, 0.5),
+            "C1#_ON" => Action::NoteOn(70, 0.5),
+            "D1_ON" => Action::NoteOn(71, 0.5),
+            "D1#_ON" => Action::NoteOn(72, 0.5),
+            "E1_ON" => Action::NoteOn(73, 0.5),
+            "F1_ON" => Action::NoteOn(74, 0.5),
+            "F1#_ON" => Action::NoteOn(75, 0.5),
+            "G1_ON" => Action::NoteOn(76, 0.5),
+            "G1#_ON" => Action::NoteOn(77, 0.5),
+            "A1_ON" => Action::NoteOn(78, 0.5),
+            "A1#_ON" => Action::NoteOn(79, 0.5),
+            "B1_ON" => Action::NoteOn(80, 0.5),
+            "C2_ON" =>  Action::NoteOn(81, 0.5),
+            "C2#_ON" => Action::NoteOn(82, 0.5),
+            "D2_ON" => Action::NoteOn(83, 0.5),
+            "D2#_ON" => Action::NoteOn(84, 0.5),
+            "E2_ON" => Action::NoteOn(85, 0.5),
+            "F2_ON" => Action::NoteOn(86, 0.5),
+            "F2#_ON" => Action::NoteOn(87, 0.5),
+            "G2_ON" => Action::NoteOn(88, 0.5),
+            "G2#_ON" => Action::NoteOn(89, 0.5),
+            "A2_ON" => Action::NoteOn(90, 0.5),
+            "A2#_ON" => Action::NoteOn(91, 0.5),
+            "B2_ON" => Action::NoteOn(92, 0.5),
+            "C3_ON" =>  Action::NoteOn(93, 0.5),
+            "C3#_ON" => Action::NoteOn(94, 0.5),
+            "D3_ON" => Action::NoteOn(95, 0.5),
+            "D3#_ON" => Action::NoteOn(96, 0.5),
+            "E3_ON" => Action::NoteOn(97, 0.5),
+            "F3_ON" => Action::NoteOn(98, 0.5),
+            "F3#_ON" => Action::NoteOn(99, 0.5),
+            "G3_ON" => Action::NoteOn(100, 0.5),
+            "G3#_ON" => Action::NoteOn(101, 0.5),
+            "A3_ON" => Action::NoteOn(102, 0.5),
+            "A3#_ON" => Action::NoteOn(103, 0.5),
+            "B3_ON" => Action::NoteOn(104, 0.5),
+
+            "C1_OFF" =>  Action::NoteOff(69),
+            "C1#_OFF" => Action::NoteOff(70),
+            "D1_OFF" => Action::NoteOff(71),
+            "D1#_OFF" => Action::NoteOff(72),
+            "E1_OFF" => Action::NoteOff(73),
+            "F1_OFF" => Action::NoteOff(74),
+            "F1#_OFF" => Action::NoteOff(75),
+            "G1_OFF" => Action::NoteOff(76),
+            "G1#_OFF" => Action::NoteOff(77),
+            "A1_OFF" => Action::NoteOff(78),
+            "A1#_OFF" => Action::NoteOff(79),
+            "B1_OFF" => Action::NoteOff(80),
+            "C2_OFF" =>  Action::NoteOff(81),
+            "C2#_OFF" => Action::NoteOff(82),
+            "D2_OFF" => Action::NoteOff(83),
+            "D2#_OFF" => Action::NoteOff(84),
+            "E2_OFF" => Action::NoteOff(85),
+            "F2_OFF" => Action::NoteOff(86),
+            "F2#_OFF" => Action::NoteOff(87),
+            "G2_OFF" => Action::NoteOff(88),
+            "G2#_OFF" => Action::NoteOff(89),
+            "A2_OFF" => Action::NoteOff(90),
+            "A2#_OFF" => Action::NoteOff(91),
+            "B2_OFF" => Action::NoteOff(92),
+            "C3_OFF" =>  Action::NoteOff(93),
+            "C3#_OFF" => Action::NoteOff(94),
+            "D3_OFF" => Action::NoteOff(95),
+            "D3#_OFF" => Action::NoteOff(96),
+            "E3_OFF" => Action::NoteOff(97),
+            "F3_OFF" => Action::NoteOff(98),
+            "F3#_OFF" => Action::NoteOff(99),
+            "G3_OFF" => Action::NoteOff(100),
+            "G3#_OFF" => Action::NoteOff(101),
+            "A3_OFF" => Action::NoteOff(102),
+            "A3#_OFF" => Action::NoteOff(103),
+            "B3_OFF" => Action::NoteOff(104),
+
+            _ => Action::Noop,
+        };
+
+        events.push(action);
+    };
+
+    events
 }
 
 #[cfg(target_os = "linux")]

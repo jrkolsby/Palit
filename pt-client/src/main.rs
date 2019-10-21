@@ -94,7 +94,7 @@ fn main() -> std::io::Result<()> {
             libc::poll(&mut fds[0] as *mut libc::pollfd, fds.len() as libc::nfds_t, 100);
         }
 
-
+        // If anybody else closes the pipe, halt TODO: Throw error
         if fds[0].revents & libc::POLLHUP == libc::POLLHUP { break; }
 
         let action = if fds[0].revents > 0 {
