@@ -146,40 +146,16 @@ pub fn event_loop<F: 'static>(
         midi_keys: NodeIndex,
         keys: NodeIndex,
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
-    where F: FnMut(Action) -> Action {
+    where F: FnOnce(Action) -> Action {
 
     // The callback we'll use to pass to the Stream. It will request audio from our dsp_graph.
     let callback = move |pa::OutputStreamCallbackArgs { buffer, time, .. }| {
 
         let ipc_actions: Vec<Action> = ipc_action(&ipc_in);
 
-        for action in ipc_actions.iter() {
-            match action {
-                // Can mutate graph here, before the walk below
-                Action::AddRoute(nid_o, oid, nid_i, iid) => {
-                    println!("Mutating graph!");
-                },
-                Action::DeleteRoute(eid) => {
-                    println!("deleting edge!");
-                },
-                // Give action directly to indexed node
-                Action::SetParam(nid, _, _) => {
-                    // TODO: Make sure that node index exists!
-                    // ... be careful when nodes are removed that the
-                    // ... indicies are shifted accordingly
-                    let id = NodeIndex::new(*nid);
-                    patch[id].dispatch(action.clone());
-                },
-                // Give notes to the outputs of keyboard
-                Action::NoteOn(_,_) | Action::NoteOff(_) => {
-                    patch[keys].dispatch(action.clone());
-                },
-                Action::Play | Action::Stop => {
-                    patch[operator].dispatch(action.clone());
-                },
-                Action::Exit => { return pa::Complete },
-                _ => { println!("Unimplemented: {:?}", action);}
-            };
+        match ipc_dispatch(ipc_actions, keys, operator, &mut patch) {
+            Action::Exit => { return pa::Complete; },
+            _ => {}
         }
 
         // Nodes dispatch actions to its ins, outs, or to client. Midi signals
@@ -336,6 +312,42 @@ where
 {
     use std::f64::consts::PI;
     ((phase * PI * 2.0).sin() as f32 * volume).to_sample::<S>()
+}
+
+fn ipc_dispatch(ipc_actions: Vec<Action>, 
+        keys: NodeIndex, 
+        operator: NodeIndex, 
+        patch: &mut Graph<[Output; CHANNELS], Module>) -> Action {
+
+    for action in ipc_actions.iter() {
+        match action {
+            // Can mutate graph here, before the walk below
+            Action::AddRoute(nid_o, oid, nid_i, iid) => {
+                println!("Mutating graph!");
+            },
+            Action::DeleteRoute(eid) => {
+                println!("deleting edge!");
+            },
+            // Give action directly to indexed node
+            Action::SetParam(nid, _, _) => {
+                // TODO: Make sure that node index exists!
+                // ... be careful when nodes are removed that the
+                // ... indicies are shifted accordingly
+                let id = NodeIndex::new(*nid);
+                patch[id].dispatch(action.clone());
+            },
+            // Give notes to the outputs of keyboard
+            Action::NoteOn(_,_) | Action::NoteOff(_) => {
+                patch[keys].dispatch(action.clone());
+            },
+            Action::Play | Action::Stop => {
+                patch[operator].dispatch(action.clone());
+            },
+            Action::Exit => { return Action::Exit; },
+            _ => { println!("Unimplemented: {:?}", action);}
+        };
+    }
+    Action::Noop
 }
 
 fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
