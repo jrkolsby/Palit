@@ -82,12 +82,13 @@ fn main() -> Result<(), Box<error::Error>> {
     // Construct our dsp graph.
     let mut graph = Graph::new();
 
-    // Construct special nodes
+    // Construct Master
     let master = graph.add_node(Module::Master);
-    let keys = graph.add_node(Module::Passthru(vec![]));
+
+    // Construct special event nodes
+    let keys = graph.add_node(Module::DebugKeys(vec![], vec![], 48000));
     let midi_keys = graph.add_node(Module::Passthru(vec![]));
 
-    /*
     let synth = graph.add_node(Module::Synth(synth::Store {
         sigs: iter::repeat(None).take(256).collect(),
         sample_rate: signal::rate(f64::from(48000)),
@@ -95,18 +96,21 @@ fn main() -> Result<(), Box<error::Error>> {
         bar_values: [1., 1., 1., 0.75, 0.5, 0., 0., 0., 0.],
     }));
 
-    // Connect our synth to our keys
+    // Connect keys -> synth -> master
     graph.add_connection(keys, synth);
     graph.add_connection(synth, master);
-    */
+
+    // Set the master node for the graph.
+    graph.set_master(Some(master));
+
+    /*
+    // Pasting some useful stuff here
 
     // Connect a few oscillators to the synth.
     graph.add_input(Module::Oscillator(0.0, A5_HZ, 0.2), master);
     graph.add_input(Module::Oscillator(0.0, D5_HZ, 0.1), master);
     graph.add_input(Module::Oscillator(0.0, F5_HZ, 0.15), master);
 
-    /*
-    // Pasting some useful stuff here
     if let Err(err) = graph.add_connection(master, oscillator_a) {
         println!(
             "Testing for cycle error: {:?}",
@@ -123,5 +127,5 @@ fn main() -> Result<(), Box<error::Error>> {
     }
     */
 
-    event_loop(ipc_in, ipc_client, graph, master, keys, midi_keys, |a| { a })
+    event_loop(ipc_in, ipc_client, graph, midi_keys, keys, |a| { a })
 }

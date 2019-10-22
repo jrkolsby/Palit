@@ -27,7 +27,6 @@ pub struct Store {
 pub fn dispatch(store: &mut Store, action: Action) {
     match action {
         Action::NoteOn(note, vol) => {
-            println!("NOTEON");
             let hz = 440. * 2_f64.powf((note as f64 - 69.)/12.);
 
             for (baridx, barfreq) in BAR_FREQS.iter().enumerate() {
@@ -68,8 +67,6 @@ pub fn dispatch(store: &mut Store, action: Action) {
 }
 
 pub fn compute(store: &mut Store) -> Output {
-
-    println!("COMPUTE");
     // Mono -> Stereo
     if let Some(s) = store.stored_sample.take() { return s };
     

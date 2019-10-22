@@ -9,11 +9,9 @@ use std::io::prelude::*;
 #[cfg(target_os = "linux")]
 extern crate alsa;
 #[cfg(target_os = "linux")]
-use alsa::{seq, pcm};
+use alsa::{seq, pcm, PollDescriptors};
 #[cfg(target_os = "linux")]
 use alsa::pcm::State;
-#[cfg(target_os = "linux")]
-use alsa::PollDescriptors;
 
 use dsp::{sample::ToFrameSliceMut, NodeIndex, Frame, FromSample};
 use dsp::{Outputs, Graph, Node, Sample, Walker};
@@ -145,12 +143,8 @@ pub fn event_loop<F: 'static>(
         mut patch: Graph<[Output; CHANNELS], Module>, 
         midi_keys: NodeIndex,
         keys: NodeIndex,
-        master: NodeIndex,
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
     where F: FnMut(Action) -> Action {
-
-    // Set the master node for the graph.
-    patch.set_master(Some(master));
 
     // The callback we'll use to pass to the Stream. It will request audio from our dsp_graph.
     let callback = move |pa::OutputStreamCallbackArgs { buffer, time, .. }| {
@@ -179,7 +173,7 @@ pub fn event_loop<F: 'static>(
                     patch[keys].dispatch(action.clone());
                 },
                 Action::Exit => { return pa::Complete },
-                _ => { println!("Got action, {:?}", action);}
+                _ => { println!("Got bad action, {:?}", action);}
             };
         }
 
@@ -243,6 +237,7 @@ pub enum Module {
     Oscillator(Phase, Frequency, Volume),
     Synth(synth::Store),
     Passthru(Vec<Action>),
+    DebugKeys(Vec<Action>, Vec<Action>, u16),
 }
 
 impl Module {
@@ -250,6 +245,7 @@ impl Module {
         match *self {
             Module::Master => {}
             Module::Passthru(ref mut queue) => { queue.push(a.clone()) }
+            Module::DebugKeys(ref mut onqueue, _, _) => { onqueue.push(a.clone()); }
             Module::Synth(ref mut store) => synth::dispatch(store, a.clone()),
             _ => {}
         };
@@ -266,15 +262,29 @@ impl Module {
                 queue.clear();
                 return (Some(carry), None, None)
             },
-            Module::Master => (None, None, None),
-            //Module::Synth(ref mut store) => synth::
+            Module::DebugKeys(ref mut onqueue, ref mut offqueue, ref mut timer) => {
+                let carry = onqueue.clone();
+                while let Some(note) = onqueue.pop() {
+                    offqueue.push(match note {
+                        Action::NoteOn(n, _) => Action::NoteOff(n),
+                        _ => Action::Noop,
+                    });
+                }
+                if *timer == 0 {
+                    *timer = 48000;
+                    return (Some(offqueue.clone()), None, None)
+                } else {
+                    return (Some(carry), None, None)
+                }
+            }
+            Module::Master => (None, None, None), // TODO: give master levels to client
             _ => (None, None, None)
         }
     }
 }
 
 impl Node<[Output; CHANNELS]> for Module {
-    // Here we'll override the audio_requested method and generate a sine wave.
+    // Override the audio_requested method and compute PCM audio
     fn audio_requested(&mut self, buffer: &mut [[Output; CHANNELS]], sample_hz: f64) {
         match *self {
             Module::Master => (),
@@ -286,13 +296,19 @@ impl Node<[Output; CHANNELS]> for Module {
                 });
             },
             Module::Synth(ref mut store) => {
-                println!("SYNTH");
                 dsp::slice::map_in_place(buffer, |_| {
                     Frame::from_fn(|_| synth::compute(store))
                 });
             },
-            Module::Passthru(_) => (),
-            _ => { println!("audio mismatch"); }
+            // Modules which aren't sound-producing can still implement audio_requested
+            // ... to keep time, such as envelopes or arpeggiators
+            Module::DebugKeys(_, _, ref mut timer) => {
+                println!("TIME {}", *timer);
+                if *timer > 0 { 
+                    *timer = *timer - buffer.len() as u16; 
+                }
+            },
+            _ => ()
         }
     }
 }
@@ -321,11 +337,13 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "PLAY" => Action::Play,
             "STOP" => Action::Stop,
 
-            "NOTE_ON" => 
-                Action::NoteOn(argv[1].parse::<u8>().unwrap(), 
-                               argv[2].parse::<f64>().unwrap()),
+            "NOTE_ON" => Action::NoteOn(argv[1].parse::<u8>().unwrap(), 
+                                        argv[2].parse::<f64>().unwrap()),
+
+            "NOTE_OFF" => Action::NoteOff(argv[1].parse::<u8>().unwrap()),
 
             "EXIT" => Action::Exit,
+
             _ => Action::Noop,
         };
 
@@ -342,8 +360,7 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
 pub fn event_loop(
         mut ipc_in: File, 
         mut ipc_client: File, 
-        mut patch: Graph<[Output; CHANNELS], Module>, 
-        master: NodeIndex) -> Result<(), Box<error::Error>> {
+        mut patch: Graph<[Output; CHANNELS], Module>) -> Result<(), Box<error::Error>> {
     
     // Get audio devices
     let (audio_dev, rate) = open_audio_dev()?;
