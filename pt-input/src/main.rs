@@ -16,6 +16,8 @@ use linux_raw_input_rs::{InputReader, get_input_devices};
 use linux_raw_input_rs::keys::Keys;
 use linux_raw_input_rs::input::EventType;
 
+// ACTION FORMAT: CMD1:PARAM1:PARAM2 CMD2:PARAM1 ...
+
 #[cfg(target_os = "macos")]
 fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> {
 
@@ -32,36 +34,61 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
     stdout.flush().unwrap();
 
     for c in stdin.keys() {
-        let client_buf: &str = match c.unwrap() {
-            Key::Char('q') => "EXIT",
-            Key::Char('1') => "1",
-            Key::Char('2') => "2",
+        let key = c.unwrap();
 
-            Key::Char('[') => "PLAY",
-            Key::Char(']') => "STOP",
+        let client_buf: &str = match key.clone() {
+            Key::Char('q') => "EXIT ",
+            Key::Char('1') => "1 ",
+            Key::Char('2') => "2 ",
 
-            Key::Char('m') => "M",
-            Key::Char('r') => "R",
-            Key::Char('v') => "V",
-            Key::Char('i') => "I",
-            Key::Char(' ') => "SPC",
+            Key::Char('[') => "PLAY ",
+            Key::Char(']') => "STOP ",
 
-            Key::Up => "UP",
-            Key::Down => "DN",
-            Key::Left => "LT",
-            Key::Right => "RT",
+            Key::Char('m') => "M ",
+            Key::Char('r') => "R ",
+            Key::Char('v') => "V ",
+            Key::Char('i') => "I ",
+            Key::Char(' ') => "SPC ",
+
+            Key::Up => "UP ",
+            Key::Down => "DN ",
+            Key::Left => "LT ",
+            Key::Right => "RT ",
 
             _ => "",
         };
 
-        write!(stdout, "{}{}{}",
-            termion::clear::All,
-            termion::cursor::Goto(2, 1),
-            client_buf).unwrap();
+        let sound_buf: &str = match key.clone() {
+            Key::Char('q') => "EXIT ",
+
+            Key::Char('[') => "PLAY ",
+            Key::Char(']') => "STOP ",
+
+            Key::Char('a') => "NOTE_ON:69:1 ",
+            Key::Char('w') => "NOTE_ON:70:1 ",
+            Key::Char('s') => "NOTE_ON:71:1 ",
+            Key::Char('e') => "NOTE_ON:72:1 ",
+            Key::Char('d') => "NOTE_ON:73:1 ",
+            Key::Char('f') => "NOTE_ON:74:1 ",
+            Key::Char('t') => "NOTE_ON:75:1 ",
+            Key::Char('g') => "NOTE_ON:76:1 ",
+            Key::Char('y') => "NOTE_ON:77:1 ",
+            Key::Char('h') => "NOTE_ON:78:1 ",
+            Key::Char('u') => "NOTE_ON:79:1 ",
+            Key::Char('j') => "NOTE_ON:80:1 ",
+            Key::Char('k') => "NOTE_ON:81:1 ",
+            Key::Char('o') => "NOTE_ON:82:1 ",
+            Key::Char('l') => "NOTE_ON:83:1 ",
+            Key::Char('p') => "NOTE_ON:84:1 ",
+            Key::Char(';') => "NOTE_ON:85:1 ",
+
+            _ => "",
+        };
 
         if client_buf.len() > 0 { ipc_client.write(client_buf.as_bytes()); }
+        if sound_buf.len() > 0 { ipc_sound.write(sound_buf.as_bytes()); }
 
-        if client_buf == "EXIT" { break; }
+        if client_buf == "EXIT " { break; }
     }
 
     Ok(())
