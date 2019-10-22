@@ -21,14 +21,6 @@ mod timeline;
 mod action;
 
 use crate::core::{event_loop, Module, Frequency};
-use crate::timeline::{Region, Timeline};
-
-fn arm<'a>(wav: &'a WaveFile, timeline: &'a mut Timeline<'a>) {
-    let wav1: WaveFile = WaveFile::open("Who.wav").unwrap();
-    for mut region in timeline.regions.iter_mut() {
-	region.wave = wav.iter();
-    }
-}
 
 const A5_HZ: Frequency = 440.0;
 const D5_HZ: Frequency = 587.33;
@@ -41,43 +33,13 @@ fn main() -> Result<(), Box<error::Error>> {
 
     // Configure pt-client IPC
     let mut ipc_client = OpenOptions::new()
-	.write(true)
-	.open("/tmp/pt-client").unwrap();
+        .write(true)
+        .open("/tmp/pt-client").unwrap();
 
     let mut ipc_in = OpenOptions::new()
-	.custom_flags(libc::O_NONBLOCK)
-	.read(true)
-	.open("/tmp/pt-sound").unwrap();
-
-    let wav1: WaveFile = WaveFile::open("Who.wav").unwrap();
-
-    let mut tl = Timeline {
-        bpm: 127,
-        duration: 960000,
-        time_beat: 4,
-        time_note: 4,
-        loop_on: false,
-        loop_in: 0,
-        loop_out: 0,
-        playhead: 0,
-        playing: false,
-        regions: vec![
-            Region {
-                active: false,
-                offset: 100,
-                gain: 1.0,
-                duration: 480000,
-                wave: wav1.iter(),
-            },
-            Region {
-                active: false,
-                gain: 1.0,
-                offset: 1320000,
-                duration: 480000,
-                wave: wav1.iter(),
-            }
-        ],
-    };
+        .custom_flags(libc::O_NONBLOCK)
+        .read(true)
+	    .open("/tmp/pt-sound").unwrap();
 
     // Construct our dsp graph.
     let mut graph = Graph::new();
@@ -89,6 +51,8 @@ fn main() -> Result<(), Box<error::Error>> {
     let keys = graph.add_node(Module::DebugKeys(vec![], vec![], 48000));
     let midi_keys = graph.add_node(Module::Passthru(vec![]));
 
+    let timeline = graph.add_node(Module::Timeline(timeline::init()));
+
     let synth = graph.add_node(Module::Synth(synth::Store {
         sigs: iter::repeat(None).take(256).collect(),
         sample_rate: signal::rate(f64::from(48000)),
@@ -99,6 +63,7 @@ fn main() -> Result<(), Box<error::Error>> {
     // Connect keys -> synth -> master
     graph.add_connection(keys, synth);
     graph.add_connection(synth, master);
+    graph.add_connection(timeline, master);
 
     // Set the master node for the graph.
     graph.set_master(Some(master));

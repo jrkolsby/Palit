@@ -25,6 +25,7 @@ use sample::signal;
 use crate::midi::{open_midi_dev, read_midi_event, connect_midi_source_ports};
 use crate::action::Action;
 use crate::synth;
+use crate::timeline;
 
 // SAMPLE FORMAT ALSA
 pub type SF = i16;
@@ -238,6 +239,7 @@ pub enum Module {
     Synth(synth::Store),
     Passthru(Vec<Action>),
     DebugKeys(Vec<Action>, Vec<Action>, u16),
+    Timeline(timeline::Store),
 }
 
 impl Module {
@@ -277,6 +279,7 @@ impl Module {
                     return (Some(carry), None, None)
                 }
             }
+            Module::Timeline(ref mut store) => timeline::dispatch_requested(store),
             Module::Master => (None, None, None), // TODO: give master levels to client
             _ => (None, None, None)
         }
@@ -356,10 +359,14 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
 }
 
 #[cfg(target_os = "linux")]
-pub fn event_loop(
+pub fn event_loop<F: 'static>(
         mut ipc_in: File, 
         mut ipc_client: File, 
-        mut patch: Graph<[Output; CHANNELS], Module>) -> Result<(), Box<error::Error>> {
+        mut patch: Graph<[Output; CHANNELS], Module>, 
+        midi_keys: NodeIndex,
+        keys: NodeIndex,
+        mut dispatch_f: F) -> Result<(), Box<error::Error>> 
+    where F: FnMut(Action) -> Action {
     
     // Get audio devices
     let (audio_dev, rate) = open_audio_dev()?;
