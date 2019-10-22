@@ -14,5 +14,5 @@ libc = "0.2.62"
 dsp-chain = "0.13.1"
 portaudio = "0.6.4"
 
-[target.'cfg(linux)'.dependencies]
+[target.'cfg(unix)'.dependencies]
 alsa = "0.2"

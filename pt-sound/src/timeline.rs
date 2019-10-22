@@ -34,7 +34,7 @@ pub fn init() -> Store {
     let mut wav_iter = wav_f.iter();
     let mut buf: Vec<f32> = Vec::new();
     while let Some(s) = wav_iter.next() {
-        // s is a i32
+        // TODO: int to float sample conversion
         buf.push(s[0] as f32 * 0.0000001);
     };
     return Store {

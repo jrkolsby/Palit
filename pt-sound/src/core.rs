@@ -397,7 +397,7 @@ pub fn event_loop<F: 'static>(
         midi_keys: NodeIndex,
         keys: NodeIndex,
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
-    where F: FnMut(Action) -> Action {
+    where F: FnOnce(Action) -> Action {
     
     // Get audio devices
     let (audio_dev, rate) = open_audio_dev()?;
@@ -419,15 +419,32 @@ pub fn event_loop<F: 'static>(
     } else { None };
 
     loop {
-        if let Ok(ref mut mmap) = mmap {
-            if write_samples_direct(&audio_dev, mmap, &mut root)? { continue; }
-        } else if let Some(ref mut io) = io {
-            if write_samples_io(&audio_dev, io, &mut root)? { continue; }
+
+        let ipc_actions: Vec<Action> = ipc_action(&ipc_in);
+
+        match ipc_dispatch(ipc_actions, keys, operator, &mut patch) {
+            Action::Exit => { return Ok(()) },
+            _ => {}
         }
 
-        if read_midi_event(&mut midi_input, &mut root.synths[0])? { continue; }
+        walk_dispatch(&ipc_client, &mut patch);
 
-        let a: Action = ipc_action(&ipc_in);
+        let buffer: &mut [[Output; CHANNELS]] = &mut [[0.0; CHANNELS]; 128];
+
+        dsp::slice::equilibrium(buffer);
+
+        patch.audio_requested(buffer, SAMPLE_HZ);
+
+        // TODO: float->int sample conversion
+        let mut buf_iter = buffer.iter().map(|a| (a[0]*1000.0) as i16);
+
+        if let Ok(ref mut mmap) = mmap {
+            if write_samples_direct(&audio_dev, mmap, &mut buf_iter)? { continue; }
+        } else if let Some(ref mut io) = io {
+            if write_samples_io(&audio_dev, io, &mut buf_iter)? { continue; }
+        }
+
+        //if read_midi_event(&mut midi_input, &mut root.synths[0])? { continue; }
 
         // Nothing to do, let's sleep until woken up by the kernel.
         alsa::poll::poll(&mut fds, 100)?;

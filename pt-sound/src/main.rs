@@ -73,9 +73,9 @@ fn main() -> Result<(), Box<error::Error>> {
     // Set the master node for the graph.
     graph.set_master(Some(master));
 
-    /*
     // Pasting some useful stuff here
 
+    /*
     // Connect a few oscillators to the synth.
     graph.add_input(Module::Oscillator(0.0, A5_HZ, 0.2), master);
     graph.add_input(Module::Oscillator(0.0, D5_HZ, 0.1), master);
