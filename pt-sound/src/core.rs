@@ -303,7 +303,6 @@ impl Node<[Output; CHANNELS]> for Module {
             // Modules which aren't sound-producing can still implement audio_requested
             // ... to keep time, such as envelopes or arpeggiators
             Module::DebugKeys(_, _, ref mut timer) => {
-                println!("TIME {}", *timer);
                 if *timer > 0 { 
                     *timer = *timer - buffer.len() as u16; 
                 }
