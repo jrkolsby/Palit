@@ -67,7 +67,7 @@ pub fn dispatch(store: &mut Store, action: Action) {
     }
 }
 
-fn next(store: &mut Store) -> Output {
+pub fn compute(store: &mut Store) -> Output {
 
     // Mono -> Stereo
     if let Some(s) = store.stored_sample.take() { return s };

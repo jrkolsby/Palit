@@ -86,8 +86,8 @@ fn main() -> Result<(), Box<error::Error>> {
 
     // Construct special nodes
     let master = graph.add_node(Module::Master);
-    let keys = graph.add_node(Module::Keyboard);
-    let midi_keys = graph.add_node(Module::Keyboard);
+    let keys = graph.add_node(Module::Passthru(vec![]));
+    let midi_keys = graph.add_node(Module::Passthru(vec![]));
 
     let synth = graph.add_node(Module::Synth(synth::Store {
         sigs: iter::repeat(None).take(256).collect(),
@@ -100,6 +100,10 @@ fn main() -> Result<(), Box<error::Error>> {
     graph.add_input(Module::Oscillator(0.0, A5_HZ, 0.2), master);
     graph.add_input(Module::Oscillator(0.0, D5_HZ, 0.1), master);
     graph.add_input(Module::Oscillator(0.0, F5_HZ, 0.15), master);
+
+    // Connect our synth to our keys
+    graph.add_connection(keys, synth);
+    graph.add_connection(synth, master);
 
     /*
     // Pasting some useful stuff here
