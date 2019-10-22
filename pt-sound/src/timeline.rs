@@ -35,7 +35,7 @@ pub fn init() -> Store {
     let mut buf: Vec<f32> = Vec::new();
     while let Some(s) = wav_iter.next() {
         // s is a i32
-        buf.push(s[0] as f32 / 0.000001);
+        buf.push(s[0] as f32 * 0.0000001);
     };
     return Store {
         bpm: 127,
@@ -76,17 +76,17 @@ pub fn dispatch_requested(store: &mut Store) -> (
         }
 }
 
+pub fn dispatch(store: &mut Store, a: Action) {
+    match a {
+        Action::Play => { println!("PLAY"); store.playing = true; },
+        Action::Stop => { println!("STOP"); store.playing = false; },
+        _ => {}
+    }
+}
+
 pub fn compute(store: &mut Store) -> Output {
-    store.playhead += 1;
-    if store.playhead % 65536 == 0 {
-        println!("tick!");
-        //self.out.write(b"TICK");
-    }
     let mut z: f32 = 0.0;
-    if !store.playing {
-        return z
-    }
-    // see iter() iter_mut() and into_iter()
+    if !store.playing { return z; }
     for region in store.regions.iter_mut() {
         if store.playhead >= region.offset && store.playhead < region.offset + region.duration {
             let index = (store.playhead-region.offset) as usize;
@@ -95,5 +95,6 @@ pub fn compute(store: &mut Store) -> Output {
         }
     }
     let z = z.min(0.999).max(-0.999);
+    store.playhead = store.playhead + 1;
     z
 }

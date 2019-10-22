@@ -50,6 +50,7 @@ fn main() -> Result<(), Box<error::Error>> {
     // Construct special event nodes
     let keys = graph.add_node(Module::DebugKeys(vec![], vec![], 48000));
     let midi_keys = graph.add_node(Module::Passthru(vec![]));
+    let operator = graph.add_node(Module::Passthru(vec![]));
 
     let timeline = graph.add_node(Module::Timeline(timeline::init()));
 
@@ -63,6 +64,10 @@ fn main() -> Result<(), Box<error::Error>> {
     // Connect keys -> synth -> master
     graph.add_connection(keys, synth);
     graph.add_connection(synth, master);
+    graph.add_connection(timeline, master);
+
+    // Connect operator -> timeline -> master
+    graph.add_connection(operator, timeline);
     graph.add_connection(timeline, master);
 
     // Set the master node for the graph.
@@ -92,5 +97,5 @@ fn main() -> Result<(), Box<error::Error>> {
     }
     */
 
-    event_loop(ipc_in, ipc_client, graph, midi_keys, keys, |a| { a })
+    event_loop(ipc_in, ipc_client, graph, operator, midi_keys, keys, |a| { a })
 }

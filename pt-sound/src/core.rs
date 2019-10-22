@@ -142,6 +142,7 @@ pub fn event_loop<F: 'static>(
         mut ipc_in: File, 
         mut ipc_client: File, 
         mut patch: Graph<[Output; CHANNELS], Module>, 
+        operator: NodeIndex,
         midi_keys: NodeIndex,
         keys: NodeIndex,
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
@@ -173,8 +174,11 @@ pub fn event_loop<F: 'static>(
                 Action::NoteOn(_,_) | Action::NoteOff(_) => {
                     patch[keys].dispatch(action.clone());
                 },
+                Action::Play | Action::Stop => {
+                    patch[operator].dispatch(action.clone());
+                },
                 Action::Exit => { return pa::Complete },
-                _ => { println!("Got bad action, {:?}", action);}
+                _ => { println!("Unimplemented: {:?}", action);}
             };
         }
 
@@ -229,16 +233,20 @@ pub fn event_loop<F: 'static>(
     Ok(())
 }
 
-// Our type for which we will implement the `Dsp` trait.
+// Node types in our patch graph.
 pub enum Module {
-    /// Synth will be our demonstration of a master GraphNode.
+    // Exhibits default behavior of mixing inputs to its output
     Master,
-    /// Oscillator will be our generator type of node, meaning that we will override
-    /// the way it provides audio via its `audio_requested` method.
+    // Generates a sine wave
     Oscillator(Phase, Frequency, Volume),
-    Synth(synth::Store),
+    // A useful node which, when receiving an action, will dispatch it
+    // ... to its neighbors
     Passthru(Vec<Action>),
+    // A hacky node which will dispatch NoteOn actions to its neighbors,
+    // and every second or so will send all corresponding NoteOff actions.
+    // Useful for debugging on OSX where keyup events aren't accessed.
     DebugKeys(Vec<Action>, Vec<Action>, u16),
+    Synth(synth::Store),
     Timeline(timeline::Store),
 }
 
@@ -249,6 +257,7 @@ impl Module {
             Module::Passthru(ref mut queue) => { queue.push(a.clone()) }
             Module::DebugKeys(ref mut onqueue, _, _) => { onqueue.push(a.clone()); }
             Module::Synth(ref mut store) => synth::dispatch(store, a.clone()),
+            Module::Timeline(ref mut store) => timeline::dispatch(store, a.clone()),
             _ => {}
         };
     }
@@ -301,6 +310,11 @@ impl Node<[Output; CHANNELS]> for Module {
             Module::Synth(ref mut store) => {
                 dsp::slice::map_in_place(buffer, |_| {
                     Frame::from_fn(|_| synth::compute(store))
+                });
+            },
+            Module::Timeline(ref mut store) => {
+                dsp::slice::map_in_place(buffer, |_| {
+                    Frame::from_fn(|_| timeline::compute(store))
                 });
             },
             // Modules which aren't sound-producing can still implement audio_requested
@@ -363,6 +377,7 @@ pub fn event_loop<F: 'static>(
         mut ipc_in: File, 
         mut ipc_client: File, 
         mut patch: Graph<[Output; CHANNELS], Module>, 
+        operator: NodeIndex,
         midi_keys: NodeIndex,
         keys: NodeIndex,
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
