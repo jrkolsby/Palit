@@ -50,7 +50,6 @@ fn main() -> Result<(), Box<error::Error>> {
 	.open("/tmp/pt-sound").unwrap();
 
     let wav1: WaveFile = WaveFile::open("Who.wav").unwrap();
-    //let wav2: WaveFile = WaveFile::open("When.wav").unwrap();
 
     let mut tl = Timeline {
         bpm: 127,
@@ -78,7 +77,6 @@ fn main() -> Result<(), Box<error::Error>> {
                 wave: wav1.iter(),
             }
         ],
-        //out: ipc_client,
     };
 
     // Construct our dsp graph.
@@ -89,6 +87,7 @@ fn main() -> Result<(), Box<error::Error>> {
     let keys = graph.add_node(Module::Passthru(vec![]));
     let midi_keys = graph.add_node(Module::Passthru(vec![]));
 
+    /*
     let synth = graph.add_node(Module::Synth(synth::Store {
         sigs: iter::repeat(None).take(256).collect(),
         sample_rate: signal::rate(f64::from(48000)),
@@ -96,14 +95,15 @@ fn main() -> Result<(), Box<error::Error>> {
         bar_values: [1., 1., 1., 0.75, 0.5, 0., 0., 0., 0.],
     }));
 
+    // Connect our synth to our keys
+    graph.add_connection(keys, synth);
+    graph.add_connection(synth, master);
+    */
+
     // Connect a few oscillators to the synth.
     graph.add_input(Module::Oscillator(0.0, A5_HZ, 0.2), master);
     graph.add_input(Module::Oscillator(0.0, D5_HZ, 0.1), master);
     graph.add_input(Module::Oscillator(0.0, F5_HZ, 0.15), master);
-
-    // Connect our synth to our keys
-    graph.add_connection(keys, synth);
-    graph.add_connection(synth, master);
 
     /*
     // Pasting some useful stuff here

@@ -31,6 +31,8 @@ pub enum Action {
 
     Tick,
 
+    Exit,
+
     Noop,
 }
 

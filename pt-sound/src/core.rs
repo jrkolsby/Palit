@@ -154,17 +154,12 @@ pub fn event_loop<F: 'static>(
 
     // The callback we'll use to pass to the Stream. It will request audio from our dsp_graph.
     let callback = move |pa::OutputStreamCallbackArgs { buffer, time, .. }| {
-        let buffer: &mut [[Output; CHANNELS]] = buffer.to_frame_slice_mut().unwrap();
-        dsp::slice::equilibrium(buffer);
-        patch.audio_requested(buffer, SAMPLE_HZ);
 
         let ipc_actions: Vec<Action> = ipc_action(&ipc_in);
-        //let midi_action: Action = alsa blah blah...
 
         for action in ipc_actions.iter() {
-
             match action {
-                // Can mutate graph here
+                // Can mutate graph here, before the walk below
                 Action::AddRoute(nid_o, oid, nid_i, iid) => {
                     println!("Mutating graph!");
                 },
@@ -183,7 +178,7 @@ pub fn event_loop<F: 'static>(
                 Action::NoteOn(_,_) | Action::NoteOff(_) => {
                     patch[keys].dispatch(action.clone());
                 },
-                Action::Stop => { return pa::Complete },
+                Action::Exit => { return pa::Complete },
                 _ => { println!("Got action, {:?}", action);}
             };
         }
@@ -193,18 +188,18 @@ pub fn event_loop<F: 'static>(
         let mut walk = patch.visit_order_rev();
         while let Some(n) = walk.next(&patch) {
             let (out_d, in_d, client_d) = patch[n].dispatch_requested();
-            if let Some(out_a) = out_d {
+            if let Some(mut out_a) = out_d {
                 let mut outs = patch.outputs(n);
                 while let Some(oid) = outs.next_node(&patch) {
-                    for a in out_a.iter() {
+                    while let Some(a) = out_a.pop() {
                         patch[oid].dispatch(a.clone());
                     }
                 }
             }
-            if let Some(in_a) = in_d {
+            if let Some(mut in_a) = in_d {
                 let mut ins = patch.inputs(n);
                 while let Some(iid) = ins.next_node(&patch) {
-                    for a in in_a.iter() {
+                    while let Some(a) = in_a.pop() {
                         patch[iid].dispatch(a.clone());
                     }
                 }
@@ -216,6 +211,10 @@ pub fn event_loop<F: 'static>(
                 }
             }
         }
+
+        let buffer: &mut [[Output; CHANNELS]] = buffer.to_frame_slice_mut().unwrap();
+        dsp::slice::equilibrium(buffer);
+        patch.audio_requested(buffer, SAMPLE_HZ);
 
         pa::Continue
     };
@@ -247,24 +246,26 @@ pub enum Module {
 }
 
 impl Module {
-    pub fn dispatch(&mut self, a: Action) -> Action {
+    pub fn dispatch(&mut self, a: Action) {
         match *self {
             Module::Master => {}
             Module::Passthru(ref mut queue) => { queue.push(a.clone()) }
             Module::Synth(ref mut store) => synth::dispatch(store, a.clone()),
             _ => {}
         };
-        println!("dispatching!");
-        a
     }
     pub fn dispatch_requested(&mut self) -> (
-        Option<Vec<Action>>, // Actions for outputs
-        Option<Vec<Action>>, // Actions for inputs
-        Option<Vec<Action>> // Actions for client
+            Option<Vec<Action>>, // Actions for outputs
+            Option<Vec<Action>>, // Actions for inputs
+            Option<Vec<Action>> // Actions for client
         ) {
 
         match *self {
-            Module::Passthru(ref mut queue) => (Some(queue.clone()), None, None),
+            Module::Passthru(ref mut queue) => {
+                let carry = queue.clone();
+                queue.clear();
+                return (Some(carry), None, None)
+            },
             Module::Master => (None, None, None),
             //Module::Synth(ref mut store) => synth::
             _ => (None, None, None)
@@ -283,13 +284,15 @@ impl Node<[Output; CHANNELS]> for Module {
                     *phase += frequency / sample_hz;
                     Frame::from_fn(|_| val)
                 });
-            }
+            },
             Module::Synth(ref mut store) => {
+                println!("SYNTH");
                 dsp::slice::map_in_place(buffer, |_| {
                     Frame::from_fn(|_| synth::compute(store))
                 });
-            }
-            _ => {}
+            },
+            Module::Passthru(_) => (),
+            _ => { println!("audio mismatch"); }
         }
     }
 }
@@ -314,7 +317,6 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
         let argv: Vec<&str> = action_raw.split(":").collect();
 
         let action = match argv[0] {
-            //"OPEN_PROJECT" => { println!("OPEN"); },
 
             "PLAY" => Action::Play,
             "STOP" => Action::Stop,
@@ -323,6 +325,7 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
                 Action::NoteOn(argv[1].parse::<u8>().unwrap(), 
                                argv[2].parse::<f64>().unwrap()),
 
+            "EXIT" => Action::Exit,
             _ => Action::Noop,
         };
 
