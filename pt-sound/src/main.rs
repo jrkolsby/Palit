@@ -48,7 +48,8 @@ fn main() -> Result<(), Box<error::Error>> {
     let master = graph.add_node(Module::Master);
 
     // Construct special event nodes
-    let keys = graph.add_node(Module::DebugKeys(vec![], vec![], 48000));
+    //let keys = graph.add_node(Module::DebugKeys(vec![], vec![], 48000));
+    let keys = graph.add_node(Module::Passthru(vec![]));
     let midi_keys = graph.add_node(Module::Passthru(vec![]));
     let operator = graph.add_node(Module::Passthru(vec![]));
 

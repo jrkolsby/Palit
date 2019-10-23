@@ -39,7 +39,7 @@ pub type Frequency = f64;
 pub type Volume = f32;
 
 const CHANNELS: usize = 2;
-const FRAMES: u32 = 64;
+const FRAMES: u32 = 512;
 const SAMPLE_HZ: f64 = 44_100.0;
 
 #[cfg(target_os = "linux")]
@@ -81,6 +81,11 @@ pub fn open_audio_dev() -> Result<(alsa::PCM, u32), Box<error::Error>> {
     };
 
     Ok((p, rate))
+}
+
+fn set_buffer_size(p: &mut alsa::PCM, buf_size: i64) {
+    let hwp = p.hw_params_current().unwrap();
+    hwp.set_buffer_size(buf_size);
 }
 
 #[cfg(target_os = "linux")]
@@ -397,6 +402,7 @@ pub fn event_loop<F: 'static>(
         midi_keys: NodeIndex,
         keys: NodeIndex,
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
+
     where F: FnOnce(Action) -> Action {
     
     // Get audio devices
@@ -429,14 +435,14 @@ pub fn event_loop<F: 'static>(
 
         walk_dispatch(&ipc_client, &mut patch);
 
-        let buffer: &mut [[Output; CHANNELS]] = &mut [[0.0; CHANNELS]; 128];
+        let buffer: &mut [[Output; CHANNELS]] = &mut [[0.0; CHANNELS]; FRAMES as usize];
 
         dsp::slice::equilibrium(buffer);
 
-        patch.audio_requested(buffer, SAMPLE_HZ);
+        patch.audio_requested(buffer, rate as f64);
 
         // TODO: float->int sample conversion
-        let mut buf_iter = buffer.iter().map(|a| (a[0]*1000.0) as i16);
+        let mut buf_iter = buffer.iter().map(|a| (a[0]*500.0) as i16);
 
         if let Ok(ref mut mmap) = mmap {
             if write_samples_direct(&audio_dev, mmap, &mut buf_iter)? { continue; }
