@@ -83,6 +83,7 @@ pub fn open_audio_dev() -> Result<(alsa::PCM, u32), Box<error::Error>> {
     Ok((p, rate))
 }
 
+#[cfg(target_os = "linux")]
 fn set_buffer_size(p: &mut alsa::PCM, buf_size: i64) {
     let hwp = p.hw_params_current().unwrap();
     hwp.set_buffer_size(buf_size);
