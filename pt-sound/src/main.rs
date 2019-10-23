@@ -39,7 +39,7 @@ fn main() -> Result<(), Box<error::Error>> {
     let mut ipc_in = OpenOptions::new()
         .custom_flags(libc::O_NONBLOCK)
         .read(true)
-	    .open("/tmp/pt-sound").unwrap();
+        .open("/tmp/pt-sound").unwrap();
 
     // Construct our dsp graph.
     let mut graph = Graph::new();
