@@ -3,7 +3,7 @@ extern crate termion;
 
 use std::io::{BufReader, Write, Stdout, stdout, stdin};
 use std::io::prelude::*;
-use std::fs::{OpenOptions, read_to_string};
+use std::fs::{OpenOptions, read_to_string, File};
 use std::os::unix::fs::OpenOptionsExt;
 use std::ffi::CString;
 
@@ -40,6 +40,60 @@ fn render(mut stdout: RawTerminal<Stdout>, layers: &Vec<Box<Layer>>) -> RawTermi
     stdout
 }
 
+fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
+    let mut buf: String = String::new();
+    ipc_in.read_to_string(&mut buf);
+    let mut ipc_iter = buf.split(" ");
+
+    let mut events: Vec<Action> = Vec::new();
+
+    while let Some(action_raw) = ipc_iter.next() {
+        let argv: Vec<&str> = action_raw.split(":").collect();
+
+        let action = match argv[0] {
+            "TICK" => Action::Tick,
+
+            "?" => Action::Noop,
+
+            "EXIT" => break,
+            "1" => Action::Help,
+            "2" => Action::Back,
+
+            "PLAY" => Action::Play,
+            "STOP" => Action::Stop,
+
+            "M" => Action::SelectG,
+            "R" => Action::SelectY,
+            "V" => Action::SelectP,
+            "I" => Action::SelectB,
+            "SPC" => Action::SelectR,
+
+            "A" => Action::NoteC1,
+            "S" => Action::NoteD1,
+            "D" => Action::NoteE1,
+            "F" => Action::NoteF1,
+            "G" => Action::NoteG1,
+            "H" => Action::NoteA1,
+            "J" => Action::NoteB1,
+            "K" => Action::NoteC1,
+            "L" => Action::NoteD1,
+
+            "UP" => Action::Up,
+            "DN" => Action::Down,
+            "LT" => Action::Left,
+            "RT" => Action::Right,
+
+            _ => { Action::Noop },
+        };
+
+        match action {
+            Action::Noop => {},
+            _ => { events.push(action); }
+        };
+    };
+
+    events
+}
 fn main() -> std::io::Result<()> {
 
     // Public action fifo /tmp/pt-client
@@ -94,61 +148,18 @@ fn main() -> std::io::Result<()> {
             libc::poll(&mut fds[0] as *mut libc::pollfd, fds.len() as libc::nfds_t, 100);
         }
 
-
+        // If anybody else closes the pipe, halt TODO: Throw error
         if fds[0].revents & libc::POLLHUP == libc::POLLHUP { break; }
 
-        let action = if fds[0].revents > 0 {
-            let mut buf = String::new();
-            ipc_in.read_to_string(&mut buf);
-
-            if buf.len() > 0 { match &buf[..] {
-                "TICK" => Action::Tick,
-
-                "?" => Action::Noop,
-
-                "EXIT" => break,
-                "1" => Action::Help,
-                "2" => Action::Back,
-
-                "PLAY" => Action::Play,
-                "STOP" => Action::Stop,
-
-                "M" => Action::SelectG,
-                "R" => Action::SelectY,
-                "V" => Action::SelectP,
-                "I" => Action::SelectB,
-                "SPC" => Action::SelectR,
-
-                "A" => Action::NoteC1,
-                "S" => Action::NoteD1,
-                "D" => Action::NoteE1,
-                "F" => Action::NoteF1,
-                "G" => Action::NoteG1,
-                "H" => Action::NoteA1,
-                "J" => Action::NoteB1,
-                "K" => Action::NoteC1,
-                "L" => Action::NoteD1,
-
-                "UP" => Action::Up,
-                "DN" => Action::Down,
-                "LT" => Action::Left,
-                "RT" => Action::Right,
-
-                a => { Action::Noop },
-
-            }} else { continue; }
+        let mut events: Vec<Action> = if fds[0].revents > 0 {
+            ipc_action(&mut ipc_in)
         } else { continue; };
-
-        match action {
-            Action::Noop => {}
-            a => { events.push(a); }
-        }
 
         while let Some(next) = events.pop() {
             // Execute toplevel actions, capture default from view
             let default: Action = match next {
-                Action::Play => { ipc_sound.write(b"PLAY"); Action::Noop }
-                Action::Stop => { ipc_sound.write(b"STOP"); Action::Noop }
+                Action::Play => { ipc_sound.write(b"PLAY "); Action::Noop }
+                Action::Stop => { ipc_sound.write(b"STOP "); Action::Noop }
                 Action::Help => { 
                     layers.push(Box::new(Help::new(10, 10, 44, 15))); 
                     Action::Noop
@@ -170,12 +181,11 @@ fn main() -> std::io::Result<()> {
                     layers.push(Box::new(Title::new(23, 5, 36, 23)));
                 },
                 Action::CreateProject(title) => {
-                    ipc_sound.write(b"NEW_PROJECT");
+                    ipc_sound.write(format!("NEW_PROJECT:{} ", title).as_bytes());
                     layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
                 },
                 Action::OpenProject(title) => {
-                    ipc_sound.write(b"OPEN_PROJECT");
-                    ipc_sound.write(title.as_bytes());
+                    ipc_sound.write(format!("OPEN_PROJECT:{} ", title).as_bytes());
                     layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
                 },
                 Action::Back => { layers.pop(); }, 

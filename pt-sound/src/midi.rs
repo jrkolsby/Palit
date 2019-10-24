@@ -1,13 +1,18 @@
+#[cfg(target_os = "linux")]
 extern crate alsa;
+
 extern crate sample;
 
-use std::{iter, error};
+#[cfg(target_os = "linux")]
 use alsa::{seq, pcm};
+
+use std::{iter, error};
 use std::ffi::CString;
 use sample::signal;
 
-use crate::synth::Synth;
+use crate::action::Action;
 
+#[cfg(target_os = "linux")]
 pub fn connect_midi_source_ports(s: &alsa::Seq, our_port: i32) -> Result<(), Box<error::Error>> {
     // Iterate over clients and clients' ports
     let our_id = s.client_id()?;
@@ -34,6 +39,7 @@ pub fn connect_midi_source_ports(s: &alsa::Seq, our_port: i32) -> Result<(), Box
     Ok(())
 } 
 
+#[cfg(target_os = "linux")]
 pub fn open_midi_dev() -> Result<alsa::Seq, Box<error::Error>> {
     // Open the sequencer.
     let s = alsa::Seq::open(None, Some(alsa::Direction::Capture), true)?;
@@ -54,28 +60,37 @@ pub fn open_midi_dev() -> Result<alsa::Seq, Box<error::Error>> {
     Ok(s)
 }
 
-pub fn read_midi_event(input: &mut seq::Input, synth: &mut Synth) -> Result<bool, Box<error::Error>> {
-    if input.event_input_pending(true)? == 0 { return Ok(false); }
+#[cfg(target_os = "macos")]
+pub fn open_midi_dev() -> Result<(), Box<error::Error>> { Ok(()) }
+
+#[cfg(target_os = "macos")]
+pub fn read_midi_event() -> Result<(), Box<error::Error>> { Ok(()) }
+
+#[cfg(target_os = "macos")]
+pub fn connect_midi_source_ports() -> Result<(), Box<error::Error>> { Ok(()) }
+
+#[cfg(target_os = "linux")]
+pub fn read_midi_event(input: &mut seq::Input) -> Result<Option<Action>, Box<error::Error>> {
+    if input.event_input_pending(true)? == 0 { return Ok(None); }
     let ev = input.event_input()?;
     // println!("Received: {:?}", ev);
     match ev.get_type() {
         seq::EventType::Noteon => {
             let data: seq::EvNote = ev.get_data().unwrap();
             if data.velocity == 0 {
-                synth.remove_note(data.note);
+                Ok(Some(Action::NoteOff(data.note)))
             } else {
-                synth.add_note(data.note, f64::from(data.velocity + 64) / 2048.);
+                Ok(Some(Action::NoteOn(data.note, f64::from(data.velocity + 64) / 2048.)))
             }
         },
         seq::EventType::Noteoff => {
             let data: seq::EvNote = ev.get_data().unwrap();
-            synth.remove_note(data.note);
+            Ok(Some(Action::NoteOff(data.note)))
         },
         seq::EventType::Controller => {
             let data: seq::EvCtrl = ev.get_data().unwrap();
-            synth.cc(data.param, data.value);
-        }
-        _ => {},
+            Ok(Some(Action::SetParam(0, data.param, data.value)))
+        },
+        _ => Ok(None),
     }
-    Ok(true)
 }
