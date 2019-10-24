@@ -32,6 +32,7 @@ pub enum Action {
     VolumeDown,
     Help,
     Tick,
+    Exit,
 
     NoteC1,
     NoteD1,

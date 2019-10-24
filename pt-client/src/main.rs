@@ -42,6 +42,7 @@ fn render(mut stdout: RawTerminal<Stdout>, layers: &Vec<Box<Layer>>) -> RawTermi
 
 fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
     let mut buf: String = String::new();
+
     ipc_in.read_to_string(&mut buf);
     let mut ipc_iter = buf.split(" ");
 
@@ -55,7 +56,6 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
 
             "?" => Action::Noop,
 
-            "EXIT" => break,
             "1" => Action::Help,
             "2" => Action::Back,
 
@@ -82,6 +82,8 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "DN" => Action::Down,
             "LT" => Action::Left,
             "RT" => Action::Right,
+
+            "EXIT" => Action::Exit,
 
             _ => { Action::Noop },
         };
@@ -142,14 +144,14 @@ fn main() -> std::io::Result<()> {
     let mut events: Vec<Action> = Vec::new();
 
     // MAIN LOOP
-    loop {
+    'event: loop {
 
         unsafe{
             libc::poll(&mut fds[0] as *mut libc::pollfd, fds.len() as libc::nfds_t, 100);
         }
 
         // If anybody else closes the pipe, halt TODO: Throw error
-        if fds[0].revents & libc::POLLHUP == libc::POLLHUP { break; }
+        if fds[0].revents & libc::POLLHUP == libc::POLLHUP { break 'event; }
 
         let mut events: Vec<Action> = if fds[0].revents > 0 {
             ipc_action(&mut ipc_in)
@@ -165,9 +167,12 @@ fn main() -> std::io::Result<()> {
                     Action::Noop
                 },
                 Action::Back => { 
-                    layers.pop(); 
                     Action::Noop
                 }, 
+                Action::Exit => { 
+                    println!("EXIT");
+                    break 'event;
+                },
                 // Dispatch toplevel action to front layer
                 a => {
                     let target = layers.last_mut().unwrap();
@@ -203,7 +208,6 @@ fn main() -> std::io::Result<()> {
             stdout = render(stdout, &layers);
 
         }
-
     }
 
     // CLEAN UP

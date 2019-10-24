@@ -42,10 +42,19 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 ### NOVEMBER 1
 
+- [X] SOUND-9: Root mixer for timelines and instruments
+- [ ] SOUND-10: Midi Tape
+- [ ] SOUND-11: Arpeggio
+- [ ] SOUND-12: Chord Gen
+- [ ] SOUND-13: Timeline looping support
+
+- [ ] INF-5: Unicode Support in linux TTY with KMSCON
+
+### DECEMBER 1
+
 - [ ] SOUND-3: Faust synth output from keyboard MIDI
 - [ ] SOUND-4: Recording from ALSA input
 - [ ] SOUND-8: Fix audio underruns
-- [ ] SOUND-9: Root mixer for timelines and instruments
 
 - [ ] UI-3: Keyboard display with feedback for keypress events
 - [ ] UI-7: Loading screen
@@ -68,5 +77,3 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [ ] DG-5: Paint laptop casing and general keys CLASSIC BEIGE
 
 - [ ] INF-1: Implement testing suite which takes keyboard input and project files and outputs UI sequences and stored audio files
-- [ ] INF-5: Unicode Support in linux TTY
-- [ ] INF-6: Migrate state to root structs
