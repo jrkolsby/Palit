@@ -26,6 +26,8 @@ use crate::midi::{open_midi_dev, read_midi_event, connect_midi_source_ports};
 use crate::action::Action;
 use crate::synth;
 use crate::timeline;
+use crate::chord;
+use crate::arpeggio;
 
 // SAMPLE FORMAT ALSA
 pub type SF = i16;
@@ -37,10 +39,19 @@ pub type Output = f32;
 pub type Phase = f64;
 pub type Frequency = f64;
 pub type Volume = f32;
+pub type Offset = u32;
+pub type Key = u8;
 
 const CHANNELS: usize = 2;
 const FRAMES: u32 = 512;
 const SAMPLE_HZ: f64 = 44_100.0;
+
+pub struct Note {
+    t_in: Offset,
+    t_out: Offset,
+    note: Key,
+    vel: Volume,
+}
 
 #[cfg(target_os = "linux")]
 pub fn open_audio_dev() -> Result<(alsa::PCM, u32), Box<error::Error>> {
@@ -203,6 +214,8 @@ pub enum Module {
     DebugKeys(Vec<Action>, Vec<Action>, u16),
     Synth(synth::Store),
     Timeline(timeline::Store),
+    Chord(chord::Store),
+    Arpeggio(arpeggio::Store),
 }
 
 impl Module {
@@ -213,6 +226,7 @@ impl Module {
             Module::DebugKeys(ref mut onqueue, _, _) => { onqueue.push(a.clone()); }
             Module::Synth(ref mut store) => synth::dispatch(store, a.clone()),
             Module::Timeline(ref mut store) => timeline::dispatch(store, a.clone()),
+            Module::Chord(ref mut store) => chord::dispatch(store, a.clone()),
             _ => {}
         };
     }
@@ -244,6 +258,7 @@ impl Module {
                 }
             }
             Module::Timeline(ref mut store) => timeline::dispatch_requested(store),
+            Module::Chord(ref mut store) => chord::dispatch_requested(store),
             Module::Master => (None, None, None), // TODO: give master levels to client
             _ => (None, None, None)
         }

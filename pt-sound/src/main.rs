@@ -19,6 +19,8 @@ mod midi;
 mod synth;
 mod timeline;
 mod action;
+mod chord;
+mod arpeggio;
 
 use crate::core::{event_loop, Module, Frequency};
 
@@ -32,14 +34,20 @@ fn main() -> Result<(), Box<error::Error>> {
     println!("Waiting for pt-client...");
 
     // Configure pt-client IPC
-    let mut ipc_client = OpenOptions::new()
+    let mut ipc_client = match OpenOptions::new() 
         .write(true)
-        .open("/tmp/pt-client").unwrap();
+        .open("/tmp/pt-client") {
+            Ok(a) => a,
+            Err(_) => panic!("Could not open /tmp/pt-client")
+        };
 
-    let mut ipc_in = OpenOptions::new()
+    let mut ipc_in = match OpenOptions::new()
         .custom_flags(libc::O_NONBLOCK)
         .read(true)
-        .open("/tmp/pt-sound").unwrap();
+        .open("/tmp/pt-sound") {
+            Ok(a) => a,
+            Err(_) => panic!("Could not open /tmp/pt-sound")
+        };
 
     // Construct our dsp graph.
     let mut graph = Graph::new();
@@ -54,16 +62,12 @@ fn main() -> Result<(), Box<error::Error>> {
     let operator = graph.add_node(Module::Passthru(vec![]));
 
     let timeline = graph.add_node(Module::Timeline(timeline::init()));
-
-    let synth = graph.add_node(Module::Synth(synth::Store {
-        sigs: iter::repeat(None).take(256).collect(),
-        sample_rate: signal::rate(f64::from(48000)),
-        stored_sample: None,
-        bar_values: [1., 1., 1., 0.75, 0.5, 0., 0., 0., 0.],
-    }));
+    let synth = graph.add_node(Module::Synth(synth::init()));
+    let chord_gen = graph.add_node(Module::Chord(chord::init()));
 
     // Connect keys -> synth -> master
-    graph.add_connection(keys, synth);
+    graph.add_connection(keys, chord_gen);
+    graph.add_connection(chord_gen, synth);
     graph.add_connection(synth, master);
     graph.add_connection(timeline, master);
 
