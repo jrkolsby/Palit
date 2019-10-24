@@ -237,7 +237,7 @@ impl Module {
                     });
                 }
                 if *timer == 0 {
-                    *timer = 48000;
+                    *timer = 10000;
                     return (Some(offqueue.clone()), None, None)
                 } else {
                     return (Some(carry), None, None)
@@ -275,8 +275,11 @@ impl Node<[Output; CHANNELS]> for Module {
             // Modules which aren't sound-producing can still implement audio_requested
             // ... to keep time, such as envelopes or arpeggiators
             Module::DebugKeys(_, _, ref mut timer) => {
-                if *timer > 0 { 
-                    *timer = *timer - buffer.len() as u16; 
+                let dl = buffer.len() as u16;
+                if *timer > dl { 
+                    *timer = *timer - dl;
+                } else {
+                    *timer = 0;
                 }
             },
             _ => ()
