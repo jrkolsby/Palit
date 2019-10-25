@@ -337,10 +337,10 @@ fn walk_dispatch(ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Module
     while let Some(n) = walk.next(&patch) {
         let (out_d, in_d, client_d) = patch[n].dispatch_requested();
         if let Some(mut out_a) = out_d {
-            let mut outs = patch.outputs(n);
-            while let Some(oid) = outs.next_node(&patch) {
-                while let Some(a) = out_a.pop() {
-                    patch[oid].dispatch(a.clone());
+            while let Some(a) = out_a.pop() {
+                let mut outs = patch.outputs(n);
+                while let Some(oid) = outs.next_node(&patch) {
+                        patch[oid].dispatch(a.clone());
                 }
             }
         }
@@ -387,9 +387,7 @@ fn ipc_dispatch(ipc_actions: Vec<Action>,
             Action::NoteOn(_,_) | Action::NoteOff(_) => {
                 patch[keys].dispatch(action.clone());
             },
-            Action::Play | 
-            Action::Stop |
-            Action::Octave(_) => {
+            Action::Play | Action::Stop | Action::Octave(_) => {
                 patch[operator].dispatch(action.clone());
             },
             Action::Exit => { return Action::Exit; },
