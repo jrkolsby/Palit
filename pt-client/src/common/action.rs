@@ -35,14 +35,23 @@ pub enum Action {
     Exit,
 
     NoteC1,
+    NoteC1S,
     NoteD1,
+    NoteD1S,
     NoteE1,
     NoteF1,
+    NoteF1S,
     NoteG1,
+    NoteG1S,
     NoteA1,
+    NoteA1S,
     NoteB1,
     NoteC2,
     NoteD2,
+    NoteD2S,
+    NoteE2,
+    NoteE2S,
+    NoteF2,
 
     // ABSTRACT ACTIONS
     OpenProject(String),

@@ -1,15 +1,14 @@
 use dsp::{NodeIndex, EdgeIndex};
+use crate::core::{Offset, Volume, Key};
 
 #[derive(Debug, Clone)]
 pub enum Action {
-    // KEYBOARD ACTIONS
+    // true = on
     LoopMode(bool),
 
-    PitchUp,
-    PitchDown,
-
-    VolumeUp,
-    VolumeDown,
+    // true = up
+    Octave(bool), 
+    Volume(bool), 
 
     AddRoute(NodeIndex, u8, NodeIndex, u8),
     DeleteRoute(EdgeIndex),
@@ -21,10 +20,12 @@ pub enum Action {
     Pepper,
     InputTitle,
 
-    NoteOn(u8, f64),
-    NoteOff(u8),
+    NoteOn(Key, f64),
+    NoteOff(Key),
 
     SetParam(usize, u32, i32),
+
+    Arm(Offset),
 
     Play,
     Stop,

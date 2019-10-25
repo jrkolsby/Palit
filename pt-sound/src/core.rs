@@ -208,6 +208,7 @@ pub enum Module {
     // A useful node which, when receiving an action, will dispatch it
     // ... to its neighbors
     Passthru(Vec<Action>),
+    Octave(Vec<Action>, Key),
     // A hacky node which will dispatch NoteOn actions to its neighbors,
     // and every second or so will send all corresponding NoteOff actions.
     // Useful for debugging on OSX where keyup events aren't accessed.
@@ -227,6 +228,13 @@ impl Module {
             Module::Synth(ref mut store) => synth::dispatch(store, a.clone()),
             Module::Timeline(ref mut store) => timeline::dispatch(store, a.clone()),
             Module::Chord(ref mut store) => chord::dispatch(store, a.clone()),
+            Module::Octave(ref mut queue, ref mut n) => { 
+                match a {
+                    Action::NoteOn(_, _) | Action::NoteOff(_) => { queue.push(a.clone()); },
+                    Action::Octave(up) => if up { *n = *n+1; } else { *n = *n-1; },
+                    _ => (),
+                }
+            },
             _ => {}
         };
     }
@@ -242,6 +250,17 @@ impl Module {
                 queue.clear();
                 return (Some(carry), None, None)
             },
+            Module::Octave(ref mut queue, ref mut dn) => {
+                let mut carry = Vec::new();
+                while let Some(note) = queue.pop() {
+                    carry.push(match note {
+                        Action::NoteOn(n, v) => Action::NoteOn(n + (11 * *dn), v),
+                        Action::NoteOff(n) => Action::NoteOff(n + (11 * *dn)),
+                        _ => Action::Noop,
+                    });
+                }
+                return (Some(carry), None, None)
+            }
             Module::DebugKeys(ref mut onqueue, ref mut offqueue, ref mut timer) => {
                 let carry = onqueue.clone();
                 while let Some(note) = onqueue.pop() {
@@ -368,7 +387,9 @@ fn ipc_dispatch(ipc_actions: Vec<Action>,
             Action::NoteOn(_,_) | Action::NoteOff(_) => {
                 patch[keys].dispatch(action.clone());
             },
-            Action::Play | Action::Stop => {
+            Action::Play | 
+            Action::Stop |
+            Action::Octave(_) => {
                 patch[operator].dispatch(action.clone());
             },
             Action::Exit => { return Action::Exit; },
@@ -399,6 +420,8 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "NOTE_OFF" => Action::NoteOff(argv[1].parse::<u8>().unwrap()),
 
             "EXIT" => Action::Exit,
+
+            "OCTAVE" => Action::Octave(argv[1].parse::<u8>().unwrap() == 1),
 
             _ => Action::Noop,
         };

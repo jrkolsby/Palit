@@ -60,20 +60,22 @@ fn main() -> Result<(), Box<error::Error>> {
     //let keys = graph.add_node(Module::Passthru(vec![]));
     let midi_keys = graph.add_node(Module::Passthru(vec![]));
     let operator = graph.add_node(Module::Passthru(vec![]));
+    let octave = graph.add_node(Module::Octave(vec![], 4));
 
     let timeline = graph.add_node(Module::Timeline(timeline::init()));
     let synth = graph.add_node(Module::Synth(synth::init()));
     let chord_gen = graph.add_node(Module::Chord(chord::init()));
 
-    // Connect keys -> synth -> master
-    graph.add_connection(keys, chord_gen);
+    // Connect keys -> octave -> chord_gen -> synth -> master
+    graph.add_connection(keys, octave);
+    graph.add_connection(octave, chord_gen);
     graph.add_connection(chord_gen, synth);
     graph.add_connection(synth, master);
     graph.add_connection(timeline, master);
 
-    // Connect operator -> timeline -> master
+    // Connect operator to nodes which it controls
     graph.add_connection(operator, timeline);
-    graph.add_connection(timeline, master);
+    graph.add_connection(operator, octave);
 
     // Set the master node for the graph.
     graph.set_master(Some(master));
