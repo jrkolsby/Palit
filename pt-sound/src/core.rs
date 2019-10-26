@@ -330,32 +330,31 @@ where
     ((phase * PI * 2.0).sin() as f32 * volume).to_sample::<S>()
 }
 
-fn walk_dispatch(ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Module>) {
+fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Module>) {
     // Nodes dispatch actions to its ins, outs, or to client. Midi signals
     // ... must travel opposite the direciton of audio in an acyclic graph
     let mut walk = patch.visit_order_rev();
     while let Some(n) = walk.next(&patch) {
         let (out_d, in_d, client_d) = patch[n].dispatch_requested();
         if let Some(mut out_a) = out_d {
-            while let Some(a) = out_a.pop() {
-                let mut outs = patch.outputs(n);
-                while let Some(oid) = outs.next_node(&patch) {
-                        patch[oid].dispatch(a.clone());
+            let mut outs = patch.outputs(n);
+            while let Some(oid) = outs.next_node(&patch) {
+                for a in out_a.iter() {
+                    patch[oid].dispatch(a.clone());
                 }
             }
         }
         if let Some(mut in_a) = in_d {
             let mut ins = patch.inputs(n);
             while let Some(iid) = ins.next_node(&patch) {
-                while let Some(a) = in_a.pop() {
+                for a in in_a.iter() {
                     patch[iid].dispatch(a.clone());
                 }
             }
         }
         if let Some(client_a) = client_d {
             for a in client_a.iter() {
-                // DISPATCH ACTION TO ipc_client
-                //patch[oid].dispatch(a.clone());
+                ipc_client.write(action_ipc(a.clone()));
             }
         }
     }
@@ -431,6 +430,13 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
     };
 
     events
+}
+
+fn action_ipc(a: Action) -> &'static [u8] {
+    match a {
+        Action::Tick => "TICK ".as_bytes(),
+        _ => &[]
+    }
 }
 
 #[cfg(target_os = "linux")]
