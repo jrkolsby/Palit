@@ -20,7 +20,7 @@ pub enum Action {
     Pepper,
     InputTitle,
 
-    NoteOn(Key, f64),
+    NoteOn(Key, Volume),
     NoteOff(Key),
 
     SetParam(usize, u32, i32),

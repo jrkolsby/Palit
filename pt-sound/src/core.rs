@@ -38,7 +38,7 @@ pub type Output = f32;
 
 pub type Phase = f64;
 pub type Frequency = f64;
-pub type Volume = f32;
+pub type Volume = f64;
 pub type Offset = u32;
 pub type Key = u8;
 
@@ -47,10 +47,10 @@ const FRAMES: u32 = 512;
 const SAMPLE_HZ: f64 = 44_100.0;
 
 pub struct Note {
-    t_in: Offset,
-    t_out: Offset,
-    note: Key,
-    vel: Volume,
+    pub t_in: Offset,
+    pub t_out: Offset,
+    pub note: Key,
+    pub vel: Volume,
 }
 
 #[cfg(target_os = "linux")]
@@ -235,6 +235,7 @@ impl Module {
                     _ => (),
                 }
             },
+            Module::Arpeggio(ref mut store) => arpeggio::dispatch(store, a.clone()),
             _ => {}
         };
     }
@@ -278,6 +279,7 @@ impl Module {
             }
             Module::Timeline(ref mut store) => timeline::dispatch_requested(store),
             Module::Chord(ref mut store) => chord::dispatch_requested(store),
+            Module::Arpeggio(ref mut store) => arpeggio::dispatch_requested(store),
             Module::Master => (None, None, None), // TODO: give master levels to client
             _ => (None, None, None)
         }
@@ -316,6 +318,9 @@ impl Node<[Output; CHANNELS]> for Module {
                     *timer = 0;
                 }
             },
+            Module::Arpeggio(ref mut store) => {
+                buffer.iter().map(|_| arpeggio::compute(store));
+            },
             _ => ()
         }
     }
@@ -324,10 +329,10 @@ impl Node<[Output; CHANNELS]> for Module {
 /// Return a sine wave for the given phase.
 fn sine_wave<S: Sample>(phase: Phase, volume: Volume) -> S
 where
-    S: Sample + FromSample<f32>,
+    S: Sample + FromSample<f64>,
 {
     use std::f64::consts::PI;
-    ((phase * PI * 2.0).sin() as f32 * volume).to_sample::<S>()
+    ((phase * PI * 2.0).sin() as f64 * volume).to_sample::<S>()
 }
 
 fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Module>) {
