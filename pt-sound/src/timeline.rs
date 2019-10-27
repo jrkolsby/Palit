@@ -69,7 +69,8 @@ pub fn dispatch_requested(store: &mut Store) -> (
         Option<Vec<Action>>, // Actions for inputs
         Option<Vec<Action>> // Actions for client
     ) {
-        if store.playhead % 65536 == 0 {
+        if store.playing && store.playhead % 65536 == 0 {
+            println!("tick!");
             (None, None, Some(vec![Action::Tick]))
         } else {
             (None, None, None)

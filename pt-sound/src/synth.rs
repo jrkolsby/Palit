@@ -31,7 +31,7 @@ pub fn init() -> Store {
         sigs: iter::repeat(None).take(256).collect(),
         sample_rate: signal::rate(f64::from(48000)),
         stored_sample: None,
-        bar_values: [1., 1., 1., 0.75, 0.5, 0., 0., 0., 0.],
+        bar_values: [0.25, 0.25, 0.25, 0.75, 0.5, 0., 0., 0., 0.],
     }
 }
 

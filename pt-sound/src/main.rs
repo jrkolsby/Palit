@@ -65,17 +65,25 @@ fn main() -> Result<(), Box<error::Error>> {
     let timeline = graph.add_node(Module::Timeline(timeline::init()));
     let synth = graph.add_node(Module::Synth(synth::init()));
     let chord_gen = graph.add_node(Module::Chord(chord::init()));
+    let arpeggio = graph.add_node(Module::Arpeggio(arpeggio::init()));
 
     // Connect keys -> octave -> chord_gen -> synth -> master
+    /*
     graph.add_connection(keys, octave);
     graph.add_connection(octave, chord_gen);
     graph.add_connection(chord_gen, synth);
     graph.add_connection(synth, master);
     graph.add_connection(timeline, master);
+    */
+
+    // Connect arpeggio -> keys -> master
+    graph.add_connection(arpeggio, synth);
+    graph.add_connection(synth, master);
 
     // Connect operator to nodes which it controls
     graph.add_connection(operator, timeline);
     graph.add_connection(operator, octave);
+    graph.add_connection(operator, arpeggio);
 
     // Set the master node for the graph.
     graph.set_master(Some(master));

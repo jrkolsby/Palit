@@ -319,7 +319,9 @@ impl Node<[Output; CHANNELS]> for Module {
                 }
             },
             Module::Arpeggio(ref mut store) => {
-                buffer.iter().map(|_| arpeggio::compute(store));
+                dsp::slice::map_in_place(buffer, |a| {
+                    arpeggio::compute(store); a
+                });
             },
             _ => ()
         }
