@@ -56,8 +56,8 @@ fn main() -> Result<(), Box<error::Error>> {
     let master = graph.add_node(Module::Master);
 
     // Construct special event nodes
-    let keys = graph.add_node(Module::DebugKeys(vec![], vec![], 10000));
-    //let keys = graph.add_node(Module::Passthru(vec![]));
+    //let keys = graph.add_node(Module::DebugKeys(vec![], vec![], 0));
+    let keys = graph.add_node(Module::Passthru(vec![]));
     let midi_keys = graph.add_node(Module::Passthru(vec![]));
     let operator = graph.add_node(Module::Passthru(vec![]));
     let octave = graph.add_node(Module::Octave(vec![], 4));
@@ -75,6 +75,9 @@ fn main() -> Result<(), Box<error::Error>> {
     graph.add_connection(synth, master);
     graph.add_connection(timeline, master);
     */
+
+    graph.add_connection(keys, octave);
+    graph.add_connection(octave, arpeggio);
 
     // Connect arpeggio -> keys -> master
     graph.add_connection(arpeggio, synth);

@@ -1,58 +1,58 @@
 use crate::core::{Note, Key, Offset};
 use crate::action::Action;
+use std::borrow::BorrowMut;
 
 pub struct Store {
     timer: Offset,
     length: Offset,
+    rate: usize,
     notes: Vec<Note>,
-    pattern: Vec<Key>,
     queue: Vec<Action>,
 }
 
 pub fn init() -> Store {
     Store {
         timer: 0,
-        length: 24000,
-        notes: vec![
-            Note {
-                t_in: 0,
-                t_out: 5000,
-                note: 69,
-                vel: 0.4,
-            },
-            Note {
-                t_in: 5000,
-                t_out: 24000,
-                note: 71,
-                vel: 0.4,
-            },
-            Note {
-                t_in: 8000,
-                t_out: 24000,
-                note: 75,
-                vel: 0.4,
-            },
-            Note {
-                t_in: 15000,
-                t_out: 16000,
-                note: 58,
-                vel: 1.0,
-            },
-        ],
-        // This is the chromatic order in which notes are
-        // ... inserted into store.notes where 0 is the 
-        pattern: vec![0, 2, 1, 3],
+        rate: 4, // notes per bar
+        length: 24000, // samples per bar
+        notes: vec![],
         queue: vec![],
+    }
+}
+
+fn distribute_notes(notes: &mut Vec<Note>, length: Offset) {
+    let len_i = notes.len() as u32;
+    // given 3 notes in arpeggio, evenly space 6 NoteOn / NoteOff
+    // actions, starting with the first event at timer == 0
+    // |O  F  O  F  O  F  |
+    let samples_per_event = length / (len_i*2);
+    let mut i = 0;
+    for mut note in notes.iter_mut() {
+        note.t_in = i*samples_per_event;
+        note.t_out = (i+1)*samples_per_event;
+        i = i+2;
     }
 }
 
 pub fn dispatch(store: &mut Store, action: Action) {
     match action {
-        Action::NoteOn(note, vol) => {
-            //store.notes.push(Note {})
+        Action::NoteOn(note, vel) => {
+            // Push a new note to the end of store.notes 
+            // ... and redistribute the t_in and t_out 
+            // ... based on the rate and samples per bar
+            store.notes.push(Note {
+                t_in: 0,
+                t_out: 0,
+                note, 
+                vel,
+            });
+            distribute_notes(store.notes.borrow_mut(), store.length);
         },
         Action::NoteOff(note) => {
-            
+            store.notes.retain(|n| n.note != note);
+            if store.notes.len() > 0 {
+                distribute_notes(store.notes.borrow_mut(), store.length);
+            }
         },
         Action::SetParam(_, ctrl, value) => {
         }

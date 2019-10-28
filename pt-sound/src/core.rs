@@ -46,6 +46,8 @@ const CHANNELS: usize = 2;
 const FRAMES: u32 = 512;
 const SAMPLE_HZ: f64 = 44_100.0;
 
+const DEBUG_KEY_PERIOD: u16 = 24100;
+
 pub struct Note {
     pub t_in: Offset,
     pub t_out: Offset,
@@ -255,8 +257,8 @@ impl Module {
                 let mut carry = Vec::new();
                 while let Some(note) = queue.pop() {
                     carry.push(match note {
-                        Action::NoteOn(n, v) => Action::NoteOn(n + (11 * *dn), v),
-                        Action::NoteOff(n) => Action::NoteOff(n + (11 * *dn)),
+                        Action::NoteOn(n, v) => Action::NoteOn(n + (12 * *dn), v),
+                        Action::NoteOff(n) => Action::NoteOff(n + (12 * *dn)),
                         _ => Action::Noop,
                     });
                 }
@@ -271,7 +273,7 @@ impl Module {
                     });
                 }
                 if *timer == 0 {
-                    *timer = 10000;
+                    *timer = DEBUG_KEY_PERIOD;
                     return (Some(offqueue.clone()), None, None)
                 } else {
                     return (Some(carry), None, None)
@@ -337,6 +339,12 @@ where
     ((phase * PI * 2.0).sin() as f64 * volume).to_sample::<S>()
 }
 
+// NOTE ABT EVENT LOOP TIMING
+// assume buffer size of 512 frames, and a 48000Hz sample_rate,
+// for each loop, we must write 512 frames to the audio device, 
+// while the computation of these 512 frames might not take 
+// 48000 / 512 seconds to calculate, that is the limit, otherwise
+// we get an audio underrun.
 fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Module>) {
     // Nodes dispatch actions to its ins, outs, or to client. Midi signals
     // ... must travel opposite the direciton of audio in an acyclic graph
