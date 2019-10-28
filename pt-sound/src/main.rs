@@ -17,7 +17,7 @@ use dsp::{sample::ToFrameSliceMut, Frame, FromSample, Graph, Node, Sample, Walke
 mod core;
 mod midi;
 mod synth;
-mod timeline;
+mod tape;
 mod action;
 mod chord;
 mod arpeggio;
@@ -62,7 +62,7 @@ fn main() -> Result<(), Box<error::Error>> {
     let operator = graph.add_node(Module::Passthru(vec![]));
     let octave = graph.add_node(Module::Octave(vec![], 4));
 
-    let timeline = graph.add_node(Module::Timeline(timeline::init()));
+    let tape = graph.add_node(Module::Tape(tape::init()));
     let synth = graph.add_node(Module::Synth(synth::init()));
     let chord_gen = graph.add_node(Module::Chord(chord::init()));
     let arpeggio = graph.add_node(Module::Arpeggio(arpeggio::init()));
@@ -73,7 +73,7 @@ fn main() -> Result<(), Box<error::Error>> {
     graph.add_connection(octave, chord_gen);
     graph.add_connection(chord_gen, synth);
     graph.add_connection(synth, master);
-    graph.add_connection(timeline, master);
+    graph.add_connection(tape, master);
     */
 
     graph.add_connection(keys, octave);
@@ -84,7 +84,7 @@ fn main() -> Result<(), Box<error::Error>> {
     graph.add_connection(synth, master);
 
     // Connect operator to nodes which it controls
-    graph.add_connection(operator, timeline);
+    graph.add_connection(operator, tape);
     graph.add_connection(operator, octave);
     graph.add_connection(operator, arpeggio);
 

@@ -25,7 +25,7 @@ use sample::signal;
 use crate::midi::{open_midi_dev, read_midi_event, connect_midi_source_ports};
 use crate::action::Action;
 use crate::synth;
-use crate::timeline;
+use crate::tape;
 use crate::chord;
 use crate::arpeggio;
 
@@ -216,7 +216,7 @@ pub enum Module {
     // Useful for debugging on OSX where keyup events aren't accessed.
     DebugKeys(Vec<Action>, Vec<Action>, u16),
     Synth(synth::Store),
-    Timeline(timeline::Store),
+    Tape(tape::Store),
     Chord(chord::Store),
     Arpeggio(arpeggio::Store),
 }
@@ -228,7 +228,7 @@ impl Module {
             Module::Passthru(ref mut queue) => { queue.push(a.clone()) }
             Module::DebugKeys(ref mut onqueue, _, _) => { onqueue.push(a.clone()); }
             Module::Synth(ref mut store) => synth::dispatch(store, a.clone()),
-            Module::Timeline(ref mut store) => timeline::dispatch(store, a.clone()),
+            Module::Tape(ref mut store) => tape::dispatch(store, a.clone()),
             Module::Chord(ref mut store) => chord::dispatch(store, a.clone()),
             Module::Octave(ref mut queue, ref mut n) => { 
                 match a {
@@ -279,7 +279,7 @@ impl Module {
                     return (Some(carry), None, None)
                 }
             }
-            Module::Timeline(ref mut store) => timeline::dispatch_requested(store),
+            Module::Tape(ref mut store) => tape::dispatch_requested(store),
             Module::Chord(ref mut store) => chord::dispatch_requested(store),
             Module::Arpeggio(ref mut store) => arpeggio::dispatch_requested(store),
             Module::Master => (None, None, None), // TODO: give master levels to client
@@ -305,9 +305,9 @@ impl Node<[Output; CHANNELS]> for Module {
                     Frame::from_fn(|_| synth::compute(store))
                 });
             },
-            Module::Timeline(ref mut store) => {
+            Module::Tape(ref mut store) => {
                 dsp::slice::map_in_place(buffer, |_| {
-                    Frame::from_fn(|_| timeline::compute(store))
+                    Frame::from_fn(|_| tape::compute(store))
                 });
             },
             // Modules which aren't sound-producing can still implement audio_requested

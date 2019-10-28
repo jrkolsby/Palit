@@ -44,7 +44,7 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 - [X] SOUND-9: Root mixer for timelines and instruments
 - [ ] SOUND-10: Midi Tape
-- [ ] SOUND-11: Arpeggio
+- [X] SOUND-11: Arpeggio
 - [X] SOUND-12: Chord Gen
 - [ ] SOUND-13: Timeline looping support
 
