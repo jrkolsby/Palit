@@ -37,6 +37,7 @@ fn distribute_notes(notes: &mut Vec<Note>, length: Offset) {
 pub fn dispatch(store: &mut Store, action: Action) {
     match action {
         Action::NoteOn(note, vel) => {
+            println!("arp on {}", note);
             // Push a new note to the end of store.notes 
             // ... and redistribute the t_in and t_out 
             // ... based on the rate and samples per bar
@@ -49,13 +50,15 @@ pub fn dispatch(store: &mut Store, action: Action) {
             distribute_notes(store.notes.borrow_mut(), store.length);
         },
         Action::NoteOff(note) => {
+            println!("arp off {}", note);
             store.notes.retain(|n| n.note != note);
             if store.notes.len() > 0 {
                 distribute_notes(store.notes.borrow_mut(), store.length);
             }
+            store.queue.push(Action::NoteOff(note));
         },
         Action::SetParam(_, ctrl, value) => {
-        }
+        },
         _ => {}
     }
 }

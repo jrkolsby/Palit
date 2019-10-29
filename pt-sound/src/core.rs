@@ -263,7 +263,7 @@ impl Module {
                     });
                 }
                 return (Some(carry), None, None)
-            }
+            },
             Module::DebugKeys(ref mut onqueue, ref mut offqueue, ref mut timer) => {
                 let carry = onqueue.clone();
                 while let Some(note) = onqueue.pop() {
@@ -278,7 +278,7 @@ impl Module {
                 } else {
                     return (Some(carry), None, None)
                 }
-            }
+            },
             Module::Tape(ref mut store) => tape::dispatch_requested(store),
             Module::Chord(ref mut store) => chord::dispatch_requested(store),
             Module::Arpeggio(ref mut store) => arpeggio::dispatch_requested(store),
