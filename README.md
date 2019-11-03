@@ -42,31 +42,39 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 ### NOVEMBER 1
 
-- [X] SOUND-9: Root mixer for timelines and instruments
-- [ ] SOUND-10: Midi Tape
+- [X] SOUND-9: Root mixer for timelines and synth (DSP Graph)
 - [X] SOUND-11: Arpeggio
 - [X] SOUND-12: Chord Gen
-- [ ] SOUND-13: Timeline looping support
-
-- [ ] INF-5: Unicode Support in linux TTY with KMSCON
 
 ### DECEMBER 1
 
 - [ ] SOUND-3: Faust synth output from keyboard MIDI
 - [ ] SOUND-4: Recording from ALSA input
-- [ ] SOUND-8: Fix audio underruns
+- [ ] SOUND-10: Midi Tape
+- [ ] SOUND-13: Timeline looping
+- [ ] SOUND-14: Timeline editing
+- [ ] SOUND-15: Timeline XML save/load
+
+- [ ] INF-5: Unicode Support in linux TTY with KMSCON
 
 - [ ] UI-3: Keyboard display with feedback for keypress events
-- [ ] UI-7: Loading screen
 - [ ] UI-10: Render partial waveforms
-- [ ] UI-11: Fix termion light/dark colors in raw tty
+- [ ] UI-13: Synth view
+- [ ] UI-18: Routes view
+- [ ] UI-19: Timeline editing
+
+### JANUARY 1
+
+- [ ] SOUND-8: Fix audio underruns
+- [ ] SOUND-16: VST audio host (Steinberg API)
+- [ ] SOUND-17: VST client host (XML UI to text layout)
+
+- [ ] UI-7: Loading screen
 - [ ] UI-12: Error Screen
-- [ ] UI-13: Synth modal
 - [ ] UI-14: Network setup
 - [ ] UI-15: Keyboard setup
 - [ ] UI-16: Add track modal
 - [ ] UI-17: Select instrument modal
-- [ ] UI-18: Routes view
 
 - [ ] HARD-3: Purchase functional android phone
 - [ ] HARD-4: Replace laptop sreen with android phone

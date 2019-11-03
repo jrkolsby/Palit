@@ -1,45 +1,43 @@
 use std::io::{Write, Stdout};
-
 use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 
 use crate::common::{Action, Color};
 use crate::views::{Layer};
-use crate::components::{popup, casette, button};
+use crate::components::{upright, knob, slider};
 
-pub struct Title {
+pub struct Piano {
     x: u16,
     y: u16,
     width: u16,
     height: u16,
-    state: TitleState,
+    state: PianoState,
 }
 
 #[derive(Clone, Debug)]
-pub struct TitleState {
-    title: String,
-    title_val: String,
-    letter: u8,
+pub struct PianoState {
+    notes: Vec<Action>
 }
 
 const ASCII_MAX: u8 = 126;
 const ASCII_MIN: u8 = 48;
 
-fn reduce(state: TitleState, action: Action) -> TitleState {
-    TitleState {
-        title: state.title.clone(),
-        title_val: match action {
-            Action::Right => format!("{}{}", state.title_val, state.letter as char),
-            Action::Left => state.title_val[..state.title_val.len()-1].to_string(),
-            Action::SelectG => format!("{}.xml", state.title_val),
-            Action::SelectY => "".to_string(),
-            _ => state.title_val.clone(),
-        },
-        letter: match action {
-            Action::Up => { if state.letter == ASCII_MAX { ASCII_MIN } else { state.letter+1 }},
-            Action::Down => { if state.letter == ASCII_MIN { ASCII_MAX } else { state.letter-1 }},
-            _ => state.letter.clone(),
-        },
+fn reduce(state: PianoState, action: Action) -> PianoState {
+    PianoState {
+        keys: match action {
+            Action::NoteOn(_,_) => { 
+                let new_keys = state.keys.clone(); 
+                new_keys.push(action);
+                new_keys
+            },
+            Action::NoteOff(a,_) => {
+                state.keys.retain(|a| match a {
+                    Action::NoteOn(_a, ) => a == _a,
+                    _ => false,
+                })
+            }
+        }
+
     }
 }
 

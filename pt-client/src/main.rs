@@ -68,24 +68,8 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "I" => Action::SelectB,
             "SPC" => Action::SelectR,
 
-            "A" => Action::NoteC1,
-            "W" => Action::NoteC1S,
-            "S" => Action::NoteD1,
-            "E" => Action::NoteD1S,
-            "D" => Action::NoteE1,
-            "F" => Action::NoteF1,
-            "T" => Action::NoteF1S,
-            "G" => Action::NoteG1,
-            "Y" => Action::NoteG1S,
-            "H" => Action::NoteA1,
-            "U" => Action::NoteA1S,
-            "J" => Action::NoteB1,
-            "K" => Action::NoteC2,
-            "L" => Action::NoteD2,
-            "O" => Action::NoteD2S,
-            "L" => Action::NoteE2,
-            "P" => Action::NoteE2S,
-            ";" => Action::NoteF2,
+            "NOTE_ON" => Action::NoteOn(argv[1].parse::<u16>().unwrap(), 
+                                        argv[2].parse::<f32>().unwrap()),
 
             "UP" => Action::Up,
             "DN" => Action::Down,
@@ -175,9 +159,7 @@ fn main() -> std::io::Result<()> {
                     layers.push(Box::new(Help::new(10, 10, 44, 15))); 
                     Action::Noop
                 },
-                Action::Back => { 
-                    Action::Noop
-                }, 
+                Action::Back => { layers.pop(); Action::Noop }, 
                 Action::Exit => { 
                     println!("EXIT");
                     break 'event;

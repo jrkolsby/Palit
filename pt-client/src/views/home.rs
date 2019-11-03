@@ -6,9 +6,9 @@ use std::path::Path;
 use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 
-use crate::common::{Action, Color};
+use crate::common::{Action, Color, Direction};
 use crate::views::{Layer};
-use crate::components::{logo, button};
+use crate::components::{logo, button, slider};
 
 const PALIT_ROOT: &str = "/usr/local/palit/";
 const NUM_FOCII: usize = 3;
@@ -120,40 +120,42 @@ impl Layer for Home {
     fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
 
 	// Logo
-        out = logo::render(out, self.x, self.y);
+    out = logo::render(out, self.x, self.y);
 
 	// New Button
 	out = button::render(out, self.x + 10, self.y + 10, 17, 
         "New Project", Color::Red, self.state.focus == 0);
 
+    out = slider::render(out, self.x, self.y+10, "SLIDER".to_string(), 10, Direction::East);
+
 	// Project Listing
 	let mut col: [u16; 2] = [4,4];
         for (i, project) in self.state.projects.iter().enumerate() {
-	    if i >= self.state.scroll_x * NUM_PROJECTS && 
-		i < (self.state.scroll_x+1) * NUM_PROJECTS {
-		let j: u16 = (i % NUM_PROJECTS) as u16;
-		let row: usize = (j % 2) as usize;
-		write!(out, "{}", cursor::Goto(self.x+col[row] as u16, 
-		    self.y+15+(row as u16 * 2))).unwrap();
-		if self.state.focus == 0 { 
-		    write!(out, "{}", color::Fg(color::Black)).unwrap();
-		    match j {
-			0 => write!(out, "{}", color::Bg(color::Yellow)).unwrap(),
-			1 => write!(out, "{}", color::Bg(color::Magenta)).unwrap(),
-			2 => write!(out, "{}", color::Bg(color::Blue)).unwrap(),
-			3 => write!(out, "{}", color::Bg(color::Green)).unwrap(),
-			_ => write!(out, "{}", color::Bg(color::Reset)).unwrap(), 
-		    }
-		} else {
-		    write!(out, "{}{}", 
-			color::Fg(color::White), 
-			color::Bg(color::Reset)
-		    ).unwrap();
-		}
+            if i >= self.state.scroll_x * NUM_PROJECTS && 
+                i < (self.state.scroll_x+1) * NUM_PROJECTS {
+                let j: u16 = (i % NUM_PROJECTS) as u16;
+                let row: usize = (j % 2) as usize;
+                write!(out, "{}", cursor::Goto(self.x+col[row] as u16, 
+                    self.y+15+(row as u16 * 2))).unwrap();
+                if self.state.focus == 0 { 
+                    write!(out, "{}", color::Fg(color::Black)).unwrap();
+                    match j {
+                        0 => write!(out, "{}", color::Bg(color::Yellow)).unwrap(),
+                        1 => write!(out, "{}", color::Bg(color::Magenta)).unwrap(),
+                        2 => write!(out, "{}", color::Bg(color::Blue)).unwrap(),
+                        3 => write!(out, "{}", color::Bg(color::Green)).unwrap(),
+                        _ => write!(out, "{}", color::Bg(color::Reset)).unwrap(), 
+                    }
+                } else {
+                    write!(out, "{}{}", 
+                    color::Fg(color::White), 
+                    color::Bg(color::Reset)
+                    ).unwrap();
+                }
 
-		write!(out, " {} ", project).unwrap();
-		col[row] += project.len() as u16 + 4;
-	    }
+                write!(out, " {} ", project).unwrap();
+                col[row] += project.len() as u16 + 4;
+            }
         }
 
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();

@@ -13,6 +13,7 @@ pub struct Help {
     width: u16,
     height: u16,
     state: HelpState,
+    history: Vec<HelpState>,
 }
 
 #[derive(Clone, Debug)]
@@ -24,7 +25,14 @@ pub struct HelpState {
 fn reduce(state: HelpState, action: Action) -> HelpState {
     HelpState {
         title: state.title.clone(),
-        active: state.active.clone()
+        active: match action {
+            Action::NoteOn(_, _) => {
+                let mut newActive = state.active.clone();
+                newActive.push(action);
+                newActive
+            }
+            _ => state.active.clone()
+        },
     }
 }
 
@@ -32,8 +40,8 @@ impl Help {
     pub fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
         // Initialize State
         let initial_state: HelpState = HelpState {
-            title: "Please Help Me Please".to_string(),
-            active: vec![Action::Noop]
+            title: "KEYBOARD".to_string(),
+            active: vec![]
         };
 
         Help {
@@ -41,6 +49,7 @@ impl Help {
             y: y,
             width: width,
             height: height,
+            history: vec![],
             state: initial_state
         }
     }
@@ -50,9 +59,8 @@ impl Layer for Help {
     fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
 
-	out = popup::render(out, self.x, self.y, self.width, self.height, &self.state.title);
-
-        out = keyboard::render(out, self.x+5, self.y+5);
+	    out = popup::render(out, self.x, self.y, self.width, self.height, &self.state.title);
+        out = keyboard::render(out, &self.state.active, self.x+5, self.y+5);
 
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
 

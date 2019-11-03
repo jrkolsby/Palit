@@ -24,3 +24,15 @@ pub enum Rate {
     Med,
     Slow,
 }
+
+#[derive(Clone, Debug)]
+pub enum Direction {
+    North,
+    South,
+    East,
+    West,
+    NW,
+    NE,
+    SW,
+    SE,
+}
