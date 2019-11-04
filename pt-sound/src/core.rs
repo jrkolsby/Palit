@@ -369,7 +369,13 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
         }
         if let Some(client_a) = client_d {
             for a in client_a.iter() {
-                ipc_client.write(action_ipc(a.clone()));
+                let message = match a {
+                    Action::Tick => "TICK ".to_string(),
+                    Action::NoteOn(n,v) => format!("NOTE_ON:{}:{} ", n, v),
+                    Action::NoteOff(n) => format!("NOTE_OFF:{} ", n),
+                    _ => "".to_string(),
+                };
+                ipc_client.write(message.as_bytes());
             }
         }
     }
@@ -445,13 +451,6 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
     };
 
     events
-}
-
-fn action_ipc(a: Action) -> &'static [u8] {
-    match a {
-        Action::Tick => "TICK ".as_bytes(),
-        _ => &[]
-    }
 }
 
 #[cfg(target_os = "linux")]

@@ -89,8 +89,9 @@ pub fn dispatch_requested(store: &mut Store) -> (
         Option<Vec<Action>> // Actions for client
     ) {
     if store.queue.len() == 0 { (None, None, None) } else {
-        let carry = store.queue.clone();
+        let carry1 = store.queue.clone();
+        let carry2 = store.queue.clone();
         store.queue.clear();
-        (Some(carry), None, None) 
+        (Some(carry1), None, Some(carry2)) 
     }
 }

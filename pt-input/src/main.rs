@@ -50,6 +50,7 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
             Key::Char('i') => "I ",
             Key::Char(' ') => "SPC ",
 
+            /*
             Key::Char('a') => "NOTE_ON:24:0.4 ",
             Key::Char('w') => "NOTE_ON:25:0.4 ",
             Key::Char('s') => "NOTE_ON:26:0.4 ",
@@ -67,6 +68,7 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
             Key::Char('l') => "NOTE_ON:38:0.4 ",
             Key::Char('p') => "NOTE_ON:39:0.4 ",
             Key::Char(';') => "NOTE_ON:40:0.4 ",
+            */
 
             Key::Up => "UP ",
             Key::Down => "DN ",

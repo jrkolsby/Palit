@@ -71,6 +71,8 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "NOTE_ON" => Action::NoteOn(argv[1].parse::<u16>().unwrap(), 
                                         argv[2].parse::<f32>().unwrap()),
 
+            "NOTE_OFF" => Action::NoteOff(argv[1].parse::<u16>().unwrap()),
+
             "UP" => Action::Up,
             "DN" => Action::Down,
             "LT" => Action::Left,
@@ -161,7 +163,6 @@ fn main() -> std::io::Result<()> {
                 },
                 Action::Back => { layers.pop(); Action::Noop }, 
                 Action::Exit => { 
-                    println!("EXIT");
                     break 'event;
                 },
                 // Dispatch toplevel action to front layer

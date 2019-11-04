@@ -23,7 +23,6 @@ fn reduce(state: PianoState, action: Action) -> PianoState {
     PianoState {
         notes: match action {
             Action::NoteOn(_,_) => { 
-                println!("piano view noteon");
                 let mut new_keys = state.notes.clone(); 
                 new_keys.push(action);
                 new_keys
@@ -38,7 +37,6 @@ fn reduce(state: PianoState, action: Action) -> PianoState {
             }
             _ => state.notes.clone()
         }
-
     }
 }
 
@@ -73,7 +71,6 @@ impl Layer for Piano {
     }
 
     fn dispatch(&mut self, action: Action) -> Action {
-        println!("{:?}", action);
         self.state = reduce(self.state.clone(), action.clone());
 
         match action {
