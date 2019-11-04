@@ -15,7 +15,7 @@ mod views;
 mod common;
 mod components; 
 
-use views::{Layer, Home, Timeline, Help, Title};
+use views::{Layer, Home, Timeline, Help, Title, Piano};
 
 use common::{Action};
 
@@ -103,8 +103,8 @@ fn main() -> std::io::Result<()> {
     println!("Waiting for pt-sound...");
 
     let mut ipc_sound = OpenOptions::new()
-	.write(true)
-	.open("/tmp/pt-sound").unwrap();
+        .write(true)
+        .open("/tmp/pt-sound").unwrap();
 
     // Configure raw_mode stdout
     let mut stdout = stdout().into_raw_mode().unwrap();
@@ -125,6 +125,7 @@ fn main() -> std::io::Result<()> {
     // Configure UI layers
     let mut layers: Vec<Box<Layer>> = Vec::new();
     layers.push(Box::new(Home::new(1, 1, size.0, size.1)));
+    layers.push(Box::new(Piano::new(1, 1, size.0/2, size.1/2)));
 
     // Hide cursor and clear screen
     write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
@@ -145,7 +146,6 @@ fn main() -> std::io::Result<()> {
 
         // If anybody else closes the pipe, halt TODO: Throw error
         if fds[0].revents & libc::POLLHUP == libc::POLLHUP { break 'event; }
-
         let mut events: Vec<Action> = if fds[0].revents > 0 {
             ipc_action(&mut ipc_in)
         } else { continue; };
@@ -197,7 +197,6 @@ fn main() -> std::io::Result<()> {
 
             // Renders layers
             stdout = render(stdout, &layers);
-
         }
     }
 

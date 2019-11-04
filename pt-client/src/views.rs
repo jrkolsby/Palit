@@ -15,3 +15,6 @@ pub use help::HelpState;
 mod title;
 pub use title::Title;
 pub use title::TitleState;
+
+mod piano;
+pub use piano::Piano;

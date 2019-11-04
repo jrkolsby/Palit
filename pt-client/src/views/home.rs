@@ -8,7 +8,7 @@ use termion::raw::{RawTerminal};
 
 use crate::common::{Action, Color, Direction};
 use crate::views::{Layer};
-use crate::components::{logo, button, slider};
+use crate::components::{logo, button, piano, slider};
 
 const PALIT_ROOT: &str = "/usr/local/palit/";
 const NUM_FOCII: usize = 3;
@@ -62,17 +62,17 @@ fn reduce(state: HomeState, action: Action) -> HomeState {
         _ => state.scroll_x,
     };
     let focus = match action {
-	Action::Up => if state.focus == 0 { NUM_FOCII-1 } else {
+	    Action::Up => if state.focus == 0 { NUM_FOCII-1 } else {
             (state.focus-1) % NUM_FOCII
         },
-	Action::Down => (state.focus+1) % NUM_FOCII,
-	_ => state.focus
+	    Action::Down => (state.focus+1) % NUM_FOCII,
+	    _ => state.focus
     };
     HomeState {
         motd: state.motd.clone(),
         projects: state.projects.clone(),
         focus,
-	scroll_x,
+	    scroll_x,
     }
 }
 
