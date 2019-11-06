@@ -18,3 +18,6 @@ pub use title::TitleState;
 
 mod piano;
 pub use piano::Piano;
+
+mod routes;
+pub use routes::Routes;

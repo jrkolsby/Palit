@@ -17,7 +17,7 @@ mod views;
 mod common;
 mod components; 
 
-use views::{Layer, Home, Timeline, Help, Title, Piano};
+use views::{Layer, Home, Timeline, Help, Title, Piano, Routes};
 
 use common::{Action};
 
@@ -130,7 +130,8 @@ fn main() -> std::io::Result<()> {
     // Configure UI layers
     let mut layers: VecDeque<Box<Layer>> = VecDeque::new();
     layers.push_back(Box::new(Home::new(1, 1, size.0, size.1)));
-    layers.push_back(Box::new(Piano::new(1, 1, size.0/2, size.1/2)));
+    layers.push_back(Box::new(Piano::new(20, 1, size.0/2, size.1/2)));
+    layers.push_back(Box::new(Routes::new(1, 1, 4, size.1)));
 
     // Hide cursor and clear screen
     write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
