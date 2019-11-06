@@ -7,6 +7,8 @@ use std::fs::{OpenOptions, read_to_string, File};
 use std::os::unix::fs::OpenOptionsExt;
 use std::ffi::CString;
 
+use std::collections::VecDeque;
+
 use termion::{clear, cursor, terminal_size};
 use termion::raw::{IntoRawMode, RawTerminal};
 
@@ -15,11 +17,11 @@ mod views;
 mod common;
 mod components; 
 
-use views::{Layer, Home, Timeline, Help, Title, Piano};
+use views::{Layer, Home, Timeline, Help, Title, Piano, Routes};
 
 use common::{Action};
 
-fn render(mut stdout: RawTerminal<Stdout>, layers: &Vec<Box<Layer>>) -> RawTerminal<Stdout> {
+fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<Box<Layer>>) -> RawTerminal<Stdout> {
     /*
         LAYERS:
         4:   ---    <- End render here
@@ -29,6 +31,7 @@ fn render(mut stdout: RawTerminal<Stdout>, layers: &Vec<Box<Layer>>) -> RawTermi
         0: -------  <- Home
     */
     // Determine bottom layer
+    if layers.len() == 0 { return stdout; }
     let mut bottom = layers.len()-1;
     for layer in (*layers).iter().rev() {
         if layer.alpha() { bottom -= 1 }
@@ -125,9 +128,10 @@ fn main() -> std::io::Result<()> {
     let size: (u16, u16) = terminal_size().unwrap();
 
     // Configure UI layers
-    let mut layers: Vec<Box<Layer>> = Vec::new();
-    layers.push(Box::new(Home::new(1, 1, size.0, size.1)));
-    layers.push(Box::new(Piano::new(1, 1, size.0/2, size.1/2)));
+    let mut layers: VecDeque<Box<Layer>> = VecDeque::new();
+    layers.push_back(Box::new(Home::new(1, 1, size.0, size.1)));
+    layers.push_back(Box::new(Piano::new(20, 1, size.0/2, size.1/2)));
+    layers.push_back(Box::new(Routes::new(1, 1, 4, size.1)));
 
     // Hide cursor and clear screen
     write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
@@ -155,50 +159,63 @@ fn main() -> std::io::Result<()> {
         while let Some(next) = events.pop() {
             // Execute toplevel actions, capture default from view
             let default: Action = match next {
-                Action::Play => { ipc_sound.write(b"PLAY "); Action::Noop }
-                Action::Stop => { ipc_sound.write(b"STOP "); Action::Noop }
                 Action::Help => { 
-                    layers.push(Box::new(Help::new(10, 10, 44, 15))); 
+                    layers.push_back(Box::new(Help::new(10, 10, 44, 15))); 
                     Action::Noop
                 },
-                Action::Back => { layers.pop(); Action::Noop }, 
+                Action::Back => { 
+                    if let Some(current) = layers.pop_front() {
+                        layers.push_back(current);
+                    }
+                    Action::Noop
+                }, 
                 Action::Exit => { 
                     break 'event;
                 },
                 // Dispatch toplevel action to front layer
                 a => {
-                    let target = layers.last_mut().unwrap();
-                    target.dispatch(a)
+                    let target_i = (layers.len() as i16)-1;
+                    if target_i >= 0 {
+                        let target = layers.get_mut(target_i as usize).unwrap();
+                        target.dispatch(a)
+                    } else {
+                        Action::Noop
+                    }
                 }
             };
 
             // capture default action if returned from layer
             match default {
                 Action::InputTitle => {
-                    layers.push(Box::new(Title::new(23, 5, 36, 23)));
+                    layers.push_back(Box::new(Title::new(23, 5, 36, 23)));
                 },
                 Action::CreateProject(title) => {
                     ipc_sound.write(format!("NEW_PROJECT:{} ", title).as_bytes());
-                    layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
+                    layers.push_back(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
                 },
                 Action::OpenProject(title) => {
                     ipc_sound.write(format!("OPEN_PROJECT:{} ", title).as_bytes());
-                    layers.push(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
+                    layers.push_back(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
                 },
-                Action::Back => { layers.pop(); }, 
+                Action::Back => { layers.pop_back(); }, 
                 Action::Pepper => {
-                    layers.push(Box::new(Help::new(10, 10, 44, 15))); 
+                    layers.push_back(Box::new(Help::new(10, 10, 44, 15))); 
                 },
+                /*
+                Action::Error(message) => {
+                    layers.push(Box::new(Error::new(message))) ;
+                }
+                */
                 _ => {}
             };	
-
-            // Clears screen
-            write!(stdout, "{}", clear::All).unwrap();
-            stdout.flush().unwrap();
-
-            // Renders layers
-            stdout = render(stdout, &layers);
         }
+
+        // Clears screen
+        write!(stdout, "{}", clear::All).unwrap();
+        stdout.flush().unwrap();
+
+        // Renders layers
+        stdout = render(stdout, &layers);
     }
 
     // CLEAN UP
