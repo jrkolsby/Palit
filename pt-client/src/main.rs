@@ -207,14 +207,14 @@ fn main() -> std::io::Result<()> {
                 */
                 _ => {}
             };	
-
-            // Clears screen
-            write!(stdout, "{}", clear::All).unwrap();
-            stdout.flush().unwrap();
-
-            // Renders layers
-            stdout = render(stdout, &layers);
         }
+
+        // Clears screen
+        write!(stdout, "{}", clear::All).unwrap();
+        stdout.flush().unwrap();
+
+        // Renders layers
+        stdout = render(stdout, &layers);
     }
 
     // CLEAN UP
