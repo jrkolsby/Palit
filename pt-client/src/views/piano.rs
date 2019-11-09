@@ -24,16 +24,16 @@ pub struct PianoState {
     eq_hi: i16,
 }
 
-pub struct MultiFocus<T> {
-    r: fn(RawTerminal<Stdout>, u16, u16, T) -> RawTerminal<Stdout>,
-    g: fn(RawTerminal<Stdout>, u16, u16, T) -> RawTerminal<Stdout>,
-    y: fn(RawTerminal<Stdout>, u16, u16, T) -> RawTerminal<Stdout>,
-    p: fn(RawTerminal<Stdout>, u16, u16, T) -> RawTerminal<Stdout>,
-    b: fn(RawTerminal<Stdout>, u16, u16, T) -> RawTerminal<Stdout>,
+pub struct MultiFocus<State> {
+    r: fn(RawTerminal<Stdout>, u16, u16, &State) -> RawTerminal<Stdout>,
+    g: fn(RawTerminal<Stdout>, u16, u16, &State) -> RawTerminal<Stdout>,
+    y: fn(RawTerminal<Stdout>, u16, u16, &State) -> RawTerminal<Stdout>,
+    p: fn(RawTerminal<Stdout>, u16, u16, &State) -> RawTerminal<Stdout>,
+    b: fn(RawTerminal<Stdout>, u16, u16, &State) -> RawTerminal<Stdout>,
 }
 
-impl<T: Copy> MultiFocus<T> {
-    pub fn render(&self, mut out: RawTerminal<Stdout>, x: u16, y: u16, state: T, active: bool) -> RawTerminal<Stdout> {
+impl<T> MultiFocus<T> {
+    pub fn render(&self, mut out: RawTerminal<Stdout>, x: u16, y: u16, state: &T, active: bool) -> RawTerminal<Stdout> {
         if active { 
             out = write_fg(out, Color::Black); 
             out = write_bg(out, Color::Red); 
@@ -42,25 +42,25 @@ impl<T: Copy> MultiFocus<T> {
 
         if active { 
             out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Red); 
+            out = write_bg(out, Color::Green); 
         }
         out = (self.g)(out, x, y, state);
 
         if active { 
             out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Red); 
+            out = write_bg(out, Color::Yellow); 
         }
         out = (self.y)(out, x, y, state);
         
         if active { 
             out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Red); 
+            out = write_bg(out, Color::Pink); 
         }
         out = (self.p)(out, x, y, state);
 
         if active { 
-            write_fg(out, Color::Black); 
-            write_bg(out, Color::Red); 
+            out = write_fg(out, Color::Black); 
+            out = write_bg(out, Color::Blue); 
         }
         out = (self.b)(out, x, y, state);
         out
@@ -165,7 +165,7 @@ impl Layer for Piano {
         for (i, row) in self.focii.iter().enumerate() {
             for (j, col) in row.iter().enumerate() {
                 let isFocused = self.state.focus == (i,j);
-                out = col.render(out, self.x, self.y, self.state.clone(), isFocused);
+                out = col.render(out, self.x, self.y, &self.state.clone(), isFocused);
             }
         }
 
