@@ -20,7 +20,6 @@ pub use color::write_bg;
 pub use color::write_fg;
 
 pub use multifocus::Focus;
-pub use multifocus::FocusState;
 pub use multifocus::MultiFocus;
 
 #[derive(Clone, Debug)]

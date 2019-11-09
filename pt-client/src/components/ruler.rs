@@ -21,13 +21,7 @@ pub fn render(mut out: RawTerminal<Stdout>,
     }
     for i in 0..width {
         let beat = if (i+scroll+1) % time_beat as u16 == 0 { "!" } else { "." };
-        let space = {
-            let mut a: String = " ".to_string();
-            for _i in 0..zoom {
-                a = format!("{}{}", a, a).to_string();
-            }
-            a
-        };
+        let space = (0..zoom).map(|_| " ").collect::<String>();
         if i+scroll == playhead {
             for j in 0..height {
                 write!(out, "{}|", cursor::Goto(origin_x+i, origin_y+j));

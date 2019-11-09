@@ -50,6 +50,8 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
             Key::Char('i') => "I ",
             Key::Char(' ') => "SPC ",
 
+            Key::Char('\n') => "DESELECT ",
+
             /*
             Key::Char('a') => "NOTE_ON:24:0.4 ",
             Key::Char('w') => "NOTE_ON:25:0.4 ",
@@ -154,7 +156,14 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
                 Keys::KEY_RIGHT => "RT ",
 
                 _ => ""
-            }
+            },
+            (EventType::Release, k) => match k {
+                Keys::KEY_M |
+                Keys::KEY_R |
+                Keys::KEY_V |
+                Keys::KEY_I |
+                Keys::KEY_SPACE => "DESELECT ",
+            },
             (_, _) => ""
         };
 

@@ -83,6 +83,8 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
 
             "EXIT" => Action::Exit,
 
+            "DESELECT" => Action::Deselect,
+
             _ => { Action::Noop },
         };
 

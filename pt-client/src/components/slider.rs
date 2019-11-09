@@ -119,7 +119,7 @@ pub fn render(mut out: RawTerminal<Stdout>,
                             [0][l2]
                             [0][l3],
     };
-    write!(out, "{}{}",
+    write!(out, "{}{} ",
         cursor::Goto((_x+dx) as u16, (_y+dy) as u16),
         over_glyph).unwrap();
     out

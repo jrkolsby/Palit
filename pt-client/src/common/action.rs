@@ -36,12 +36,15 @@ pub enum Action {
 
     NoteOn(u16, f32),
     NoteOff(u16),
+    SetParam(u16, f32),
 
     // ABSTRACT ACTIONS
     OpenProject(String),
     CreateProject(String),
     Pepper,
     InputTitle,
+
+    Deselect,
 
     Noop,
 }
