@@ -45,3 +45,5 @@ pub enum Action {
 
     Noop,
 }
+
+pub type DirectAction = (u16, Action);

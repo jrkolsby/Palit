@@ -1,5 +1,4 @@
 mod timeline;
-mod multifocus;
 mod action;
 mod color;
 mod render;
@@ -13,10 +12,11 @@ pub use timeline::file_to_pairs;
 pub use timeline::read_document;
 
 pub use action::Action;
-
-pub use multifocus::MultiFocus;
+pub use action::DirectAction;
 
 pub use color::Color;
+pub use color::write_bg;
+pub use color::write_fg;
 
 #[derive(Clone, Debug)]
 pub enum Rate {

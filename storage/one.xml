@@ -9,21 +9,29 @@
     <assets>
 	<asset size="960000" id="a3" src="/usr/local/palit/assets/Who.wav" />
     </assets>
-    <tracks>
-		<track id="t1" color="yellow">
-			<region id="r1" asset="a3" offset="0" in="0" out="48000" />
-			<region id="r2" asset="a3" offset="480000" in="0" out="480000" />
-			<region id="r3" asset="a3" offset="432000" in="0" out="960000"/>
-		</track>
-		<track id="t2" color="blue">
-			<region id="r1" asset="a3" offset="48000" in="0" out="96000" />
-			<region id="r2" asset="a3" offset="500000" in="0" out="192000" />
-			<region id="r3" asset="a3" offset="130000" in="0" out="48000"/>
-		</track>
-		<track id="t3" color="pink">
-			<region id="r1" asset="a3" offset="48000" in="0" out="48000" />
-			<region id="r2" asset="a3" offset="1800000" in="0" out="48000" />
-			<region id="r3" asset="a3" offset="130000" in="0" out="48000"/>
-		</track>
-    </tracks>
+    <modules>
+	<device out="o0" gain="-12" />
+	<device out="o1" gain="-12" />
+	<device in="i0" gain="-12" />
+	<device in="i1" gain="-12" />
+	<timeline id="m1">
+	    <track id="t1" out="o2">
+		<region id="r1" asset="a3" offset="0" in="0" out="48000" />
+		<region id="r2" asset="a3" offset="480000" in="0" out="480000" />
+		<region id="r3" asset="a3" offset="432000" in="0" out="960000"/>
+	    </track>
+	    <track id="t2" out="o3">
+		<region id="r1" asset="a3" offset="48000" in="0" out="96000" />
+		<region id="r2" asset="a3" offset="500000" in="0" out="192000" />
+		<region id="r3" asset="a3" offset="130000" in="0" out="48000"/>
+	    </track>
+	    <track id="t3" out="o4">
+		<region id="r1" asset="a3" offset="48000" in="0" out="48000" />
+		<region id="r2" asset="a3" offset="1800000" in="0" out="48000" />
+		<region id="r3" asset="a3" offset="130000" in="0" out="48000"/>
+	    </track>
+	</timeline>
+	<arpeggio id="m2">
+	</arpeggio>
+    </modules>
 </nd>

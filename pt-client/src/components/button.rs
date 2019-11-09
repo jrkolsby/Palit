@@ -3,7 +3,7 @@ use termion::{color, cursor};
 
 use std::io::{Write, Stdout};
 
-use crate::common::Color;
+use crate::common::{ Color, write_bg, write_fg };
 
 pub fn render(mut out: RawTerminal<Stdout>, 
     origin_x: u16, 
@@ -21,34 +21,26 @@ pub fn render(mut out: RawTerminal<Stdout>,
 	    let right = x == width-1;
 	    let bottom = y == 2;
 	    if active {
-			write!(out, "{}", color::Fg(color::Black));
-			match bg_color {
-				Color::Red => write!(out, "{}", color::Bg(color::Red)),
-				Color::Pink => write!(out, "{}", color::Bg(color::Magenta)),
-				Color::Blue => write!(out, "{}", color::Bg(color::Blue)),
-				Color::Green => write!(out, "{}", color::Bg(color::Green)),
-				Color::Yellow => write!(out, "{}", color::Bg(color::Yellow)),
-			};
+			out = write_bg(out, bg_color);
+			out = write_fg(out, Color::Black);
 	    } else {
-			write!(out, "{}{}",
-				color::Fg(color::White),
-				color::Bg(color::Reset));
+			out = write_fg(out, Color::White);
 	    }
 	    write!(out, "{}{}",
-		cursor::Goto(origin_x+x, origin_y+y),
-		match (top, right, bottom, left){
-		    // TOP LEFT
-		    (true, false, false, true) => "┌",
-		    (false, true, true, false) => "┘",
-		    (true, true, false, false) => "┐",
-		    (false, false, true, true) => "└",
-		    (false, false, false, true) => "│",
-		    (false, true, false, false) => "│",
-		    (true, false, false, false) => "─",
-		    (false, false, true, false) => "─",
-		    _ => " "
-		}).unwrap();
-	}
+			cursor::Goto(origin_x+x, origin_y+y),
+			match (top, right, bottom, left){
+				// TOP LEFT
+				(true, false, false, true) => "┌",
+				(false, true, true, false) => "┘",
+				(true, true, false, false) => "┐",
+				(false, false, true, true) => "└",
+				(false, false, false, true) => "│",
+				(false, true, false, false) => "│",
+				(true, false, false, false) => "─",
+				(false, false, true, false) => "─",
+				_ => " "
+			}).unwrap();
+		}
     }
     let title_x = origin_x + (width/2) - (title_len/2);
     write!(out, "{}{}", cursor::Goto(title_x, origin_y+1), title);

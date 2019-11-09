@@ -126,8 +126,6 @@ impl Layer for Home {
 	out = button::render(out, self.x + 10, self.y + 10, 17, 
         "New Project", Color::Red, self.state.focus == 0);
 
-    out = slider::render(out, self.x, self.y+10, "SLIDER".to_string(), 10, Direction::East);
-
 	// Project Listing
 	let mut col: [u16; 2] = [4,4];
         for (i, project) in self.state.projects.iter().enumerate() {
