@@ -1,24 +1,18 @@
 use termion::raw::{RawTerminal};
-use termion::{color, cursor};
+use termion::{cursor};
 
 use std::io::{Write, Stdout};
 
-use crate::common::{Direction, Color, write_bg, write_fg};
+use crate::common::{Direction};
 
 pub fn render(mut out: RawTerminal<Stdout>, 
     x: u16, 
     y: u16, 
     title: String, 
     mut len: i16, 
-    dir: Direction,
-    bg: Color) -> RawTerminal<Stdout> 
+    dir: Direction) -> RawTerminal<Stdout> 
 {    
-    out = write_bg(out, bg);
     write!(out, "{}{}", cursor::Goto(x, y+1), title).unwrap();
-    match bg {
-        Color::Transparent => write!(out, "{}", color::Fg(color::White)),
-        _ => write!(out, "{}", color::Fg(color::White))
-    };
     let _x: i16 = x as i16;
     let _y: i16 = y as i16;
     let mut dx: i16 = 0;
@@ -54,9 +48,8 @@ pub fn render(mut out: RawTerminal<Stdout>,
                             [0][1],
     };
     while len >= ticks_per_char {
-        write!(out, "{}{}{}",
+        write!(out, "{}{} ",
             cursor::Goto((_x+dx) as u16, (_y+dy) as u16),
-            color::Fg(color::White),
             glyph).unwrap();
         dx = match dir {
             Direction::North |
@@ -126,9 +119,8 @@ pub fn render(mut out: RawTerminal<Stdout>,
                             [0][l2]
                             [0][l3],
     };
-    write!(out, "{}{}{}",
+    write!(out, "{}{}",
         cursor::Goto((_x+dx) as u16, (_y+dy) as u16),
-        color::Fg(color::White),
         over_glyph).unwrap();
     out
 }

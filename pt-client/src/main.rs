@@ -135,7 +135,7 @@ fn main() -> std::io::Result<()> {
     // Configure UI layers
     let mut layers: VecDeque<(u16, Box<Layer>)> = VecDeque::new();
     add_layer(&mut layers, Box::new(Home::new(1, 1, size.0, size.1)));
-    add_layer(&mut layers, Box::new(Piano::new(20, 1, size.0/2, size.1/2)));
+    add_layer(&mut layers, Box::new(Piano::new(5, 10, size.0/2, size.1/2)));
     add_layer(&mut layers, Box::new(Routes::new(1, 1, 4, size.1)));
 
     // Hide cursor and clear screen

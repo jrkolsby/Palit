@@ -2,6 +2,7 @@ mod timeline;
 mod action;
 mod color;
 mod render;
+mod multifocus;
 
 pub use timeline::Asset;
 pub use timeline::Region;
@@ -17,6 +18,10 @@ pub use action::DirectAction;
 pub use color::Color;
 pub use color::write_bg;
 pub use color::write_fg;
+
+pub use multifocus::Focus;
+pub use multifocus::FocusState;
+pub use multifocus::MultiFocus;
 
 #[derive(Clone, Debug)]
 pub enum Rate {

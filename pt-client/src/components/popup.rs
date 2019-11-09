@@ -33,9 +33,9 @@ pub fn render(mut out: RawTerminal<Stdout>,
 		    _ => " "
 		}).unwrap();
 	    if right || bottom {
-		write!(out, "{}{}  ",
-		    cursor::Goto(origin_x+x+1, origin_y+y+1),
-		    color::Bg(color::LightBlue)).unwrap();
+			write!(out, "{}{}  ",
+				cursor::Goto(origin_x+x+1, origin_y+y+1),
+				color::Bg(color::LightBlue)).unwrap();
 	    }
 	    let title_len = title.len() as u16;
 	    let title_x = (width/2) - (title_len/2);

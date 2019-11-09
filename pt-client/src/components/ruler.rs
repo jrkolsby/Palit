@@ -1,7 +1,7 @@
 use termion::raw::{RawTerminal};
-use termion::{color, cursor};
-
+use termion::{cursor};
 use std::io::{Write, Stdout};
+use crate::common::{Color, write_fg, write_bg};
 
 const WIDTH: u16 = 10;
 const HEIGHT: u16 = 3;
@@ -32,9 +32,9 @@ pub fn render(mut out: RawTerminal<Stdout>,
             for j in 0..height {
                 write!(out, "{}|", cursor::Goto(origin_x+i, origin_y+j));
             }
-            write!(out, "{}", color::Fg(color::Red));
+            out = write_fg(out, Color::Red);
         } else {
-            write!(out, "{}", color::Fg(color::White));
+            out = write_fg(out, Color::White);
         }
         write!(out, "{}{}{}",
             cursor::Goto(origin_x+i, origin_y),

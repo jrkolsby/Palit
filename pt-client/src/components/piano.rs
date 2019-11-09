@@ -26,7 +26,8 @@ const ASSET: &str = r#"
   └────────────────────────┘   
 "#;
 
-pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16, notes: &Vec<Action>) -> RawTerminal<Stdout> {
+pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16, 
+        notes: &Vec<Action>) -> RawTerminal<Stdout> {
     for (i, line) in ASSET.lines().enumerate() {
         write!(out, "{}{}{}{}",
             cursor::Goto(x, (i as u16)+y+1),

@@ -23,6 +23,7 @@ pub fn write_bg(mut out: RawTerminal<Stdout>, c: Color) -> RawTerminal<Stdout> {
         Color::Yellow => write!(out, "{}", color::Bg(color::Yellow)),
         Color::White => write!(out, "{}", color::Bg(color::White)),
         Color::Black => write!(out, "{}", color::Bg(color::Black)),
+        Color::Transparent => write!(out, "{}", color::Bg(color::Reset)),
         _ => Ok(())
     };
     out

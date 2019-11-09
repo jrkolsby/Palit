@@ -123,11 +123,9 @@ impl Layer for Timeline {
             self.state.focus == 0,
         ); // top right corner
 
-        out = button::render(out, 2, self.height-3, 56, 
-            "RECORD", Color::Red, true);
+        out = button::render(out, 2, self.height-3, 56, "RECORD");
 
-        out = button::render(out, 60, self.height-3, 19, 
-            "IMPORT", Color::Pink, true);
+        out = button::render(out, 60, self.height-3, 19, "IMPORT");
             
         // save and quit
         write!(out, "{}{}{}  Save and quit  {}{}",

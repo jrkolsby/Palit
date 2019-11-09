@@ -123,8 +123,7 @@ impl Layer for Home {
     out = logo::render(out, self.x, self.y);
 
 	// New Button
-	out = button::render(out, self.x + 10, self.y + 10, 17, 
-        "New Project", Color::Red, self.state.focus == 0);
+	out = button::render(out, self.x + 10, self.y + 10, 17, "New Project");
 
 	// Project Listing
 	let mut col: [u16; 2] = [4,4];

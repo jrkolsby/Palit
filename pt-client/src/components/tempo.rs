@@ -1,7 +1,7 @@
 use termion::raw::{RawTerminal};
-use termion::{color, cursor};
-
+use termion::{cursor};
 use std::io::{Write, Stdout};
+use crate::common::{Color, write_bg, write_fg};
 
 const WIDTH: u16 = 10;
 const HEIGHT: u16 = 3;
@@ -20,30 +20,26 @@ pub fn render(mut out: RawTerminal<Stdout>,
         for i in 0..WIDTH+1 as u16 {
             for j in 1..HEIGHT+1 as u16 {
                 if focus {
-                    write!(out, "{}{}{} ",
-                        cursor::Goto(origin_x-i, origin_y+j),
-                        color::Fg(color::Black),
-                        color::Bg(color::Green));
+                    write!(out, "{} ",
+                        cursor::Goto(origin_x-i, origin_y+j));
                 } else {
-                    write!(out, "{}{}{} ",
-                        cursor::Goto(origin_x-i, origin_y+j),
-                        color::Fg(color::White),
-                        color::Bg(color::Black));
+                    write!(out, "{} ",
+                        cursor::Goto(origin_x-i, origin_y+j));
                 }
                 // x and y start at 1
                 match (i,j) {
                     (1, 1) => {
                         match (metronome, focus) {
-                            (true,true) => write!(out, "{} ", color::Bg(color::Black)),
-                            (true,false) => write!(out, "{} ", color::Bg(color::White)),
-                            _ => { Ok(()) },
+                            (true,true) => { out = write_bg(out, Color::Transparent) },
+                            (true,false) => { out = write_bg(out, Color::White) },
+                            _ => {},
                         };
                     },
                     (3, 1) => {
                         match (metronome, focus) {
-                            (false,true) => write!(out, "{} ", color::Bg(color::Black)),
-                            (false,false) => write!(out, "{} ", color::Bg(color::White)),
-                            _ => { Ok(()) },
+                            (false,true) => { out = write_bg(out, Color::Black) },
+                            (false,false) => { out = write_bg(out, Color::White) },
+                            _ => {},
                         };
                     },
                     (2, 2) => {
@@ -62,9 +58,5 @@ pub fn render(mut out: RawTerminal<Stdout>,
                 }
             }
         }
-    // Clean up after ourselves
-    write!(out, "{}{}",
-        color::Fg(color::Reset),
-        color::Bg(color::Reset));
     out
 }

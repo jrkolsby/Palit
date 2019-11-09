@@ -2,9 +2,9 @@ use std::io::{Write, Stdout};
 use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 
-use crate::common::{Action, Color, Direction, write_fg, write_bg};
+use crate::common::{Action, Direction, MultiFocus};
 use crate::views::{Layer};
-use crate::components::{piano, slider};
+use crate::components::{piano, slider, button};
 
 pub struct Piano {
     x: u16,
@@ -22,49 +22,6 @@ pub struct PianoState {
     eq_low: i16,
     eq_mid: i16,
     eq_hi: i16,
-}
-
-pub struct MultiFocus<State> {
-    r: fn(RawTerminal<Stdout>, u16, u16, &State) -> RawTerminal<Stdout>,
-    g: fn(RawTerminal<Stdout>, u16, u16, &State) -> RawTerminal<Stdout>,
-    y: fn(RawTerminal<Stdout>, u16, u16, &State) -> RawTerminal<Stdout>,
-    p: fn(RawTerminal<Stdout>, u16, u16, &State) -> RawTerminal<Stdout>,
-    b: fn(RawTerminal<Stdout>, u16, u16, &State) -> RawTerminal<Stdout>,
-}
-
-impl<T> MultiFocus<T> {
-    pub fn render(&self, mut out: RawTerminal<Stdout>, x: u16, y: u16, state: &T, active: bool) -> RawTerminal<Stdout> {
-        if active { 
-            out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Red); 
-        }
-        out = (self.r)(out, x, y, state);
-
-        if active { 
-            out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Green); 
-        }
-        out = (self.g)(out, x, y, state);
-
-        if active { 
-            out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Yellow); 
-        }
-        out = (self.y)(out, x, y, state);
-        
-        if active { 
-            out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Pink); 
-        }
-        out = (self.p)(out, x, y, state);
-
-        if active { 
-            out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Blue); 
-        }
-        out = (self.b)(out, x, y, state);
-        out
-    }
 }
 
 fn reduce(state: PianoState, action: Action) -> PianoState {
@@ -88,7 +45,7 @@ fn reduce(state: PianoState, action: Action) -> PianoState {
         eq_low: state.eq_low,
         eq_mid: state.eq_mid,
         eq_hi: state.eq_hi,
-        focus: (0,0),
+        focus: state.focus,
     }
 }
 
@@ -112,44 +69,100 @@ impl Piano {
             width: width,
             height: height,
             state: initial_state,
-            focii: vec![
-                vec![
-                    MultiFocus::<PianoState> {
-                        r: |mut out, x, y, state| {
-                            out = slider::render(out, 
-                                x+8, 
-                                y+5, 
-                                "lo".to_string(), 
-                                state.eq_low,
-                                Direction::North,
-                                Color::Transparent);
-                            out
-                        },
-                        g: |mut out, x, y, state| {
-                            out = slider::render(out, 
-                                x+13, 
-                                y+5, 
-                                "mid".to_string(), 
-                                state.eq_mid,
-                                Direction::North,
-                                Color::Transparent);
-                            out
-                        },
-                        y: |mut out, x, y, state| {
-                            out = slider::render(out, 
-                                x+18, 
-                                y+5, 
-                                "hi".to_string(), 
-                                state.eq_hi,
-                                Direction::North,
-                                Color::Transparent);
-                            out
-                        },
-                        p: |mut out, x, y, state| {out},
-                        b: |mut out, x, y, state| {out},
-                    }
-                ]
-            ]
+            focii: vec![vec![
+                MultiFocus::<PianoState> {
+                    r: |mut out, x, y, state| {
+                        out = button::render(out, 
+                            x+2, 
+                            y+10, 
+                            20, 
+                            "Record");
+                        out
+                    },
+                    g: |mut out, x, y, state| {
+                        out = slider::render(out, 
+                            x+8, 
+                            y+5, 
+                            "20Hz".to_string(), 
+                            state.eq_mid,
+                            Direction::North);
+                        out
+                    },
+                    y: |mut out, x, y, state| {
+                        out = slider::render(out, 
+                            x+14, 
+                            y+5, 
+                            "80Hz".to_string(), 
+                            state.eq_hi,
+                            Direction::North);
+                        out
+                    },
+                    p: |mut out, x, y, state| {
+                        out = slider::render(out, 
+                            x+20, 
+                            y+5, 
+                            "120Hz".to_string(), 
+                            state.eq_low,
+                            Direction::North);
+                        out
+                    },
+                    b: |mut out, x, y, state| {
+                        out = slider::render(out, 
+                            x+26, 
+                            y+5, 
+                            "400Hz".to_string(), 
+                            state.eq_low,
+                            Direction::North);
+                        out
+                    },
+                },
+                MultiFocus::<PianoState> {
+                    r: |mut out, x, y, state| {
+                        out = button::render(out, 
+                            x+32, 
+                            y+10, 
+                            10, 
+                            "Play");
+                        out
+                    },
+                    g: |mut out, x, y, state| {
+                        out = slider::render(out, 
+                            x+32, 
+                            y+5, 
+                            "6KHz".to_string(), 
+                            state.eq_mid,
+                            Direction::North);
+                        out
+                    },
+                    y: |mut out, x, y, state| {
+                        out = slider::render(out, 
+                            x+38, 
+                            y+5, 
+                            "12KHz".to_string(), 
+                            state.eq_hi,
+                            Direction::North);
+                        out
+                    },
+                    p: |mut out, x, y, state| {
+                        out = slider::render(out, 
+                            x+44, 
+                            y+5, 
+                            "14KHz".to_string(), 
+                            state.eq_low,
+                            Direction::North);
+                        out
+                    },
+                    b: |mut out, x, y, state| {
+                        out = slider::render(out, 
+                            x+50, 
+                            y+5, 
+                            "20KHz".to_string(), 
+                            state.eq_low,
+                            Direction::North);
+                        out
+                    },
+                },
+            ]]
         }
     }
 }
@@ -162,12 +175,15 @@ impl Layer for Piano {
             self.y, 
             &self.state.notes);
 
-        for (i, row) in self.focii.iter().enumerate() {
-            for (j, col) in row.iter().enumerate() {
+        for (j, col) in self.focii.iter().enumerate() {
+            for (i, focus) in col.iter().enumerate() {
                 let isFocused = self.state.focus == (i,j);
-                out = col.render(out, self.x, self.y, &self.state.clone(), isFocused);
+                out = focus.render(out, self.x, self.y, &self.state.clone(), isFocused);
             }
         }
+
+        println!("{}", self.focii[0].len());
+        println!("{:?}", self.state.focus);
 
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
         out.flush().unwrap();
@@ -181,6 +197,21 @@ impl Layer for Piano {
         // We let our current focus transform the action
         // self.focii must be mutable
         // default = self.focii[i][j].reduce(action)
+
+        let focus_row = &self.focii[self.state.focus.1];
+
+        self.state.focus = match action {
+            Action::Left => if self.state.focus.0 > 0 {
+                    (self.state.focus.0-1, self.state.focus.1)
+                } else { self.state.focus },
+            Action::Right => if self.state.focus.0 < (focus_row.len()-1) {
+                    (self.state.focus.0+1, self.state.focus.1)
+                } else { self.state.focus },
+            Action::Up => if self.state.focus.1 > 0 {
+                    (self.state.focus.0, self.state.focus.1-1)
+                } else { self.state.focus }
+            _ => self.state.focus
+        };
 
         self.state = reduce(self.state.clone(), action.clone());
 
