@@ -33,19 +33,18 @@ pub enum Action {
     Help,
     Tick,
     Exit,
+    Deselect,
 
     NoteOn(u16, f32),
     NoteOff(u16),
     SetParam(u16, f32),
+    Patch(u16, u16, u16), // route id, in id, out id
 
-    // ABSTRACT ACTIONS
+    // Default actions
     OpenProject(String),
     CreateProject(String),
     Pepper,
     InputTitle,
-
-    Deselect,
-
     Noop,
 }
 

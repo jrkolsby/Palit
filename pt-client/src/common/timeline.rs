@@ -107,6 +107,10 @@ pub fn write_document(out_file: String, state: TimelineState) {
         .open(out_file).unwrap();
 }
 
+trait Module<T> {
+    fn read_state(self, object: Element) -> T;
+}
+
 pub fn read_document(in_file: String) -> TimelineState {
 
     /*

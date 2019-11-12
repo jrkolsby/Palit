@@ -1,43 +1,77 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE notedoc>
 
-<nd>
-    <meta title="WOWEE XML" />
-    <format samplerate="48000" bitrate="12"/>
-    <tempo bpm="127" beat="4" note="4" />
-    <duration measure="10" beat="4" />
-    <assets>
-	<asset size="960000" id="a3" src="/usr/local/palit/assets/Who.wav" />
-    </assets>
+<project>
+    <title>WOWEE XML</title>
+    <meta samplerate="48000" bitrate="12"/>
     <modules>
-	<device out="o0" />
-	<device out="o1" />
-	<device in="i0" />
-	<device in="i1" />
-	<timeline id="m1">
-	    <track id="t1" out="o2" in="i2">
-		<region id="r1" asset="a3" offset="0" in="0" out="48000" />
-		<region id="r2" asset="a3" offset="480000" in="0" out="480000" />
-		<region id="r3" asset="a3" offset="432000" in="0" out="960000"/>
-	    </track>
-	    <track id="t2" out="o3" in="i3">
-		<region id="r1" asset="a3" offset="48000" in="0" out="96000" />
-		<region id="r2" asset="a3" offset="500000" in="0" out="192000" />
-		<region id="r3" asset="a3" offset="130000" in="0" out="48000"/>
-	    </track>
-	    <track id="t3" out="o4" in="i4">
-		<region id="r1" asset="a3" offset="48000" in="0" out="48000" />
-		<region id="r2" asset="a3" offset="1800000" in="0" out="48000" />
-		<region id="r3" asset="a3" offset="130000" in="0" out="48000"/>
-	    </track>
-	</timeline>
-	<arpeggio id="m2">
-	</arpeggio>
+        <master id="m0" input="i0" volume="100" /> <!-- This always exists -->
+        <patch id="m4">
+            <param id="p9" value="32" name="master">
+            <route>
+                <!-- This tag is special because its id references another element's attribute -->
+                <input id="i5" />
+                <output id="o6" />
+            </route>
+            <route>
+                <input id="i0" />
+                <output id="o5" />
+                <!-- Route timeline tracks to master -->
+                <output id="o2" />
+                <output id="o3" />
+                <output id="o4" />
+            </route>
+        </patch>
+        <device id="m5" output="o200" />
+        <device id="m6" output="o201" />
+        <device id="m7" input="i200" />
+        <device id="m8" input="i201" />
+        <keyboard output="o203" octave="4" key="0">
+        <keyboard output="o204" octave="4" key="0">
+        <timeline id="m1" loop>
+            <!-- Note that ids only within a module are distinct -->
+            <param bpm="127" beat="4" note="4" name="tempo" />
+            <param id="p0" value="68000" name="duration" />
+            <param id="p1" value="0" name="in" />
+            <param id="p1" value="0" name="in" />
+            <playhead offset="0" />
+            <asset size="960000" id="a3" src="/usr/local/palit/assets/Who.wav" />
+            <track id="t1" output="o2" input="i2">
+                <region id="r1" asset="a3" in="0" out="48000" offset="4800" />
+                <region id="r2" asset="a3" in="0" out="48000" offset="6400" />
+                <region id="r3" asset="a3"  in="0" out="48000" offset="8000" />
+            </track>
+            <track id="t2" output="o3" input="i3">
+                <region id="r4" asset="a3" in="0" out="48000" offset="0" />
+                <region id="r5" asset="a3" in="0" out="48000" offset="1600" />
+                <region id="r6" asset="a3"  in="0" out="48000" offset="3200" />
+            </track>
+            <track id="t3" output="o4" input="i4">
+                <region id="r7" asset="a3" in="0" out="48000" offset="9600" />
+                <region id="r8" asset="a3" in="0" out="48000" offset="11200" />
+                <region id="r9" asset="a3"  in="0" out="48000" offset="12800" />
+            </track>
+        </timeline>
+        <hammond id="m3" input="i6" output="o6">
+            <param id="p0" value="32" />
+            <param id="p1" value="32" />
+            <param id="p2" value="32" />
+            <param id="p3" value="32" />
+            <param id="p4" value="32" />
+            <param id="p5" value="32" />
+            <param id="p6" value="32" />
+            <param id="p7" value="0" name="reverb" />
+            <param id="p8" value="0" name="height" />
+        </hammond>
+        <arpeggio id="m2">
+            <param id="p7" value="0" name="reverb" />
+            <param id="p8" value="0" name="height" />
+            <playhead offset="0">
+            <track input="i5" output="o5">
+                <note key="69" vel="0.4" offset="0" />
+                <note key="72" vel="0.4" offset="400" />
+                <note key="72" vel="0.4" offset="800" />
+            </track>
+        </arpeggio>
     </modules>
-    <routes>
-	<route>
-	    <in id="i0" />
-	    <out id="o2" />
-	</route>
-    </routes>
-</nd>
+</project>

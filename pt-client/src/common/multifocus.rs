@@ -1,11 +1,8 @@
 use std::io::{Write, Stdout};
-use termion::{color, cursor};
+use termion::{color, cursor, terminal_size};
 use termion::raw::{RawTerminal};
 
 use crate::common::{Action, Color, write_bg, write_fg};
-
-const FULLWIDTH: u16 = 142;
-const FULLHEIGHT: u16 = 30;
 
 /*
     A multifocus render will render five components prefixed with
@@ -40,9 +37,59 @@ pub struct MultiFocus<State> {
     pub active: Option<Focus>,
 }
 
+pub fn render_focii<T>(mut out: RawTerminal<Stdout>, x: u16, y: u16, 
+        focus: (usize, usize), focii: &Vec<Vec<MultiFocus<T>>>, state: &T) 
+        -> RawTerminal<Stdout> {
+    if let Some(_) = focii[focus.1][focus.0].active {
+        out = focii[focus.1][focus.0].render(out, 
+            x, y, &state, true);
+    } else {
+        for (j, col) in focii.iter().enumerate() {
+            for (i, _focus) in col.iter().enumerate() {
+                out = _focus.render(out, x, y, &state, focus == (i,j));
+            }
+        }
+    }
+    out
+}
+
+pub fn shift_focus<T>(focus: (usize, usize), focii: &Vec<Vec<MultiFocus<T>>>, a: Action) -> 
+        ((usize, usize), Option<Action>) {
+    let focus_row = &focii[focus.1];
+    let focus_i = &focus_row[focus.0];
+    let mut default: Option<Action> = None;
+    let mut focus = focus.clone();
+    if focus_i.active.is_none() {
+        focus = match a {
+            Action::Left => if focus.0 > 0 {
+                    (focus.0-1, focus.1)
+                // If the user tried to exceed the focus bounds, pass default back up 
+                // to the caller 
+                } else { default = Some(Action::Left); focus },
+            Action::Right => if focus.0 < (focus_row.len()-1) {
+                    (focus.0+1, focus.1)
+                } else { default = Some(Action::Right); focus },
+            // TODO: Line wrapping
+            Action::Up => if focus.1 > 0 {
+                    (focus.0, focus.1-1)
+                } else { default = Some(Action::Up); focus }
+            Action::Down => if focus.1 < (focii.len()-1) {
+                    (focus.0, focus.1+1)
+                } else { default = Some(Action::Down); focus },
+            _ => focus
+        };
+    }
+    return (focus, default);
+
+}
+
 impl<T> MultiFocus<T> {
     pub fn render(&self, mut out: RawTerminal<Stdout>, x: u16, y: u16, 
             state: &T, focused: bool) -> RawTerminal<Stdout> {
+
+        out = write_fg(out, Color::White); 
+        out = write_bg(out, Color::Transparent); 
+
         let mut fullscreen: bool = false;
         let mut full_red: bool = false;
         let mut full_green: bool = false;
@@ -51,6 +98,7 @@ impl<T> MultiFocus<T> {
         let mut full_blue: bool = false;
 
         if let Some(active) = &self.active {
+            let size: (u16, u16) = terminal_size().unwrap();
             // If something is active, fill the screen with that color
             fullscreen = true;
             out = write_fg(match active {
@@ -60,8 +108,8 @@ impl<T> MultiFocus<T> {
                 Focus::Pink => { full_pink = true; write_bg(out, Color::Pink) },
                 Focus::Blue => { full_blue = true; write_bg(out, Color::Blue) },
             }, Color::Black);
-            let space = (0..FULLWIDTH).map(|_| " ").collect::<String>();
-            for j in 1..FULLHEIGHT {
+            let space = (0..size.0).map(|_| " ").collect::<String>();
+            for j in 1..size.1 {
                 write!(out, "{}{}", cursor::Goto(1, j), space);
             }
         }

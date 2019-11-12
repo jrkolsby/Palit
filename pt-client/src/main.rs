@@ -170,14 +170,14 @@ fn main() -> std::io::Result<()> {
                     add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15))); 
                     Action::Noop
                 },
-                Action::Back => { 
+                Action::Exit => { 
+                    break 'event;
+                },
+                Action::Back => {
                     if let Some(current) = layers.pop_front() {
                         layers.push_back(current);
                     }
                     Action::Noop
-                }, 
-                Action::Exit => { 
-                    break 'event;
                 },
                 // Dispatch toplevel action to front layer
                 a => {
@@ -204,7 +204,16 @@ fn main() -> std::io::Result<()> {
                     ipc_sound.write(format!("OPEN_PROJECT:{} ", title).as_bytes());
                     add_layer(&mut layers, Box::new(Timeline::new(1, 1, size.0, size.1, title)));
                 },
-                Action::Back => { layers.pop_back(); }, 
+                Action::Up | Action::Left => {
+                    if let Some(current) = layers.pop_front() {
+                        layers.push_back(current);
+                    }
+                }, 
+                Action::Down | Action::Right => {
+                    if let Some(current) = layers.pop_back() {
+                        layers.push_front(current);
+                    }
+                }, 
                 Action::Pepper => {
                     add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15))); 
                 },

@@ -2,7 +2,7 @@ use std::io::{Write, Stdout};
 use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 
-use crate::common::{Action, Direction, MultiFocus};
+use crate::common::{Action, Direction, MultiFocus, shift_focus, render_focii};
 use crate::views::{Layer};
 use crate::components::{piano, slider, button};
 
@@ -72,7 +72,7 @@ impl Piano {
             focii: vec![vec![
                 MultiFocus::<PianoState> {
                     r: |mut out, x, y, state| {
-                        button::render(out, x+2, y+10, 20, "Record")
+                        button::render(out, x+2, y+16, 20, "Record")
                     },
                     r_t: |action, state| { action },
                     g: |mut out, x, y, state| {
@@ -115,7 +115,7 @@ impl Piano {
                 },
                 MultiFocus::<PianoState> {
                     r: |mut out, x, y, state| {
-                        button::render(out, x+32, y+10, 10, "Play")
+                        button::render(out, x+32, y+16, 10, "Play")
                     },
                     r_t: |action, state| action,
                     g: |mut out, x, y, state| {
@@ -147,22 +147,13 @@ impl Piano {
 
 impl Layer for Piano {
     fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
+
         out = piano::render(out, 
             self.x, 
             self.y, 
             &self.state.notes);
 
-        if let Some(_) = self.focii[self.state.focus.1][self.state.focus.0].active {
-            out = self.focii[self.state.focus.1][self.state.focus.0].render(out, 
-                self.x, self.y, &self.state.clone(), true);
-        } else {
-            for (j, col) in self.focii.iter().enumerate() {
-                for (i, focus) in col.iter().enumerate() {
-                    let isFocused = self.state.focus == (i,j);
-                    out = focus.render(out, self.x, self.y, &self.state.clone(), isFocused);
-                }
-            }
-        }
+        out = render_focii(out, self.x, self.y, self.state.focus.clone(), &self.focii, &self.state);
 
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
         out.flush().unwrap();
@@ -170,43 +161,24 @@ impl Layer for Piano {
     }
 
     fn dispatch(&mut self, action: Action) -> Action {
-        let focus_row = &self.focii[self.state.focus.1];
-        let focus_i = &focus_row[self.state.focus.0];
 
-        let mut default: Option<Action> = None;
-        if focus_i.active.is_none() {
-            // self.focii must be mutable
-            // default = self.focii[i][j].reduce(action)
-            self.state.focus = match action {
-                Action::Left => if self.state.focus.0 > 0 {
-                        (self.state.focus.0-1, self.state.focus.1)
-                    } else { default = Some(Action::Left); self.state.focus },
-                Action::Right => if self.state.focus.0 < (focus_row.len()-1) {
-                        (self.state.focus.0+1, self.state.focus.1)
-                    } else { default = Some(Action::Right); self.state.focus },
-                Action::Up => if self.state.focus.1 > 0 {
-                        (self.state.focus.0, self.state.focus.1-1)
-                    } else { default = Some(Action::Up); self.state.focus }
-                Action::Down => if self.state.focus.1 < (self.focii.len()-1) {
-                        (self.state.focus.0, self.state.focus.1+1)
-                    } else { default = Some(Action::Down); self.state.focus },
-                _ => self.state.focus
-            };
-        }
+        // Let the focus transform the action 
+        let multi_focus = &mut self.focii[self.state.focus.1][self.state.focus.0];
+        let _action = multi_focus.transform(action, &mut self.state);
 
-        // If the user tried to exceed the focus bounds, pass default back up 
-        // to the caller and take no further action
+        // Intercept arrow actions to change focus
+        let (focus, default) = shift_focus(self.state.focus, &self.focii, _action.clone());
+
+        // Set focus, if the multifocus defaults, take no further action
+        self.state.focus = focus;
         if let Some(_default) = default {
             return _default;
         }
 
-        // Otherwise, let the new focus transform the action
-        let _action = self.focii[self.state.focus.1][self.state.focus.0].transform(action, &mut self.state);
-
         // Perform our state reduction
         self.state = reduce(self.state.clone(), _action.clone());
 
-        // This is not comprehensive
+        // Default
         return match _action {
             Action::SetParam(_,_) => _action,
             _ => Action::Noop
@@ -219,6 +191,6 @@ impl Layer for Piano {
         self.state = self.state.clone()
     }
     fn alpha(&self) -> bool {
-        true
+        false
     }
 }

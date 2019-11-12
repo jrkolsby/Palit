@@ -21,6 +21,8 @@ pub use color::write_fg;
 
 pub use multifocus::Focus;
 pub use multifocus::MultiFocus;
+pub use multifocus::shift_focus;
+pub use multifocus::render_focii;
 
 #[derive(Clone, Debug)]
 pub enum Rate {
