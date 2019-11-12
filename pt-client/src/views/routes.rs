@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 
-use crate::common::{Action, MultiFocus, shift_focus, render_focii};
+use crate::common::{Action, MultiFocus, shift_focus, render_focii, FocusType, Window};
 use crate::views::{Layer};
 use crate::components::{button};
 
@@ -68,23 +68,28 @@ impl Routes {
             state: initial_state,
             focii: vec![vec![
                 MultiFocus::<RoutesState> {
-                    r: |mut out, x, y, state| {
-                        button::render(out, x+2, y+2, 20, "Add Route")
+                    r: |mut out, window, state| {
+                        button::render(out, window.x+2, window.y+2, 20, "Add Route")
                     },
-                    r_t: |action, state| {  
+                    r_t: |action, id, state| {  
                         match action {
                             Action::SelectR => Action::Patch(0,0,0),
                             _ => Action::Noop
                         }
                     },
-                    g: |mut out, x, y, state| out,
-                    g_t: |action, state| action,
-                    y: |mut out, x, y, state| out,
-                    y_t: |action, state| action,
-                    p: |mut out, x, y, state| out,
-                    p_t: |action, state| action,
-                    b: |mut out, x, y, state| out,
-                    b_t: |action, state| action,
+                    r_id: (FocusType::Button, 0),
+                    g: |mut out, window, state| out,
+                    g_t: |action, id, state| action,
+                    g_id: (FocusType::Button, 0),
+                    y: |mut out, window, state| out,
+                    y_t: |action, id, state| action,
+                    y_id: (FocusType::Button, 0),
+                    p: |mut out, window, state| out,
+                    p_t: |action, id, state| action,
+                    p_id: (FocusType::Button, 0),
+                    b: |mut out, window, state| out,
+                    b_t: |action, id, state| action,
+                    b_id: (FocusType::Button, 0),
                     active: None,
                 }
 
@@ -96,7 +101,9 @@ impl Routes {
 impl Layer for Routes {
     fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
 
-        out = render_focii(out, self.x, self.y, self.state.focus.clone(), &self.focii, &self.state);
+        let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
+
+        out = render_focii(out, win, self.state.focus.clone(), &self.focii, &self.state);
 
         out.flush().unwrap();
         out

@@ -22,6 +22,8 @@ pub use multifocus::Focus;
 pub use multifocus::MultiFocus;
 pub use multifocus::shift_focus;
 pub use multifocus::render_focii;
+pub use multifocus::FocusType;
+pub use multifocus::ID;
 
 #[derive(Clone, Debug)]
 pub enum Rate {
@@ -47,3 +49,11 @@ pub trait Module<T> {
 }
 
 pub type DirectAction = (u16, Action);
+
+#[derive(Clone, Copy, Debug)]
+pub struct Window {
+    pub x: u16,
+    pub y: u16,
+    pub w: u16,
+    pub h: u16,
+}

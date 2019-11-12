@@ -2,7 +2,7 @@ use std::io::{Write, Stdout};
 use termion::{color, cursor, terminal_size};
 use termion::raw::{RawTerminal};
 
-use crate::common::{Action, Color, write_bg, write_fg};
+use crate::common::{Action, Color, write_bg, write_fg, Window};
 
 /*
     A multifocus render will render five components prefixed with
@@ -15,6 +15,18 @@ use crate::common::{Action, Color, write_bg, write_fg};
 */
 
 #[derive(Clone, Debug)]
+pub enum FocusType {
+    Param,
+    Region,
+    Button,
+    Switch,
+    Input,
+    Output,
+}
+
+pub type ID = (FocusType, u16);
+
+#[derive(Clone, Debug)]
 pub enum Focus {
     Red,
     Green,
@@ -24,29 +36,33 @@ pub enum Focus {
 }
 
 pub struct MultiFocus<State> {
-    pub r: fn(RawTerminal<Stdout>, u16, u16, &State) -> RawTerminal<Stdout>,
-    pub g: fn(RawTerminal<Stdout>, u16, u16, &State) -> RawTerminal<Stdout>,
-    pub y: fn(RawTerminal<Stdout>, u16, u16, &State) -> RawTerminal<Stdout>,
-    pub p: fn(RawTerminal<Stdout>, u16, u16, &State) -> RawTerminal<Stdout>,
-    pub b: fn(RawTerminal<Stdout>, u16, u16, &State) -> RawTerminal<Stdout>,
-    pub r_t: fn(Action, &mut State) -> Action,
-    pub g_t: fn(Action, &mut State) -> Action,
-    pub y_t: fn(Action, &mut State) -> Action,
-    pub p_t: fn(Action, &mut State) -> Action,
-    pub b_t: fn(Action, &mut State) -> Action,
+    pub r: fn(RawTerminal<Stdout>, Window, &State) -> RawTerminal<Stdout>,
+    pub g: fn(RawTerminal<Stdout>, Window, &State) -> RawTerminal<Stdout>,
+    pub y: fn(RawTerminal<Stdout>, Window, &State) -> RawTerminal<Stdout>,
+    pub p: fn(RawTerminal<Stdout>, Window, &State) -> RawTerminal<Stdout>,
+    pub b: fn(RawTerminal<Stdout>, Window, &State) -> RawTerminal<Stdout>,
+    pub r_t: fn(Action, ID, &mut State) -> Action,
+    pub g_t: fn(Action, ID, &mut State) -> Action,
+    pub y_t: fn(Action, ID, &mut State) -> Action,
+    pub p_t: fn(Action, ID, &mut State) -> Action,
+    pub b_t: fn(Action, ID, &mut State) -> Action,
     pub active: Option<Focus>,
+    pub r_id: ID,
+    pub g_id: ID,
+    pub y_id: ID,
+    pub p_id: ID,
+    pub b_id: ID,
 }
 
-pub fn render_focii<T>(mut out: RawTerminal<Stdout>, x: u16, y: u16, 
+pub fn render_focii<T>(mut out: RawTerminal<Stdout>, window: Window, 
         focus: (usize, usize), focii: &Vec<Vec<MultiFocus<T>>>, state: &T) 
         -> RawTerminal<Stdout> {
     if let Some(_) = focii[focus.1][focus.0].active {
-        out = focii[focus.1][focus.0].render(out, 
-            x, y, &state, true);
+        out = focii[focus.1][focus.0].render(out, window, &state, true);
     } else {
         for (j, col) in focii.iter().enumerate() {
             for (i, _focus) in col.iter().enumerate() {
-                out = _focus.render(out, x, y, &state, focus == (i,j));
+                out = _focus.render(out, window, &state, focus == (i,j));
             }
         }
     }
@@ -84,7 +100,7 @@ pub fn shift_focus<T>(focus: (usize, usize), focii: &Vec<Vec<MultiFocus<T>>>, a:
 }
 
 impl<T> MultiFocus<T> {
-    pub fn render(&self, mut out: RawTerminal<Stdout>, x: u16, y: u16, 
+    pub fn render(&self, mut out: RawTerminal<Stdout>, window: Window,
             state: &T, focused: bool) -> RawTerminal<Stdout> {
 
         out = write_fg(out, Color::White); 
@@ -98,7 +114,7 @@ impl<T> MultiFocus<T> {
         let mut full_blue: bool = false;
 
         if let Some(active) = &self.active {
-            let size: (u16, u16) = terminal_size().unwrap();
+            let size: (u16, u16) = terminal_size().unwrap(); 
             // If something is active, fill the screen with that color
             fullscreen = true;
             out = write_fg(match active {
@@ -118,35 +134,35 @@ impl<T> MultiFocus<T> {
             out = write_bg(out, Color::Red); 
         }
         if !fullscreen || full_red {
-            out = (self.r)(out, x, y, state);
+            out = (self.r)(out, window, state);
         }
         if focused && !fullscreen { 
             out = write_fg(out, Color::Black); 
             out = write_bg(out, Color::Green); 
         }
         if !fullscreen || full_green {
-            out = (self.g)(out, x, y, state);
+            out = (self.g)(out, window, state);
         }
         if focused && !fullscreen { 
             out = write_fg(out, Color::Black); 
             out = write_bg(out, Color::Yellow); 
         }
         if !fullscreen || full_yellow {
-            out = (self.y)(out, x, y, state);
+            out = (self.y)(out, window, state);
         }
         if focused && !fullscreen { 
             out = write_fg(out, Color::Black); 
             out = write_bg(out, Color::Pink); 
         }
         if !fullscreen || full_pink {
-            out = (self.p)(out, x, y, state);
+            out = (self.p)(out, window, state);
         }
         if focused && !fullscreen { 
             out = write_fg(out, Color::Black); 
             out = write_bg(out, Color::Blue); 
         }
         if !fullscreen || full_blue {
-            out = (self.b)(out, x, y, state);
+            out = (self.b)(out, window, state);
         }
 
         // Default style
@@ -165,11 +181,11 @@ impl<T> MultiFocus<T> {
             _ => {},
         };
         match self.active {
-            Some(Focus::Red) => (self.r_t)(action, state),
-            Some(Focus::Green) => (self.g_t)(action, state),
-            Some(Focus::Yellow) => (self.y_t)(action, state),
-            Some(Focus::Pink) => (self.p_t)(action, state),
-            Some(Focus::Blue) => (self.b_t)(action, state),
+            Some(Focus::Red) => (self.r_t)(action, self.r_id.clone(), state),
+            Some(Focus::Green) => (self.g_t)(action, self.g_id.clone(), state),
+            Some(Focus::Yellow) => (self.y_t)(action, self.y_id.clone(), state),
+            Some(Focus::Pink) => (self.p_t)(action, self.p_id.clone(), state),
+            Some(Focus::Blue) => (self.b_t)(action, self.b_id.clone(), state),
             _ => action
         }
     }

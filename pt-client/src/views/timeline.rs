@@ -9,7 +9,7 @@ use std::io::{Write, Stdout};
 use std::collections::HashMap;
 
 use crate::components::{waveform, tempo, button, ruler};
-use crate::common::{Action, Color, TimelineState, MultiFocus, render_focii, shift_focus};
+use crate::common::{Action, Color, TimelineState, MultiFocus, render_focii, shift_focus, FocusType, Window};
 use crate::common::{read_document, beat_offset, file_to_pairs};
 use crate::views::{Layer};
 
@@ -21,8 +21,6 @@ const EXTRAS_H: u16 = 7;
 const SCROLL_R: u16 = 40;
 const SCROLL_L: u16 = 10;
 const ASSET_PREFIX: &str = "storage/";
-
-static mut SIZE: (u16, u16) = (0,0);
 
 // STATIC PROPERTIES THROUGHOUT VIEW'S LIFETIME
 pub struct Timeline {
@@ -99,56 +97,62 @@ impl Timeline {
         // Initialize State
         let initial_state: TimelineState = read_document(project_src.clone()); 
 
-        unsafe {
-            SIZE = terminal_size().unwrap();
-
-            Timeline {
-                x,
-                y,
-                width,
-                height,
-                project_src,
-                waveforms: generate_waveforms(&initial_state),
-                state: initial_state,
-                focii: vec![vec![
-                    MultiFocus::<TimelineState> {
-                        r: |mut out, x, y, state| 
-                            button::render(out, 2, 3, 56, "RECORD"),
-                        r_t: |action, state| action,
-                        g: |mut out, x, y, state|
-                            button::render(out, 60, 3, 19, "IMPORT"),
-                        g_t: |action, state| action,
-                        y: |mut out, x, y, state|
-                            tempo::render(out, x + (SIZE.0-3), y,
-                                state.time_beat,
-                                state.time_note,
-                                state.duration_measure,
-                                state.duration_beat,
-                                state.tempo,
-                                state.tick),
-                        y_t: |action, state| action,
-                        p: |mut out, x, y, state| out,
-                        p_t: |action, state| action,
-                        b: |mut out, x, y, state| out,
-                        b_t: |action, state| action,
-                        active: None,
-                    }
-                ], vec![
-                    MultiFocus::<TimelineState> {
-                        r: |mut out, x, y, state| out,
-                        r_t: |action, state| action,
-                        g: |mut out, x, y, state| out,
-                        g_t: |action, state| action,
-                        y: |mut out, x, y, state| out,
-                        y_t: |action, state| action,
-                        p: |mut out, x, y, state| out,
-                        p_t: |action, state| action,
-                        b: |mut out, x, y, state| out,
-                        b_t: |action, state| action,
-                        active: None,
-                    }
-                ]]
-            }
+        Timeline {
+            x,
+            y,
+            width,
+            height,
+            project_src,
+            waveforms: generate_waveforms(&initial_state),
+            state: initial_state,
+            focii: vec![vec![
+                MultiFocus::<TimelineState> {
+                    r_id: (FocusType::Button, 0),
+                    r: |mut out, window, state| 
+                        button::render(out, 2, 3, 56, "RECORD"),
+                    r_t: |action, id, state| action,
+                    g_id: (FocusType::Button, 1),
+                    g: |mut out, window, state|
+                        button::render(out, 60, 3, 19, "IMPORT"),
+                    g_t: |action, id, state| action,
+                    y_id: (FocusType::Param, 0),
+                    y: |mut out, window, state|
+                        tempo::render(out, window.x+window.w-3, window.y,
+                            state.time_beat,
+                            state.time_note,
+                            state.duration_measure,
+                            state.duration_beat,
+                            state.tempo,
+                            state.tick),
+                    y_t: |action, id, state| action,
+                    p_id: (FocusType::Param, 1),
+                    p: |mut out, window, state| out,
+                    p_t: |action, id, state| action,
+                    b_id: (FocusType::Param, 2),
+                    b: |mut out, window, state| out,
+                    b_t: |action, id, state| action,
+                    active: None,
+                }
+            ], vec![
+                MultiFocus::<TimelineState> {
+                    r: |mut out, window, state| out,
+                    r_t: |action, id, state| action,
+                    r_id: (FocusType::Param, 3),
+                    g: |mut out, window, state| out,
+                    g_t: |action, id, state| action,
+                    g_id: (FocusType::Param, 4),
+                    y: |mut out, window, state| out,
+                    y_t: |action, id, state| action,
+                    y_id: (FocusType::Param, 5),
+                    p: |mut out, window, state| out,
+                    p_t: |action, id, state| action,
+                    p_id: (FocusType::Param, 6),
+                    b: |mut out, window, state| out,
+                    b_t: |action, id, state| action,
+                    b_id: (FocusType::Param, 7),
+                    active: None,
+                }
+            ]]
         }
     }
 }
@@ -156,7 +160,9 @@ impl Timeline {
 impl Layer for Timeline {
     fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
 
-        out = render_focii(out, self.x, self.y, self.state.focus.clone(), &self.focii, &self.state);
+        let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
+
+        out = render_focii(out, win, self.state.focus.clone(), &self.focii, &self.state);
 
         // Print track sidebar
         for (i, _track) in self.state.sequence.iter().enumerate() {

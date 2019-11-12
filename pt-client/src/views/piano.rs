@@ -2,7 +2,7 @@ use std::io::{Write, Stdout};
 use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 
-use crate::common::{Action, Direction, MultiFocus, shift_focus, render_focii};
+use crate::common::{Action, Direction, MultiFocus, shift_focus, render_focii, FocusType, Window};
 use crate::views::{Layer};
 use crate::components::{piano, slider, button};
 
@@ -71,73 +71,83 @@ impl Piano {
             state: initial_state,
             focii: vec![vec![
                 MultiFocus::<PianoState> {
-                    r: |mut out, x, y, state| {
-                        button::render(out, x+2, y+16, 20, "Record")
+                    r: |mut out, window, state| {
+                        button::render(out, window.x+2, window.y+16, 20, "Record")
                     },
-                    r_t: |action, state| { action },
-                    g: |mut out, x, y, state| {
-                        slider::render(out, x+8, y+5, "20Hz".to_string(), 
+                    r_t: |action, id, state| { action },
+                    r_id: (FocusType::Button, 0),
+                    g: |mut out, window, state| {
+                        slider::render(out, window.x+8, window.y+5, "20Hz".to_string(), 
                             state.eq_mid, Direction::North)
                     },
-                    g_t: |action, state| match action {
+                    g_t: |action, id, state| match action {
                         Action::Up => { state.eq_mid += 1; Action::SetParam(0,0.0) },
                         Action::Down => { state.eq_mid -= 1; Action::SetParam(0,0.0) },
                         _ => Action::Noop
                     },
-                    y: |mut out, x, y, state| {
-                        slider::render(out, x+14, y+5, "80Hz".to_string(), 
+                    g_id: (FocusType::Button, 0),
+                    y: |mut out, window, state| {
+                        slider::render(out, window.x+14, window.y+5, "80Hz".to_string(), 
                             state.eq_hi, Direction::North)
                     },
-                    y_t: |action, state| match action {
+                    y_t: |action, id, state| match action {
                         Action::Up => { state.eq_hi += 1; Action::SetParam(0,0.0) },
                         Action::Down => { state.eq_hi -= 1; Action::SetParam(0,0.0) },
                         _ => Action::Noop
                     },
-                    p: |mut out, x, y, state| {
-                        slider::render(out, x+20, y+5, "120Hz".to_string(), 
+                    y_id: (FocusType::Button, 0),
+                    p: |mut out, window, state| {
+                        slider::render(out, window.x+20, window.y+5, "120Hz".to_string(), 
                             state.eq_low, Direction::North)
                     },
-                    p_t: |action, state| match action { 
+                    p_t: |action, id, state| match action { 
                         Action::Up => { state.eq_low += 1; Action::SetParam(0,0.0) },
                         Action::Down => { state.eq_low -= 1; Action::SetParam(0,0.0) },
                         _ => Action::Noop
                     },
-                    b: |mut out, x, y, state| {
-                        slider::render(out, x+26, y+5, "400Hz".to_string(), 
+                    p_id: (FocusType::Button, 0),
+                    b: |mut out, window, state| {
+                        slider::render(out, window.x+26, window.y+5, "400Hz".to_string(), 
                             state.eq_low, Direction::North)
                     },
-                    b_t: |action, state| match action { 
+                    b_t: |action, id, state| match action { 
                         Action::Up => { state.eq_low += 1; Action::SetParam(0,0.0) },
                         Action::Down => { state.eq_low -= 1; Action::SetParam(0,0.0) },
                         _ => Action::Noop
                     },
+                    b_id: (FocusType::Button, 0),
                     active: None,
                 },
                 MultiFocus::<PianoState> {
-                    r: |mut out, x, y, state| {
-                        button::render(out, x+32, y+16, 10, "Play")
+                    r: |mut out, window, state| {
+                        button::render(out, window.x+32, window.y+16, 10, "Play")
                     },
-                    r_t: |action, state| action,
-                    g: |mut out, x, y, state| {
-                        slider::render(out, x+32, y+5, "6KHz".to_string(), 
+                    r_t: |action, id, state| action,
+                    r_id: (FocusType::Button, 0),
+                    g: |mut out, window, state| {
+                        slider::render(out, window.x+32, window.y+5, "6KHz".to_string(), 
                             state.eq_mid, Direction::North)
                     },
-                    g_t: |action, state| action,
-                    y: |mut out, x, y, state| {
-                        slider::render(out, x+38, y+5, "12KHz".to_string(), 
+                    g_t: |action, id, state| action,
+                    g_id: (FocusType::Button, 0),
+                    y: |mut out, window, state| {
+                        slider::render(out, window.x+38, window.y+5, "12KHz".to_string(), 
                             state.eq_hi, Direction::North)
                     },
-                    y_t: |action, state| action,
-                    p: |mut out, x, y, state| {
-                        slider::render(out, x+44, y+5, "14KHz".to_string(), 
+                    y_t: |action, id, state| action,
+                    y_id: (FocusType::Button, 0),
+                    p: |mut out, window, state| {
+                        slider::render(out, window.x+44, window.y+5, "14KHz".to_string(), 
                             state.eq_low, Direction::North)
                     },
-                    p_t: |action, state| action,
-                    b: |mut out, x, y, state| {
-                        slider::render(out, x+50, y+5, "20KHz".to_string(), 
+                    p_t: |action, id, state| action,
+                    p_id: (FocusType::Button, 0),
+                    b: |mut out, window, state| {
+                        slider::render(out, window.x+50, window.y+5, "20KHz".to_string(), 
                             state.eq_low, Direction::North)
                     },
-                    b_t: |action, state| action,
+                    b_t: |action, id, state| action,
+                    b_id: (FocusType::Button, 0),
                     active: None,
                 },
             ]]
@@ -148,12 +158,14 @@ impl Piano {
 impl Layer for Piano {
     fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
 
+        let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
+
         out = piano::render(out, 
             self.x, 
             self.y, 
             &self.state.notes);
 
-        out = render_focii(out, self.x, self.y, self.state.focus.clone(), &self.focii, &self.state);
+        out = render_focii(out, win, self.state.focus.clone(), &self.focii, &self.state);
 
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
         out.flush().unwrap();
