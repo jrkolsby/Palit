@@ -2,14 +2,14 @@ extern crate wavefile;
 
 use wavefile::WaveFile;
 
-use termion::{color, cursor};
+use termion::{color, cursor, terminal_size};
 use termion::raw::{RawTerminal};
 
 use std::io::{Write, Stdout};
 use std::collections::HashMap;
 
 use crate::components::{waveform, tempo, button, ruler};
-use crate::common::{Action, Color, TimelineState};
+use crate::common::{Action, Color, TimelineState, MultiFocus, render_focii, shift_focus};
 use crate::common::{read_document, beat_offset, file_to_pairs};
 use crate::views::{Layer};
 
@@ -22,6 +22,8 @@ const SCROLL_R: u16 = 40;
 const SCROLL_L: u16 = 10;
 const ASSET_PREFIX: &str = "storage/";
 
+static mut SIZE: (u16, u16) = (0,0);
+
 // STATIC PROPERTIES THROUGHOUT VIEW'S LIFETIME
 pub struct Timeline {
     x: u16,
@@ -29,10 +31,10 @@ pub struct Timeline {
     height: u16,
     width: u16,
     project_src: String,
-    waveforms: HashMap<u32, Vec<(i32, i32)>>,
     state: TimelineState,
+    waveforms: HashMap<u32, Vec<(i32, i32)>>,
+    focii: Vec<Vec<MultiFocus<TimelineState>>>,
 }
-
 
 fn reduce(state: TimelineState, action: Action) -> TimelineState {
     let playhead = match action {
@@ -55,7 +57,6 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         assets: state.assets.clone(),
         sequence: state.sequence.clone(),
         loop_mode: state.loop_mode.clone(),
-        focus: state.focus.clone(),
         scroll_x: if playhead-state.scroll_x > SCROLL_R { state.scroll_x+1 }
             else if state.scroll_x > 0 && playhead-state.scroll_x < SCROLL_L { state.scroll_x-1 }
             else { state.scroll_x },
@@ -64,6 +65,7 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         duration_beat: state.duration_beat.clone(),
         duration_measure: state.duration_measure.clone(),
         playhead,
+        focus: state.focus.clone(),
     }
 }
 
@@ -97,14 +99,56 @@ impl Timeline {
         // Initialize State
         let initial_state: TimelineState = read_document(project_src.clone()); 
 
-        Timeline {
-            x,
-            y,
-            width,
-            height,
-            project_src,
-            waveforms: generate_waveforms(&initial_state),
-            state: initial_state,
+        unsafe {
+            SIZE = terminal_size().unwrap();
+
+            Timeline {
+                x,
+                y,
+                width,
+                height,
+                project_src,
+                waveforms: generate_waveforms(&initial_state),
+                state: initial_state,
+                focii: vec![vec![
+                    MultiFocus::<TimelineState> {
+                        r: |mut out, x, y, state| 
+                            button::render(out, 2, 3, 56, "RECORD"),
+                        r_t: |action, state| action,
+                        g: |mut out, x, y, state|
+                            button::render(out, 60, 3, 19, "IMPORT"),
+                        g_t: |action, state| action,
+                        y: |mut out, x, y, state|
+                            tempo::render(out, x + (SIZE.0-3), y,
+                                state.time_beat,
+                                state.time_note,
+                                state.duration_measure,
+                                state.duration_beat,
+                                state.tempo,
+                                state.tick),
+                        y_t: |action, state| action,
+                        p: |mut out, x, y, state| out,
+                        p_t: |action, state| action,
+                        b: |mut out, x, y, state| out,
+                        b_t: |action, state| action,
+                        active: None,
+                    }
+                ], vec![
+                    MultiFocus::<TimelineState> {
+                        r: |mut out, x, y, state| out,
+                        r_t: |action, state| action,
+                        g: |mut out, x, y, state| out,
+                        g_t: |action, state| action,
+                        y: |mut out, x, y, state| out,
+                        y_t: |action, state| action,
+                        p: |mut out, x, y, state| out,
+                        p_t: |action, state| action,
+                        b: |mut out, x, y, state| out,
+                        b_t: |action, state| action,
+                        active: None,
+                    }
+                ]]
+            }
         }
     }
 }
@@ -112,28 +156,7 @@ impl Timeline {
 impl Layer for Timeline {
     fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
 
-        // PRINT TEMPO
-        out = tempo::render(out, self.x + self.width-3, self.y,
-            self.state.time_beat,
-            self.state.time_note,
-            self.state.duration_measure,
-            self.state.duration_beat,
-            self.state.tempo,
-            self.state.tick,
-            self.state.focus == 0,
-        ); // top right corner
-
-        out = button::render(out, 2, self.height-3, 56, "RECORD");
-
-        out = button::render(out, 60, self.height-3, 19, "IMPORT");
-            
-        // save and quit
-        write!(out, "{}{}{}  Save and quit  {}{}",
-            cursor::Goto(self.x+2, self.y+1),
-            color::Bg(color::Yellow),
-            color::Fg(color::Black),
-            color::Bg(color::Reset),
-            color::Fg(color::White)).unwrap();
+        out = render_focii(out, self.x, self.y, self.state.focus.clone(), &self.focii, &self.state);
 
         // Print track sidebar
         for (i, _track) in self.state.sequence.iter().enumerate() {
@@ -189,8 +212,25 @@ impl Layer for Timeline {
         out
     }
     fn dispatch(&mut self, action: Action) -> Action {
+
+        // Let the focus transform the action 
+        let multi_focus = &mut self.focii[self.state.focus.1][self.state.focus.0];
+        let _action = multi_focus.transform(action.clone(), &mut self.state);
+
+        // Intercept arrow actions to change focus
+        let (focus, default) = shift_focus(self.state.focus, &self.focii, _action.clone());
+
+        // Set focus, if the multifocus defaults, take no further action
+        self.state.focus = focus;
+        if let Some(_default) = default {
+            return _default;
+        }
+
         self.state = reduce(self.state.clone(), action);
-        Action::Noop
+
+        match _action {
+            _ => Action::Noop
+        }
     }
     fn undo(&mut self) {
         self.state = self.state.clone()

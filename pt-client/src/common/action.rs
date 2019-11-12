@@ -16,7 +16,7 @@ pub enum Action {
     Route,
     Instrument,
     Undo,
-    Do,
+    Redo,
     Shift,
     Back,
     Save,
@@ -48,4 +48,3 @@ pub enum Action {
     Noop,
 }
 
-pub type DirectAction = (u16, Action);

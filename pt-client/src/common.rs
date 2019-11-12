@@ -13,7 +13,6 @@ pub use timeline::file_to_pairs;
 pub use timeline::read_document;
 
 pub use action::Action;
-pub use action::DirectAction;
 
 pub use color::Color;
 pub use color::write_bg;
@@ -42,3 +41,9 @@ pub enum Direction {
     SW,
     SE,
 }
+
+pub trait Module<T> {
+    fn read_state(self, object: xmltree::Element) -> T;
+}
+
+pub type DirectAction = (u16, Action);

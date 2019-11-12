@@ -15,33 +15,14 @@ pub fn render(mut out: RawTerminal<Stdout>,
     duration_beat: usize,
     bpm: u16,
     metronome: bool,
-    focus: bool,
 ) -> RawTerminal<Stdout> {
         for i in 0..WIDTH+1 as u16 {
             for j in 1..HEIGHT+1 as u16 {
-                if focus {
-                    write!(out, "{} ",
-                        cursor::Goto(origin_x-i, origin_y+j));
-                } else {
-                    write!(out, "{} ",
-                        cursor::Goto(origin_x-i, origin_y+j));
-                }
-                // x and y start at 1
+                write!(out, "{} ",
+                    cursor::Goto(origin_x-i, origin_y+j));
                 match (i,j) {
-                    (1, 1) => {
-                        match (metronome, focus) {
-                            (true,true) => { out = write_bg(out, Color::Transparent) },
-                            (true,false) => { out = write_bg(out, Color::White) },
-                            _ => {},
-                        };
-                    },
-                    (3, 1) => {
-                        match (metronome, focus) {
-                            (false,true) => { out = write_bg(out, Color::Black) },
-                            (false,false) => { out = write_bg(out, Color::White) },
-                            _ => {},
-                        };
-                    },
+                    (1, 1) => { if (metronome) { write!(out, "@"); } },
+                    (3, 1) => { if (!metronome) { write!(out, "@"); } },
                     (2, 2) => {
                         match metronome {
                             true => write!(out, "/"),

@@ -53,9 +53,10 @@ pub struct TimelineState {
 
     pub scroll_x: u16,
     pub scroll_y: u16,
-    pub focus: usize, 
 
     pub playhead: u16,
+
+    pub focus: (usize, usize),
 }
 
 fn sample_rate(rate: Rate) -> u32 {
@@ -107,10 +108,6 @@ pub fn write_document(out_file: String, state: TimelineState) {
         .open(out_file).unwrap();
 }
 
-trait Module<T> {
-    fn read_state(self, object: Element) -> T;
-}
-
 pub fn read_document(in_file: String) -> TimelineState {
 
     /*
@@ -159,14 +156,14 @@ pub fn read_document(in_file: String) -> TimelineState {
         duration_beat: duration_beat.parse().unwrap(),
         zoom: 1,
         loop_mode: false,
-        focus: 0,
         scroll_x: 0,
         scroll_y: 0,
         tick: true,
         playhead: 0,
         sample_rate: Rate::Fast,
         sequence: vec![], // TRACKS
-        assets: vec![] // FILES
+        assets: vec![], // FILES
+        focus: (0,0),
     };
 
     // GET ASSETS
