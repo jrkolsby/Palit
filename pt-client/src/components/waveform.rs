@@ -3,7 +3,7 @@ use termion::{color, cursor};
 
 use std::io::{Write, Stdout};
 
-pub fn pair_to_char(pair: (i32, i32)) -> char {
+pub fn pair_to_char(pair: (u8, u8)) -> char {
 
     // MAX IS 65,536
     let a: usize = (pair.0 >= 1) as usize;
@@ -21,7 +21,7 @@ pub fn pair_to_char(pair: (i32, i32)) -> char {
                     [a][e]
 }
 
-pub fn render(mut out: RawTerminal<Stdout>, pairs: &Vec<(i32, i32)>, x: u16, y: u16) -> RawTerminal<Stdout> {
+pub fn render(mut out: RawTerminal<Stdout>, pairs: &Vec<(u8, u8)>, x: u16, y: u16) -> RawTerminal<Stdout> {
     for (i, pair) in pairs.iter().enumerate() {
         write!(out, "{}{:}",
             cursor::Goto(x+(i as u16),y),

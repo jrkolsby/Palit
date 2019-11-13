@@ -7,20 +7,22 @@ use termion::raw::{RawTerminal};
 
 use std::io::{Write, Stdout};
 use std::collections::HashMap;
+use std::convert::TryInto;
 
 use crate::components::{waveform, tempo, button, ruler};
-use crate::common::{Action, Color, TimelineState, MultiFocus, render_focii, shift_focus, FocusType, Window};
+use crate::common::{MultiFocus, render_focii, shift_focus, FocusType, Window, ID};
+use crate::common::{Action, Color, TimelineState, Region};
 use crate::common::{read_document, beat_offset, file_to_pairs};
 use crate::views::{Layer};
 
 //#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
 
-const MARGIN: (u16, u16) = (3, 3);
-const EXTRAS_W: u16 = 6;
-const EXTRAS_H: u16 = 7;
-const SCROLL_R: u16 = 40;
-const SCROLL_L: u16 = 10;
-const ASSET_PREFIX: &str = "storage/";
+static MARGIN: (u16, u16) = (3, 3);
+static EXTRAS_W: u16 = 6;
+static EXTRAS_H: u16 = 7;
+static SCROLL_R: u16 = 40;
+static SCROLL_L: u16 = 10;
+static ASSET_PREFIX: &str = "storage/";
 
 // STATIC PROPERTIES THROUGHOUT VIEW'S LIFETIME
 pub struct Timeline {
@@ -30,7 +32,6 @@ pub struct Timeline {
     width: u16,
     project_src: String,
     state: TimelineState,
-    waveforms: HashMap<u32, Vec<(i32, i32)>>,
     focii: Vec<Vec<MultiFocus<TimelineState>>>,
 }
 
@@ -64,12 +65,17 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         duration_measure: state.duration_measure.clone(),
         playhead,
         focus: state.focus.clone(),
+        // We don't want to necessarily clone this because of the overhead, 
+        // as long as we never remove from it we should be able to implement
+        // undo / redo.
+        waveforms: state.waveforms.to_owned(), 
+        regions: state.regions.to_owned(),
     }
 }
 
 fn generate_waveforms(state: &TimelineState) 
-    -> HashMap<u32, Vec<(i32, i32)>> {
-    let mut waveforms: HashMap<u32, Vec<(i32, i32)>> = HashMap::new();
+    -> HashMap<u16, Vec<(u8, u8)>> {
+    let mut waveforms: HashMap<u16, Vec<(u8, u8)>> = HashMap::new();
 
     for asset in state.assets.iter() {
         eprintln!("generating wave: {}", asset.src.clone());
@@ -84,7 +90,7 @@ fn generate_waveforms(state: &TimelineState)
 
         eprintln!("num {}", num_pairs);
 
-        let pairs: Vec<(i32, i32)> = file_to_pairs(asset_file, num_pairs, 4);
+        let pairs: Vec<(u8, u8)> = file_to_pairs(asset_file, num_pairs, 4);
 
         waveforms.insert(asset.id, pairs);
     }
@@ -95,7 +101,120 @@ impl Timeline {
     pub fn new(x: u16, y: u16, width: u16, height: u16, project_src: String) -> Self {
 
         // Initialize State
-        let initial_state: TimelineState = read_document(project_src.clone()); 
+        let mut initial_state: TimelineState = read_document(project_src.clone()); 
+        initial_state.waveforms = generate_waveforms(&initial_state);
+
+        let void_id: ID = (FocusType::Void, 0);
+        let void_render: fn(RawTerminal<Stdout>, Window, ID, &TimelineState) -> RawTerminal<Stdout> =
+            |mut out, window, id, state| out;
+        let void_transform: fn(Action, ID, &mut TimelineState) -> Action = 
+            |action, id, state| action;
+
+        let record_id: ID = (FocusType::Button, 0);
+        let record_render: fn(RawTerminal<Stdout>, Window, ID, &TimelineState) -> RawTerminal<Stdout> = 
+            |mut out, window, id, state| button::render(out, 2, 3, 56, "RECORD");
+        let record_transform: fn(Action, ID, &mut TimelineState) -> Action = 
+            |a, _, _| match a { Action::SelectR => Action::Record, _ => Action::Noop };
+
+        let mut focii: Vec<Vec<MultiFocus::<TimelineState>>> = vec![vec![
+            MultiFocus::<TimelineState> {
+                r_id: record_id.clone(),
+                r: record_render,
+                r_t: |action, id, state| action,
+
+                g_id: (FocusType::Button, 1),
+                g: |mut out, window, id, state|
+                    button::render(out, 60, 3, 19, "IMPORT"),
+                g_t: |action, id, state| action,
+                
+                y_id: (FocusType::Param, 0),
+                y: |mut out, window, id, state|
+                    tempo::render(out, window.x+window.w-3, window.y,
+                        state.time_beat,
+                        state.time_note,
+                        state.duration_measure,
+                        state.duration_beat,
+                        state.tempo,
+                        state.tick),
+                y_t: |action, id, state| action,
+
+                p_id: (FocusType::Region, 0),
+                p: |mut out, window, id, state| out,
+                p_t: |action, id, state| action,
+
+                b_id: (FocusType::Param, 2),
+                b: |mut out, window, id, state| out,
+                b_t: |action, id, state| action,
+
+                active: None,
+            }
+        ]];
+
+        // We're gonna fill this up with regions starting at the top left-hand corner, each inner vector
+        // should have at most 4 Some's and be exactly 4 in length. 
+        let mut region_collect: Vec<Vec<Option<Region>>> = vec![vec![]];
+
+        // Populate focii with regions
+        // TODO: Stagger entries between two tracks
+        for (i, track) in initial_state.sequence.iter().enumerate() {
+            for (j, region) in track.regions.iter().enumerate() {
+                let mut bin = region_collect.last_mut().unwrap();
+                if bin.len() < 4 {
+                    bin.push(Some(region.clone()));
+                } else {
+                    region_collect.push(vec![Some(region.clone())]);
+                }
+            }
+        }
+
+        // Fill out last bin with None's
+        let mut final_bin = region_collect.last_mut().unwrap();
+        while final_bin.len() < 4 {
+            final_bin.push(None);
+        }
+
+        for bin in region_collect.iter() {
+
+            // Build four colors for all four regions in the bin
+            let (g, g_t, g_id): (
+                fn(RawTerminal<Stdout>, Window, ID, &TimelineState) -> RawTerminal<Stdout>,
+                fn(Action, ID, &mut TimelineState) -> Action, ID ) = 
+
+                if let Some(region) = &bin[0] {(
+                    |mut out, window, id, state| {
+                        let asset_id = &state.regions.get(&id.1).unwrap();
+                        waveform::render(out, &state.waveforms[asset_id], window.x, window.y + EXTRAS_H)
+                    },
+                    |action, id, state| match action {
+                        _ => Action::Noop,
+                        Action::Right => { Action::MoveRegion(id.1, 0, 0) }
+                    },
+                    (FocusType::Region, region.id.try_into().unwrap()))
+
+                // If it is empy, void the color
+                } else { (void_render, void_transform, void_id.clone()) };
+
+            // TODO: bin[1] bin[2] bin[3]
+            let (y, y_t, y_id) = (void_render, void_transform, void_id.clone());
+            let (p, p_t, p_id) = (void_render, void_transform, void_id.clone());
+            let (b, b_t, b_id) = (void_render, void_transform, void_id.clone());
+
+            focii.push(vec![
+                MultiFocus::<TimelineState> {
+
+                    r_id: record_id.clone(),
+                    r: record_render,
+                    r_t: record_transform,
+
+                    g, g_t, g_id,
+                    y, y_t, y_id,
+                    p, p_t, p_id,
+                    b, b_t, b_id,
+
+                    active: None,
+                }
+            ]);
+        }
 
         Timeline {
             x,
@@ -103,56 +222,8 @@ impl Timeline {
             width,
             height,
             project_src,
-            waveforms: generate_waveforms(&initial_state),
             state: initial_state,
-            focii: vec![vec![
-                MultiFocus::<TimelineState> {
-                    r_id: (FocusType::Button, 0),
-                    r: |mut out, window, state| 
-                        button::render(out, 2, 3, 56, "RECORD"),
-                    r_t: |action, id, state| action,
-                    g_id: (FocusType::Button, 1),
-                    g: |mut out, window, state|
-                        button::render(out, 60, 3, 19, "IMPORT"),
-                    g_t: |action, id, state| action,
-                    y_id: (FocusType::Param, 0),
-                    y: |mut out, window, state|
-                        tempo::render(out, window.x+window.w-3, window.y,
-                            state.time_beat,
-                            state.time_note,
-                            state.duration_measure,
-                            state.duration_beat,
-                            state.tempo,
-                            state.tick),
-                    y_t: |action, id, state| action,
-                    p_id: (FocusType::Param, 1),
-                    p: |mut out, window, state| out,
-                    p_t: |action, id, state| action,
-                    b_id: (FocusType::Param, 2),
-                    b: |mut out, window, state| out,
-                    b_t: |action, id, state| action,
-                    active: None,
-                }
-            ], vec![
-                MultiFocus::<TimelineState> {
-                    r: |mut out, window, state| out,
-                    r_t: |action, id, state| action,
-                    r_id: (FocusType::Param, 3),
-                    g: |mut out, window, state| out,
-                    g_t: |action, id, state| action,
-                    g_id: (FocusType::Param, 4),
-                    y: |mut out, window, state| out,
-                    y_t: |action, id, state| action,
-                    y_id: (FocusType::Param, 5),
-                    p: |mut out, window, state| out,
-                    p_t: |action, id, state| action,
-                    p_id: (FocusType::Param, 6),
-                    b: |mut out, window, state| out,
-                    b_t: |action, id, state| action,
-                    b_id: (FocusType::Param, 7),
-                    active: None,
-                }
-            ]]
+            focii,
         }
     }
 }
@@ -161,8 +232,6 @@ impl Layer for Timeline {
     fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
 
         let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
-
-        out = render_focii(out, win, self.state.focus.clone(), &self.focii, &self.state);
 
         // Print track sidebar
         for (i, _track) in self.state.sequence.iter().enumerate() {
@@ -174,7 +243,10 @@ impl Layer for Timeline {
                 i+1).unwrap();
         }
 
+        /*
+
         // Print regions
+
         for i in 1..self.width+1 {
             write!(out, "{}─", cursor::Goto(i,self.y)).unwrap();
 
@@ -196,6 +268,8 @@ impl Layer for Timeline {
                 }
             }
         }
+        */
+
         let name_len: u16 = self.state.name.len() as u16;
         let name_x: u16 = self.x + (self.width/2) - (name_len/2);
         write!(out, "{} {} ",
@@ -210,6 +284,8 @@ impl Layer for Timeline {
             self.state.zoom,
             self.state.scroll_x,
             self.state.playhead);
+
+        out = render_focii(out, win, self.state.focus.clone(), &self.focii, &self.state);
 
         write!(out, "{}", color::Bg(color::Reset)).unwrap();
 

@@ -29,13 +29,21 @@ type Route = (u16, Vec<u16>); // id, vector of input or output ids
 fn reduce(state: RoutesState, action: Action) -> RoutesState {
     RoutesState {
         routes: match action {
-            Action::Patch(a,b,c) => {
+            Action::PatchIn(a,b) => {
                 let mut new_routes = state.routes.clone();
                 if let Some(entry) = new_routes.get_mut(&a) {
                     entry.0.push(b);
-                    entry.1.push(c);
                 } else {
-                    new_routes.insert(a, (vec![b], vec![c]));
+                    new_routes.insert(a, (vec![b], vec![]));
+                }
+                new_routes
+            },
+            Action::PatchOut(a,b) => {
+                let mut new_routes = state.routes.clone();
+                if let Some(entry) = new_routes.get_mut(&a) {
+                    entry.1.push(b);
+                } else {
+                    new_routes.insert(a, (vec![], vec![b]));
                 }
                 new_routes
             },
@@ -68,26 +76,26 @@ impl Routes {
             state: initial_state,
             focii: vec![vec![
                 MultiFocus::<RoutesState> {
-                    r: |mut out, window, state| {
+                    r: |mut out, window, id, state| {
                         button::render(out, window.x+2, window.y+2, 20, "Add Route")
                     },
                     r_t: |action, id, state| {  
                         match action {
-                            Action::SelectR => Action::Patch(0,0,0),
+                            Action::SelectR => Action::PatchIn(0,0),
                             _ => Action::Noop
                         }
                     },
                     r_id: (FocusType::Button, 0),
-                    g: |mut out, window, state| out,
+                    g: |mut out, window, id, state| out,
                     g_t: |action, id, state| action,
                     g_id: (FocusType::Button, 0),
-                    y: |mut out, window, state| out,
+                    y: |mut out, window, id, state| out,
                     y_t: |action, id, state| action,
                     y_id: (FocusType::Button, 0),
-                    p: |mut out, window, state| out,
+                    p: |mut out, window, id, state| out,
                     p_t: |action, id, state| action,
                     p_id: (FocusType::Button, 0),
-                    b: |mut out, window, state| out,
+                    b: |mut out, window, id, state| out,
                     b_t: |action, id, state| action,
                     b_id: (FocusType::Button, 0),
                     active: None,
@@ -128,7 +136,7 @@ impl Layer for Routes {
         self.state = reduce(self.state.clone(), _action.clone());
 
         match _action {
-            Action::Patch(a,b,c) => _action,
+            Action::PatchIn(_,_) | Action::PatchOut(_,_) => _action,
             _ => Action::Noop
         }
     }

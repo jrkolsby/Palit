@@ -191,9 +191,12 @@ impl Layer for Home {
                 } else { Action::Noop }
             },
             Action::Up => { 
-                if self.state.focus == 2 { Action::Pepper } else { Action::Noop }
+                if self.state.focus == 2 { Action::Up } else { Action::Noop }
             },
-            _ => Action::Noop
+            Action::Down => {
+                if self.state.focus == 0 { Action::Down } else { Action::Noop }
+            },
+            _ => Action::Noop,
         }
     }
     fn undo(&mut self) {

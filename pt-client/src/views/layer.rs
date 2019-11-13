@@ -5,6 +5,7 @@ use termion::raw::{RawTerminal};
 use crate::common::{Action};
 
 // Every module has an associated view which can render its state
+/*
 pub enum View {
     Modal,
     Patch,
@@ -18,6 +19,7 @@ pub enum View {
 }
 
 pub type ID = (View, usize);
+*/
 
 pub trait Layer {
     fn render(&self, out: RawTerminal<Stdout>) -> RawTerminal<Stdout>;

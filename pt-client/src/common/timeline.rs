@@ -2,6 +2,7 @@ extern crate wavefile;
 extern crate xmltree;
 
 use std::fs::{self, OpenOptions};
+use std::collections::HashMap;
 
 use wavefile::WaveFile;
 use itertools::Itertools;
@@ -13,7 +14,7 @@ const PALIT_ROOT: &str = "/usr/local/palit/";
 
 #[derive(Debug, Clone)]
 pub struct Asset {
-    pub id: u32,
+    pub id: u16,
     pub src: String,
     pub duration: u32,
     pub channels: usize
@@ -21,8 +22,8 @@ pub struct Asset {
 
 #[derive(Clone, Debug)]
 pub struct Region {
-    pub id: u32,
-    pub asset_id: u32,
+    pub id: u16,
+    pub asset_id: u16,
     pub asset_in: u32,
     pub asset_out: u32,
     pub offset: u32,
@@ -30,7 +31,7 @@ pub struct Region {
 
 #[derive(Clone, Debug)]
 pub struct Track {
-    pub id: u32,
+    pub id: u16,
     pub color: Color,
     pub regions: Vec<Region>,
 }
@@ -48,6 +49,13 @@ pub struct TimelineState {
     pub sequence: Vec<Track>,   // TRACKS
     pub assets: Vec<Asset>,      // FILES
     pub sample_rate: Rate,
+
+    // This isn't ideal, especially if we have a lot of waveforms,
+    // But the nature of our 'document object' (multifocus) only
+    // allows us to render focii as a function of state. We'll see
+    // if this is a horrible bottleneck...
+    pub waveforms: HashMap<u16, Vec<(u8, u8)>>,
+    pub regions: HashMap<u16, u16>,
 
     pub tick: bool,
 
@@ -73,7 +81,7 @@ pub fn beat_offset(sample_offset: u32, srate: Rate, bpm: u16, zoom: usize) -> u3
     sample_offset / (samples_per_beat * zoom as u32)
 }
 
-pub fn file_to_pairs(file: WaveFile, width: usize, samples_per_tick: u16) -> Vec<(i32, i32)> {
+pub fn file_to_pairs(file: WaveFile, width: usize, samples_per_tick: u16) -> Vec<(u8, u8)> {
 
     let chunk_size = (file.len()) / (width*2);
     let chunks = &file.iter().chunks(chunk_size);
@@ -92,8 +100,8 @@ pub fn file_to_pairs(file: WaveFile, width: usize, samples_per_tick: u16) -> Vec
     for (i, value) in values.iter().enumerate() {
         if i % 2 > 0 { continue; }
 
-        let tick: (i32, i32) = (((*value as f64) * scale).round() as i32, 
-                                ((values[i+1] as f64) * scale).round() as i32);
+        let tick: (u8, u8) = (((*value as f64) * scale).round() as u8, 
+                                ((values[i+1] as f64) * scale).round() as u8);
 
         pairs.push(tick);
     }
@@ -163,6 +171,8 @@ pub fn read_document(in_file: String) -> TimelineState {
         sample_rate: Rate::Fast,
         sequence: vec![], // TRACKS
         assets: vec![], // FILES
+        regions: HashMap::new(), // REDUNDANT: need to refactor timelinestate
+        waveforms: HashMap::new(),
         focus: (0,0),
     };
 
@@ -201,13 +211,16 @@ pub fn read_document(in_file: String) -> TimelineState {
             let a_in: &str = region.attributes.get("in").unwrap();
             let a_out: &str = region.attributes.get("out").unwrap();
 
-            regions.push(Region {
+            let new_region = Region {
                 id: r_id[1..].parse().unwrap(),
                 asset_id: a_id[1..].parse().unwrap(),
                 asset_in: a_in.parse().unwrap(),
                 asset_out: a_out.parse().unwrap(),
                 offset: offset.parse().unwrap(),
-            });
+            };
+
+            state.regions.insert(new_region.id, new_region.asset_id);
+            regions.push(new_region);
         }
 
         state.sequence.push(Track {
