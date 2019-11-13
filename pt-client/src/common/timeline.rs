@@ -17,7 +17,7 @@ pub struct Asset {
     pub id: u16,
     pub src: String,
     pub duration: u32,
-    pub channels: usize
+    pub channels: usize,
 }
 
 #[derive(Clone, Debug)]
@@ -27,6 +27,7 @@ pub struct Region {
     pub asset_in: u32,
     pub asset_out: u32,
     pub offset: u32,
+    pub track: u16,
 }
 
 #[derive(Clone, Debug)]
@@ -55,7 +56,7 @@ pub struct TimelineState {
     // allows us to render focii as a function of state. We'll see
     // if this is a horrible bottleneck...
     pub waveforms: HashMap<u16, Vec<(u8, u8)>>,
-    pub regions: HashMap<u16, u16>,
+    pub regions: HashMap<u16, Region>,
 
     pub tick: bool,
 
@@ -171,7 +172,7 @@ pub fn read_document(in_file: String) -> TimelineState {
         sample_rate: Rate::Fast,
         sequence: vec![], // TRACKS
         assets: vec![], // FILES
-        regions: HashMap::new(), // REDUNDANT: need to refactor timelinestate
+        regions: HashMap::new(), 
         waveforms: HashMap::new(),
         focus: (0,0),
     };
@@ -189,7 +190,7 @@ pub fn read_document(in_file: String) -> TimelineState {
     }
 
     // GET TRACKS
-    for track in tracks.children.iter() {
+    for (i, track) in tracks.children.iter().enumerate() {
         let t_id: &str = track.attributes.get("id").unwrap();
         let col: &str = track.attributes.get("color").unwrap();
         // Match color type
@@ -217,9 +218,10 @@ pub fn read_document(in_file: String) -> TimelineState {
                 asset_in: a_in.parse().unwrap(),
                 asset_out: a_out.parse().unwrap(),
                 offset: offset.parse().unwrap(),
+                track: i as u16,
             };
 
-            state.regions.insert(new_region.id, new_region.asset_id);
+            state.regions.insert(new_region.id, new_region.clone());
             regions.push(new_region);
         }
 

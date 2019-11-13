@@ -86,12 +86,22 @@ pub fn shift_focus<T>(focus: (usize, usize), focii: &Vec<Vec<MultiFocus<T>>>, a:
             Action::Right => if focus.0 < (focus_row.len()-1) {
                     (focus.0+1, focus.1)
                 } else { default = Some(Action::Right); focus },
-            // TODO: Line wrapping
             Action::Up => if focus.1 > 0 {
-                    (focus.0, focus.1-1)
+                    let row_up = &focii[focus.1-1];
+                    if focus.0 >= row_up.len()-1 {
+                        // Go to end of row if its shorter than current row
+                        (row_up.len()-1, focus.1-1)
+                    } else {
+                        (focus.0, focus.1-1)
+                    }
                 } else { default = Some(Action::Up); focus }
             Action::Down => if focus.1 < (focii.len()-1) {
-                    (focus.0, focus.1+1)
+                    let row_down = &focii[focus.1+1];
+                    if focus.0 >= row_down.len()-1 {
+                        (row_down.len()-1, focus.1+1)
+                    } else {
+                        (focus.0, focus.1+1)
+                    }
                 } else { default = Some(Action::Down); focus },
             _ => focus
         };

@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE notedoc>
+
+<nd>
+    <meta title="WOWEE XML" />
+    <format samplerate="48000" bitrate="12"/>
+    <tempo bpm="127" beat="4" note="4" />
+    <duration measure="10" beat="4" />
+    <assets>
+	<asset id="a3" src="/usr/local/palit/assets/Who.wav" />
+    </assets>
+    <tracks>
+		<track id="t1" color="yellow">
+			<region id="r1" asset="a3" offset="0" in="0" out="48000" />
+			<region id="r2" asset="a3" offset="480000" in="0" out="480000" />
+			<region id="r3" asset="a3" offset="432000" in="0" out="960000"/>
+		</track>
+		<track id="t2" color="blue">
+			<region id="r1" asset="a3" offset="48000" in="0" out="96000" />
+			<region id="r2" asset="a3" offset="500000" in="0" out="192000" />
+			<region id="r3" asset="a3" offset="130000" in="0" out="48000"/>
+		</track>
+		<track id="t3" color="pink">
+			<region id="r1" asset="a3" offset="48000" in="0" out="48000" />
+			<region id="r2" asset="a3" offset="1800000" in="0" out="48000" />
+			<region id="r3" asset="a3" offset="130000" in="0" out="48000"/>
+		</track>
+    </tracks>
+</nd>

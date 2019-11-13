@@ -4,6 +4,7 @@
 <project>
     <title>WOWEE XML</title>
     <meta samplerate="48000" bitrate="12"/>
+    <tempo bpm="127" beat="4" note="4" />
     <modules>
         <master id="m0" input="i0" volume="100" /> <!-- This always exists -->
         <patch id="m4">
@@ -30,7 +31,6 @@
         <keyboard output="o204" octave="4" key="0">
         <timeline id="m1" loop>
             <!-- Note that ids only within a module are distinct -->
-            <param bpm="127" beat="4" note="4" name="tempo" />
             <param id="p0" value="68000" name="duration" />
             <param id="p1" value="0" name="in" />
             <param id="p1" value="0" name="in" />

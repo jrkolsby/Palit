@@ -45,20 +45,14 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
     TimelineState {
         name: state.name.clone(),
         tempo: state.tempo.clone(),
-        time_beat: match action {
-            Action::Up => (state.time_beat + 1),
-            Action::Down => (if state.time_beat == 1 { 1 } else { state.time_beat - 1 }),
-            _ => state.time_beat,
-        },
+        time_beat: state.time_beat.clone(),
         time_note: state.time_note.clone(),
         sample_rate: state.sample_rate.clone(),
         zoom: state.zoom.clone(),
         assets: state.assets.clone(),
         sequence: state.sequence.clone(),
         loop_mode: state.loop_mode.clone(),
-        scroll_x: if playhead-state.scroll_x > SCROLL_R { state.scroll_x+1 }
-            else if state.scroll_x > 0 && playhead-state.scroll_x < SCROLL_L { state.scroll_x-1 }
-            else { state.scroll_x },
+        scroll_x: state.scroll_x.clone(),
         scroll_y: state.scroll_y.clone(), 
         tick: (playhead % 2) == 0,
         duration_beat: state.duration_beat.clone(),
@@ -116,7 +110,9 @@ impl Timeline {
         let record_transform: fn(Action, ID, &mut TimelineState) -> Action = 
             |a, _, _| match a { Action::SelectR => Action::Record, _ => Action::Noop };
 
-        let mut focii: Vec<Vec<MultiFocus::<TimelineState>>> = vec![vec![
+        // We're gonna fill this up with regions starting at the top left-hand corner, each inner vector
+        // should have at most 4 Some's and be exactly 4 in length. 
+        let mut focii: Vec<Vec<MultiFocus<TimelineState>>> = vec![vec![
             MultiFocus::<TimelineState> {
                 r_id: record_id.clone(),
                 r: record_render,
@@ -150,58 +146,38 @@ impl Timeline {
             }
         ]];
 
-        // We're gonna fill this up with regions starting at the top left-hand corner, each inner vector
-        // should have at most 4 Some's and be exactly 4 in length. 
-        let mut region_collect: Vec<Vec<Option<Region>>> = vec![vec![]];
-
         // Populate focii with regions
         // TODO: Stagger entries between two tracks
         for (i, track) in initial_state.sequence.iter().enumerate() {
+            focii.push(vec![]);
             for (j, region) in track.regions.iter().enumerate() {
-                let mut bin = region_collect.last_mut().unwrap();
-                if bin.len() < 4 {
-                    bin.push(Some(region.clone()));
-                } else {
-                    region_collect.push(vec![Some(region.clone())]);
-                }
-            }
-        }
+                let (g, g_t, g_id): (fn(RawTerminal<Stdout>, 
+                                     Window, ID, &TimelineState) -> RawTerminal<Stdout>,
+                                     fn(Action, ID, &mut TimelineState) -> Action, ID) = (
+                        |mut out, window, id, state| {
+                            let region = &state.regions.get(&id.1).unwrap();
+                            let waveform = &state.waveforms[&region.asset_id];
+                            let offset: u16 = state.scroll_x + 
+                                beat_offset(region.offset, 
+                                            state.sample_rate.clone(), 
+                                            state.tempo, 
+                                            state.zoom) as u16;
+                            let region_x = window.x + EXTRAS_W + offset;
+                            let region_y = window.y + EXTRAS_H + 2 * region.track;
+                            waveform::render(out, waveform, region_x, region_y)
+                        },
+                        |action, id, state| match action {
+                            _ => Action::Noop,
+                            Action::Right => { Action::MoveRegion(id.1, 0, 0) }
+                        },
+                        (FocusType::Region, region.id.try_into().unwrap()));
 
-        // Fill out last bin with None's
-        let mut final_bin = region_collect.last_mut().unwrap();
-        while final_bin.len() < 4 {
-            final_bin.push(None);
-        }
+                // TODO: bin[1] bin[2] bin[3
+                let (y, y_t, y_id) = (void_render, void_transform, void_id.clone());
+                let (p, p_t, p_id) = (void_render, void_transform, void_id.clone());
+                let (b, b_t, b_id) = (void_render, void_transform, void_id.clone());
 
-        for bin in region_collect.iter() {
-
-            // Build four colors for all four regions in the bin
-            let (g, g_t, g_id): (
-                fn(RawTerminal<Stdout>, Window, ID, &TimelineState) -> RawTerminal<Stdout>,
-                fn(Action, ID, &mut TimelineState) -> Action, ID ) = 
-
-                if let Some(region) = &bin[0] {(
-                    |mut out, window, id, state| {
-                        let asset_id = &state.regions.get(&id.1).unwrap();
-                        waveform::render(out, &state.waveforms[asset_id], window.x, window.y + EXTRAS_H)
-                    },
-                    |action, id, state| match action {
-                        _ => Action::Noop,
-                        Action::Right => { Action::MoveRegion(id.1, 0, 0) }
-                    },
-                    (FocusType::Region, region.id.try_into().unwrap()))
-
-                // If it is empy, void the color
-                } else { (void_render, void_transform, void_id.clone()) };
-
-            // TODO: bin[1] bin[2] bin[3]
-            let (y, y_t, y_id) = (void_render, void_transform, void_id.clone());
-            let (p, p_t, p_id) = (void_render, void_transform, void_id.clone());
-            let (b, b_t, b_id) = (void_render, void_transform, void_id.clone());
-
-            focii.push(vec![
-                MultiFocus::<TimelineState> {
-
+                focii.last_mut().unwrap().push(MultiFocus::<TimelineState> {
                     r_id: record_id.clone(),
                     r: record_render,
                     r_t: record_transform,
@@ -212,8 +188,8 @@ impl Timeline {
                     b, b_t, b_id,
 
                     active: None,
-                }
-            ]);
+                })
+            }
         }
 
         Timeline {
@@ -242,33 +218,6 @@ impl Layer for Timeline {
                 cursor::Goto(self.x+1, track_y),
                 i+1).unwrap();
         }
-
-        /*
-
-        // Print regions
-
-        for i in 1..self.width+1 {
-            write!(out, "{}─", cursor::Goto(i,self.y)).unwrap();
-
-            for (j, track) in self.state.sequence.iter().enumerate() {
-		        let track_y: u16 = self.y + EXTRAS_H + (j*2) as u16;
-
-                // PRINT REGIONS
-                for region in track.regions.iter() {
-                    let id: u32 = region.asset_id;
-                    let offset: u32 = region.offset;
-
-                    if beat_offset(offset, 
-                        self.state.sample_rate.clone(),
-                        self.state.tempo,
-                        self.state.zoom) == (i + self.state.scroll_x).into() {
-                            out = waveform::render(out, 
-                                &self.waveforms[&id], self.x+EXTRAS_W+i, track_y);
-                        }
-                }
-            }
-        }
-        */
 
         let name_len: u16 = self.state.name.len() as u16;
         let name_x: u16 = self.x + (self.width/2) - (name_len/2);
