@@ -188,7 +188,6 @@ pub fn read_document(in_file: String) -> TimelineState {
             channels: 2,	// TODO
         })
     }
-
     // GET TRACKS
     for (i, track) in tracks.children.iter().enumerate() {
         let t_id: &str = track.attributes.get("id").unwrap();

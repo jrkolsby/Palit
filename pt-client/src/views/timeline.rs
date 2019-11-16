@@ -110,8 +110,12 @@ impl Timeline {
         let record_transform: fn(Action, ID, &mut TimelineState) -> Action = 
             |a, _, _| match a { Action::SelectR => Action::Record, _ => Action::Noop };
 
-        // We're gonna fill this up with regions starting at the top left-hand corner, each inner vector
-        // should have at most 4 Some's and be exactly 4 in length. 
+        /* TIMELINE LAYOUT
+        Rec, 
+        In, loop In, loop Out, Out
+
+        */
+
         let mut focii: Vec<Vec<MultiFocus<TimelineState>>> = vec![vec![
             MultiFocus::<TimelineState> {
                 r_id: record_id.clone(),
@@ -147,7 +151,6 @@ impl Timeline {
         ]];
 
         // Populate focii with regions
-        // TODO: Stagger entries between two tracks
         for (i, track) in initial_state.sequence.iter().enumerate() {
             focii.push(vec![]);
             for (j, region) in track.regions.iter().enumerate() {
@@ -248,8 +251,33 @@ impl Layer for Timeline {
         let multi_focus = &mut self.focii[self.state.focus.1][self.state.focus.0];
         let _action = multi_focus.transform(action.clone(), &mut self.state);
 
-        // Intercept arrow actions to change focus
-        let (focus, default) = shift_focus(self.state.focus, &self.focii, _action.clone());
+        // Intercept arrow actions to change focus or to return
+        let (focus, default) = match action {
+            Action::Up | Action::Down => shift_focus(self.state.focus, &self.focii, _action.clone()),
+            // Only shift focus horizontally if playhead has exceeded current region
+            Action::Left => match multi_focus.r_id.0 {
+                FocusType::Region => {
+                    if self.state.regions[&multi_focus.r_id.1].offset <= self.state.playhead.into() {
+                        shift_focus(self.state.focus, &self.focii, Action::Left)
+                    } else {
+                        (self.state.focus, None)
+                    }
+                },
+                _ => shift_focus(self.state.focus, &self.focii, Action::Left),
+            },
+            Action::Right => match multi_focus.r_id.0 {
+                FocusType::Region => {
+                    let next_focus = &mut self.focii[self.state.focus.1][self.state.focus.0+1];
+                    if self.state.regions[&next_focus.r_id.1].offset <= self.state.playhead.into() {
+                        shift_focus(self.state.focus, &self.focii, Action::Right)
+                    } else {
+                        (self.state.focus, None)
+                    }
+                },
+                _ => shift_focus(self.state.focus, &self.focii, Action::Right),
+            },
+            _ => (self.state.focus, None)
+        };
 
         // Set focus, if the multifocus defaults, take no further action
         self.state.focus = focus;
