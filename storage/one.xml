@@ -5,9 +5,9 @@
     <title>WOWEE XML</title>
     <meta samplerate="48000" bitrate="12"/>
     <modules>
-        <master input="0" volume="100" /> <!-- This always exists -->
-        <patch>
-            <param id="9" value="100" name="master">
+        <master id="0" input="0" volume="100" /> <!-- This always exists -->
+        <patch id="1">
+            <param id="9" value="100" name="master" />
             <route>
                 <!-- This tag is special because its id references another element's attribute -->
                 <input id="5" />
@@ -22,14 +22,14 @@
                 <output id="4" />
             </route>
         </patch>
-        <device id="5" output="200" />
-        <device id="6" output="201" />
-        <device id="7" input="200" />
-        <device id="8" input="201" />
-        <keyboard output="203" octave="4" key="0">
-        <keyboard output="204" octave="4" key="0">
+        <device id="2" output="200" />
+        <device id="3" output="201" />
+        <device id="4" input="200" />
+        <device id="5" input="201" />
+        <keyboard id="6" output="203" octave="4" key="0" />
+        <keyboard id="7" output="204" octave="4" key="0" />
 
-        <timeline id="m1" loop>
+        <timeline id="8">
             <!-- Note that ids only within a module are distinct -->
             <mark value="68000" name="duration" />
             <mark value="0" name="seq_in" />
@@ -58,7 +58,7 @@
             </track>
         </timeline>
 
-        <hammond id="3" input="6" output="6">
+        <hammond id="9" input="6" output="6">
             <param name="16'" value="1000" />
             <param name="5.3" value="1000" />
             <param name="8" value="1000" />
@@ -72,9 +72,9 @@
             <param name="reverb" value="0" />
         </hammond>
 
-        <arpeggio id="2">
+        <arpeggio id="10">
             <param value="0" name="pattern" />
-            <mark name="playhead" offset="0">
+            <mark name="playhead" offset="0" />
             <track input="5" output="5">
                 <note key="69" vel="0.4" offset="0" />
                 <note key="72" vel="0.4" offset="400" />

@@ -186,6 +186,7 @@ impl Timeline {
                                     Window, ID, &TimelineState) -> RawTerminal<Stdout>,
                                     fn(Action, ID, &mut TimelineState) -> Action, ID) = (
                     |mut out, window, id, state| {
+                        eprintln!("get region {}", id.1);
                         let region = state.regions.get(&id.1).unwrap();
                         let waveform = &state.assets.get(&region.asset_id).unwrap().waveform;
                         let offset: u16 = state.scroll_x + 
