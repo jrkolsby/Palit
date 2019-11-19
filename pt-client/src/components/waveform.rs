@@ -25,8 +25,7 @@ pub fn render(mut out: RawTerminal<Stdout>, pairs: &Vec<(u8, u8)>, x: u16, y: u1
     for (i, pair) in pairs.iter().enumerate() {
         write!(out, "{}{:}",
             cursor::Goto(x+(i as u16),y),
-            pair_to_char(*pair),
-            ).unwrap();
+            pair_to_char(*pair)).unwrap();
     }
     out
 }

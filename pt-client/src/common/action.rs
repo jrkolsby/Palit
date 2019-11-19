@@ -34,7 +34,6 @@ pub enum Action {
     Tick,
     Exit,
     Deselect,
-    Record,
 
     NoteOn(u16, f32),
     NoteOff(u16),
@@ -42,6 +41,9 @@ pub enum Action {
     PatchIn(u16, u16), // route id, input id
     PatchOut(u16, u16), // route id, output id
     MoveRegion(u16, u16, u32), // module id, region id, offset
+    Solo(u16),
+    Record(u16),
+    Mute(u16),
 
     // Default actions
     OpenProject(String),

@@ -16,8 +16,10 @@ use termion::raw::{IntoRawMode, RawTerminal};
 mod views;
 mod common;
 mod components; 
+mod modules;
 
 use views::{Layer, Home, Timeline, Help, Title, Piano, Routes};
+use modules::{read_document};
 
 use common::{Action};
 
@@ -96,11 +98,10 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
 
     events
 }
-fn add_layer(a: &mut VecDeque<(u16, Box<Layer>)>, b: Box<Layer>) -> u16 {
-    let id = a.len() as u16;
+fn add_layer(a: &mut VecDeque<(u16, Box<Layer>)>, b: Box<Layer>, id: u16) {
     a.push_back((id, b));
-    id
 }
+
 fn main() -> std::io::Result<()> {
 
     // Public action fifo /tmp/pt-client
@@ -136,9 +137,12 @@ fn main() -> std::io::Result<()> {
 
     // Configure UI layers
     let mut layers: VecDeque<(u16, Box<Layer>)> = VecDeque::new();
+
+    /*
     add_layer(&mut layers, Box::new(Home::new(1, 1, size.0, size.1)));
     add_layer(&mut layers, Box::new(Piano::new(5, 10, size.0/2, size.1/2)));
     add_layer(&mut layers, Box::new(Routes::new(1, 1, 4, size.1)));
+    */
 
     // Hide cursor and clear screen
     write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
@@ -167,7 +171,7 @@ fn main() -> std::io::Result<()> {
             // Execute toplevel actions, capture default from view
             let default: Action = match next {
                 Action::Help => { 
-                    add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15))); 
+                    add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15)), 0); 
                     Action::Noop
                 },
                 Action::Exit => { 
@@ -194,15 +198,24 @@ fn main() -> std::io::Result<()> {
             // capture default action if returned from layer
             match default {
                 Action::InputTitle => {
-                    add_layer(&mut layers, Box::new(Title::new(23, 5, 36, 23)));
+                    add_layer(&mut layers, Box::new(Title::new(23, 5, 36, 23)), 0);
                 },
+                /*
                 Action::CreateProject(title) => {
                     ipc_sound.write(format!("NEW_PROJECT:{} ", title).as_bytes());
                     add_layer(&mut layers, Box::new(Timeline::new(1, 1, size.0, size.1, title)));
                 },
+                */
                 Action::OpenProject(title) => {
                     ipc_sound.write(format!("OPEN_PROJECT:{} ", title).as_bytes());
-                    add_layer(&mut layers, Box::new(Timeline::new(1, 1, size.0, size.1, title)));
+                    let modules = read_document(title);
+                    for (id, el) in modules.iter() {
+                        match &el.name[..] {
+                            "timeline" => add_layer(&mut layers, 
+                                Box::new(Timeline::new(1, 1, size.0, size.1, (*el).to_owned())), *id),
+                            _ => {}
+                        }
+                    }
                 },
                 Action::Up | Action::Left => {
                     if let Some(current) = layers.pop_front() {
@@ -215,7 +228,7 @@ fn main() -> std::io::Result<()> {
                     }
                 }, 
                 Action::Pepper => {
-                    add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15))); 
+                    add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15)), 0); 
                 },
                 /*
                 Action::Error(message) => {

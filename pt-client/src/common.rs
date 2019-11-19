@@ -1,16 +1,15 @@
-mod timeline;
+mod pcm;
 mod action;
 mod color;
 mod render;
 mod multifocus;
 
-pub use timeline::Asset;
-pub use timeline::Region;
-pub use timeline::Track;
-pub use timeline::TimelineState;
-pub use timeline::beat_offset;
-pub use timeline::file_to_pairs;
-pub use timeline::read_document;
+pub use pcm::file_to_pairs;
+pub use pcm::generate_waveforms;
+pub use pcm::beat_offset;
+pub use pcm::Asset;
+pub use pcm::Region;
+pub use pcm::Track;
 
 pub use action::Action;
 
@@ -32,6 +31,12 @@ pub enum Rate {
     Slow,
 }
 
+// All parameters range from -1000 to +1000
+pub type Param = i16;
+pub type Offset = u32;
+pub type Key = u8;
+pub type DocID = u16;
+
 #[derive(Clone, Debug)]
 pub enum Direction {
     North,
@@ -44,8 +49,9 @@ pub enum Direction {
     SE,
 }
 
-pub trait Module<T> {
-    fn read_state(self, object: xmltree::Element) -> T;
+pub trait Module {
+    fn read_state(&self, object: xmltree::Element);
+    fn write_state(&self) -> xmltree::Element;
 }
 
 pub type DirectAction = (u16, Action);

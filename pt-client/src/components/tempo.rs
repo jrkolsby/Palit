@@ -11,8 +11,6 @@ pub fn render(mut out: RawTerminal<Stdout>,
     origin_y: u16, 
     time_note: usize,
     time_beat: usize,
-    duration_measure: usize,
-    duration_beat: usize,
     bpm: u16,
     metronome: bool,
 ) -> RawTerminal<Stdout> {
@@ -33,8 +31,6 @@ pub fn render(mut out: RawTerminal<Stdout>,
                     (7, 2) => { write!(out, "BPM"); }
                     (10, 1) => { write!(out, "{}", time_beat); }
                     (10, 2) => { write!(out, "{}", time_note); }
-                    (2, 3) => { write!(out, "{:02}", duration_beat); }
-                    (5, 3) => { write!(out, "{}:", duration_measure); }
                     _ => {}
                 }
             }
