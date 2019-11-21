@@ -20,8 +20,9 @@ use crate::views::{Layer};
 //#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
 
 static MARGIN: (u16, u16) = (3, 3);
-static EXTRAS_W: u16 = 6;
-static EXTRAS_H: u16 = 7;
+static TRACKS_X: u16 = 3;
+static REGIONS_X: u16 = 16;
+static TIMELINE_Y: u16 = 5;
 static SCROLL_R: u16 = 40;
 static SCROLL_L: u16 = 10;
 static ASSET_PREFIX: &str = "storage/";
@@ -149,71 +150,98 @@ impl Timeline {
             }
         ]];
 
-        // Populate track header focii (left margin)
-        for (i, track) in initial_state.tracks.iter().enumerate() {
-            let tid = i as u16;
+        let mut track_vec: Vec<(&u16, &Track)> = initial_state.tracks.iter().collect();
+        track_vec.sort_by(|(_, a), (_, b)| a.index.cmp(&b.index));
+
+        for (t_id, track) in track_vec.iter() {
             focii.push(vec![
                 MultiFocus::<TimelineState> {
-                    r_id: (FocusType::Button, tid),
-                    g_id: (FocusType::Button, tid),
-                    y_id: (FocusType::Button, tid),
-                    p_id: (FocusType::Button, tid),
-                    b_id: (FocusType::Button, tid),
+                    r_id: (FocusType::Button, **t_id),
+                    g_id: (FocusType::Button, **t_id),
+                    y_id: (FocusType::Button, **t_id),
+                    p_id: (FocusType::Button, **t_id),
+                    b_id: (FocusType::Button, **t_id),
 
-                    r: |mut out, window, id, state|
-                        button::render(out, EXTRAS_W, 2*id.1, 5, "REC"),
+                    r: |mut out, win, id, state|
+                        button::render(out, win.x+TRACKS_X, win.y+TIMELINE_Y+2*id.1, 3, "R"),
                     r_t: |action, id, _| Action::Record(id.1),
-                    g: |mut out, window, id, state|
-                        button::render(out, EXTRAS_W, 4+2*id.1, 5, "MUTE"),
+
+                    g: |mut out, win, id, state|
+                        button::render(out, win.x+TRACKS_X+4, win.y+TIMELINE_Y+(2*id.1), 3, "M"),
                     g_t: |action, id, _| Action::Mute(id.1),
-                    b: |mut out, window, id, state|
-                        button::render(out, EXTRAS_W, 4+2*id.1, 5, "SOLO"),
+
+                    b: |mut out, win, id, state|
+                        button::render(out, win.x+TRACKS_X+8, win.y+TIMELINE_Y+(2*id.1), 3, "S"),
                     b_t: |action, id, _| Action::Solo(id.1),
 
-                    p: |mut out, window, id, state| out,
+                    p: |mut out, win, id, state| out,
                     p_t: |action, id, state| action,
-                    y: |mut out, window, id, state| out,
+
+                    y: |mut out, win, id, state| out,
                     y_t: |action, id, state| action,
 
                     active: None,
                 }
             ]);
-        }
+        };
 
-        for (j, region) in initial_state.regions.iter().enumerate() {
-            let r_id = j as u16;
+        let mut region_vec: Vec<(&u16, &Region)> = initial_state.regions.iter().collect();
+        region_vec.sort_by(|(_, a), (_, b)| a.offset.cmp(&b.offset));
+
+        for (r_id, region) in region_vec.iter() {
             let (g, g_t, g_id): (fn(RawTerminal<Stdout>, 
                                     Window, ID, &TimelineState) -> RawTerminal<Stdout>,
                                     fn(Action, ID, &mut TimelineState) -> Action, ID) = (
                     |mut out, window, id, state| {
-                        eprintln!("get region {}", id.1);
                         let region = state.regions.get(&id.1).unwrap();
                         let waveform = &state.assets.get(&region.asset_id).unwrap().waveform;
-                        let offset: u16 = state.scroll_x + 
+
+                        let asset_start_offset = beat_offset(
+                            region.asset_in,
+                            state.sample_rate,
+                            state.tempo,
+                            state.zoom,
+                        ) as usize;
+
+                        let asset_length_offset = beat_offset(
+                            region.asset_out - region.asset_in,
+                            state.sample_rate,
+                            state.tempo,
+                            state.zoom,
+                        ) as usize;
+
+                        let wave_slice = &waveform[asset_start_offset..(
+                                                   asset_start_offset+asset_length_offset)];
+
+                        let timeline_offset: u16 = state.scroll_x + 
                             beat_offset(region.offset, 
-                                        state.sample_rate.clone(), 
+                                        state.sample_rate,
                                         state.tempo, 
                                         state.zoom) as u16;
-                        let region_x = window.x + EXTRAS_W + offset;
-                        let region_y = window.y + EXTRAS_H + 2 * region.track;
-                        waveform::render(out, &waveform, region_x, region_y)
+
+                        let region_x = window.x + REGIONS_X + timeline_offset;
+                        let region_y = window.y + 1 + TIMELINE_Y + 2 * region.track;
+
+                        waveform::render(out, wave_slice, region_x, region_y)
                     },
                     |action, id, state| match action {
                         _ => Action::Noop,
-                        Action::Right => { Action::MoveRegion(id.1, 0, 0) }
+                        Action::Right => { 
+                            let mut region = state.regions.get_mut(&id.1).unwrap();
+                            region.offset += (state.sample_rate/2);
+                            Action::MoveRegion(id.1, 0, 0) 
+                        }
                     },
-                    (FocusType::Region, r_id));
+                    (FocusType::Region, **r_id));
 
             // TODO: bin[1] bin[2] bin[3
             let (y, y_t, y_id) = (void_render, void_transform, void_id.clone());
             let (p, p_t, p_id) = (void_render, void_transform, void_id.clone());
             let (b, b_t, b_id) = (void_render, void_transform, void_id.clone());
+            let (r, r_t, r_id) = (void_render, void_transform, void_id.clone());
 
-            focii.last_mut().unwrap().push(MultiFocus::<TimelineState> {
-                r_id: record_id.clone(),
-                r: record_render,
-                r_t: record_transform,
-
+            focii[region.track as usize].push(MultiFocus::<TimelineState> {
+                r, r_t, r_id,
                 g, g_t, g_id,
                 y, y_t, y_id,
                 p, p_t, p_id,
@@ -240,17 +268,17 @@ impl Layer for Timeline {
         let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
 
         // Print track numbers
-        for (i, _track) in self.state.tracks.iter().enumerate() {
-            let track_y: u16 = self.y + EXTRAS_H + (i*2) as u16;
+        for (id, track) in self.state.tracks.iter() {
+            let track_y: u16 = win.y + 1 + TIMELINE_Y + (id*2) as u16;
 
             // Print track number on left
             write!(out, "{}{}",
-                cursor::Goto(self.x+1, track_y),
-                i+1).unwrap();
+                cursor::Goto(win.x+1, track_y),
+                id).unwrap();
         }
 
         // print tempo
-        out = ruler::render(out, 5, 6, 
+        out = ruler::render(out, REGIONS_X, 6, 
             self.width-4,
             self.height,
             self.state.time_beat,
@@ -312,7 +340,10 @@ impl Layer for Timeline {
         // Set focus, if the multifocus defaults, take no further action
         self.state.focus = focus;
         if let Some(_default) = default {
-            return _default;
+            match _default {
+                Action::Up | Action::Down => return _default,
+                _ => {}
+            }
         }
 
         self.state = reduce(self.state.clone(), action);

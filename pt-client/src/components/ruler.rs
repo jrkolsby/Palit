@@ -19,20 +19,24 @@ pub fn render(mut out: RawTerminal<Stdout>,
     if scroll == 0 {
         write!(out, "{}{{{{", cursor::Goto(origin_x-2, origin_y)).unwrap()
     }
+    let mut beat = 0;
+    let _zoom = zoom as u16;
     for i in 0..width {
-        let beat = if (i+scroll+1) % time_beat as u16 == 0 { "!" } else { "." };
-        let space = (0..zoom).map(|_| " ").collect::<String>();
         if i+scroll == playhead {
-            for j in 0..height {
+            for j in 1..height {
                 write!(out, "{}|", cursor::Goto(origin_x+i, origin_y+j));
             }
             out = write_fg(out, Color::Red);
         } else {
             out = write_fg(out, Color::White);
         }
-        write!(out, "{}{}{}",
-            cursor::Goto(origin_x+i, origin_y),
-            beat, space).unwrap()
+        if i % _zoom == 0 {
+            let glyph = if (beat+scroll+1) % time_beat as u16 == 0 { "!" } else { "." };
+            write!(out, "{}{}",
+                cursor::Goto(origin_x+i, origin_y),
+                glyph).unwrap();
+            beat += 1;
+        }
     }
     out
 }

@@ -88,6 +88,6 @@ pub fn read(mut doc: Element) -> TimelineState {
             waveform: vec![],
         });
     }
-
+    
     return state;
 }

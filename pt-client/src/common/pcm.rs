@@ -40,7 +40,8 @@ pub struct Track {
 pub fn beat_offset(sample_offset: u32, rate: u32, bpm: u16, zoom: usize) -> u32 {
     // return how many beats passed based on a given sample rate
     let samples_per_beat = (60 * rate) / (bpm as u32);
-    sample_offset / (samples_per_beat * zoom as u32)
+    zoom as u32 * (sample_offset / samples_per_beat)
+
 }
 
 pub fn file_to_pairs(file: WaveFile, width: usize, samples_per_tick: u16) -> Vec<(u8, u8)> {
@@ -76,7 +77,7 @@ pub fn generate_waveforms(assets: &mut HashMap<u16, Asset>,
     for (_, asset) in assets.iter_mut() {
         let asset_file = WaveFile::open(asset.src.clone()).unwrap();
 
-        let num_pairs: usize = beat_offset(
+        let num_pairs = beat_offset(
             asset.duration, rate, tempo, zoom) as usize;
 
         let pairs: Vec<(u8, u8)> = file_to_pairs(asset_file, num_pairs, 4);
