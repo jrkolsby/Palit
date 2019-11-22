@@ -3,17 +3,13 @@ use std::fs;
 
 use xmltree::Element;
 
-use crate::common::{Param, Offset};
+use crate::core::{Param, Offset};
 
 pub struct Document {
     pub title: String,
     pub sample_rate: u32,
     pub modules: HashMap<u16, Element>,
 }
-
-pub mod arpeggio;
-pub mod hammond;
-pub mod timeline;
 
 const PALIT_ROOT: &str = "/usr/local/palit/";
 
@@ -36,11 +32,6 @@ pub fn mark_map(mut doc: Element) -> (Element, HashMap<String, Offset>) {
     }
     return (doc, marks);
 }
-
-/* 
-    In the end, we need to take a document and return a list of views with
-    ids, as well as set the project title and sample and bit rates
-*/
 
 pub fn read_document(filename: String) -> Document {
 
@@ -69,7 +60,7 @@ pub fn read_document(filename: String) -> Document {
             if let Some(i) = module.attributes.get("id") {
                 result.modules.insert(i.parse::<u16>().unwrap(), module.to_owned());
             } else {
-                panic!("Module missing ID");
+                panic!("Module '{} 'missing ID", module.name);
             }
         }
     } else {

@@ -41,6 +41,7 @@ pub type Frequency = f64;
 pub type Volume = f64;
 pub type Offset = u32;
 pub type Key = u8;
+pub type Param = i16;
 
 const CHANNELS: usize = 2;
 const FRAMES: u32 = 512;
@@ -165,14 +166,14 @@ pub fn event_loop<F: 'static>(
         midi_keys: NodeIndex,
         keys: NodeIndex,
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
-    where F: FnOnce(Action) -> Action {
+    where F: Fn(&mut Graph<[Output; CHANNELS], Module>, Action) -> Action {
 
     // The callback we'll use to pass to the Stream. It will request audio from our dsp_graph.
     let callback = move |pa::OutputStreamCallbackArgs { buffer, time, .. }| {
 
         let ipc_actions: Vec<Action> = ipc_action(&ipc_in);
 
-        match ipc_dispatch(ipc_actions, keys, operator, &mut patch) {
+        match ipc_dispatch(ipc_actions, keys, operator, &mut patch, &dispatch_f) {
             Action::Exit => { return pa::Complete; },
             _ => {}
         }
@@ -381,20 +382,23 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
     }
 }
 
-fn ipc_dispatch(ipc_actions: Vec<Action>, 
+fn ipc_dispatch<F: 'static>(
+        ipc_actions: Vec<Action>, 
         keys: NodeIndex, 
         operator: NodeIndex, 
-        patch: &mut Graph<[Output; CHANNELS], Module>) -> Action {
+        patch: &mut Graph<[Output; CHANNELS], Module>,
+        root_dispatch: &F) -> Action 
+
+    where F: Fn(&mut Graph<[Output; CHANNELS], Module>, Action) -> Action {
 
     for action in ipc_actions.iter() {
         match action {
-            // Can mutate graph here, before the walk below
-            Action::AddRoute(nid_o, oid, nid_i, iid) => {
-                println!("Mutating graph!");
-            },
-            Action::DeleteRoute(eid) => {
-                println!("deleting edge!");
-            },
+            // Pass graph mutations to root_dispatch
+            Action::AddRoute(_, _, _, _) |
+            Action::DeleteRoute(_) |
+            Action::OpenProject(_) => {
+                root_dispatch(patch, action.clone());
+            }
             // Give action directly to indexed node
             Action::SetParam(nid, _, _) => {
                 // TODO: Make sure that node index exists!
@@ -441,6 +445,8 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
 
             "OCTAVE" => Action::Octave(argv[1].parse::<u8>().unwrap() == 1),
 
+            "OPEN_PROJECT" => Action::OpenProject(argv[1].to_string()),
+
             _ => Action::Noop,
         };
 
@@ -463,7 +469,7 @@ pub fn event_loop<F: 'static>(
         keys: NodeIndex,
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
 
-    where F: FnOnce(Action) -> Action {
+    where F: Fn(&mut Graph<[Output; CHANNELS], Module>, Action) -> Action {
     
     // Get audio devices
     let (audio_dev, rate) = open_audio_dev()?;
@@ -488,7 +494,7 @@ pub fn event_loop<F: 'static>(
 
         let ipc_actions: Vec<Action> = ipc_action(&ipc_in);
 
-        match ipc_dispatch(ipc_actions, keys, operator, &mut patch) {
+        match ipc_dispatch(ipc_actions, keys, operator, &mut patch, &dispatch_f) {
             Action::Exit => { return Ok(()) },
             _ => {}
         }

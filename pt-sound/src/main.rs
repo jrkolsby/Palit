@@ -21,8 +21,11 @@ mod tape;
 mod action;
 mod chord;
 mod arpeggio;
+mod document;
 
 use crate::core::{event_loop, Module, Frequency};
+use crate::document::{Document, read_document};
+use crate::action::Action;
 
 const A5_HZ: Frequency = 440.0;
 const D5_HZ: Frequency = 587.33;
@@ -62,10 +65,13 @@ fn main() -> Result<(), Box<error::Error>> {
     let operator = graph.add_node(Module::Passthru(vec![]));
     let octave = graph.add_node(Module::Octave(vec![], 4));
 
-    let tape = graph.add_node(Module::Tape(tape::init()));
+    // Pasting some useful stuff here
+
+    /*
     let synth = graph.add_node(Module::Synth(synth::init()));
     let chord_gen = graph.add_node(Module::Chord(chord::init()));
     let arpeggio = graph.add_node(Module::Arpeggio(arpeggio::init()));
+    */
 
     // Connect keys -> octave -> chord_gen -> synth -> master
     /*
@@ -76,6 +82,7 @@ fn main() -> Result<(), Box<error::Error>> {
     graph.add_connection(tape, master);
     */
 
+    /*
     graph.add_connection(keys, octave);
     graph.add_connection(octave, arpeggio);
 
@@ -90,8 +97,7 @@ fn main() -> Result<(), Box<error::Error>> {
 
     // Set the master node for the graph.
     graph.set_master(Some(master));
-
-    // Pasting some useful stuff here
+    */
 
     /*
     // Connect a few oscillators to the synth.
@@ -115,5 +121,24 @@ fn main() -> Result<(), Box<error::Error>> {
     }
     */
 
-    event_loop(ipc_in, ipc_client, graph, operator, midi_keys, keys, |a| { a })
+    event_loop(ipc_in, ipc_client, graph, operator, midi_keys, keys, |mut patch, a| { 
+        // ROOT DISPATCH
+        match a {
+            Action::OpenProject(name) => {
+                *patch = Graph::new();
+                let doc = read_document(name);
+                for (id, el) in doc.modules.iter() {
+                    match &el.name[..] {
+                        "timeline" => {
+                            let operator = patch.add_node(Module::Passthru(vec![]));
+                            let tape = patch.add_node(Module::Tape(tape::read(el.to_owned())));
+                        },
+                        _ => {}
+                    }
+                }
+                Action::Noop
+            }
+            _ => Action::Noop
+        }
+    })
 }

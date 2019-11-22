@@ -1,13 +1,16 @@
-use sample::{signal, Signal, Sample};
-use std::borrow::Borrow;
 use std::fs::File;
 use std::io::Write;
+use std::borrow::Borrow;
+use std::convert::TryInto;
+use std::collections::HashMap;
 
+use sample::{signal, Signal, Sample};
+use xmltree::Element;
 use wavefile::{WaveFile, WaveFileIterator};
 
-use crate::core::{SF, SigGen};
+use crate::core::{SF, SigGen, Output};
 use crate::action::Action;
-use crate::core::{Output};
+use crate::document::{param_map, mark_map};
 
 pub struct Region {
     pub buffer: Vec<Output>,
@@ -30,13 +33,6 @@ pub struct Store {
 }
 
 pub fn init() -> Store {
-    let mut wav_f = WaveFile::open("Who.wav").unwrap();
-    let mut wav_iter = wav_f.iter();
-    let mut buf: Vec<f32> = Vec::new();
-    while let Some(s) = wav_iter.next() {
-        // TODO: int to float sample conversion
-        buf.push(s[0] as f32 * 0.0000001);
-    };
     return Store {
         bpm: 127,
         duration: 960000,
@@ -47,20 +43,7 @@ pub fn init() -> Store {
         loop_out: 0,
         playhead: 0,
         playing: false,
-        regions: vec![
-            Region {
-                offset: 100,
-                gain: 1.0,
-                duration: 480000,
-                buffer: buf.clone(),
-            },
-            Region {
-                gain: 1.0,
-                offset: 1320000,
-                duration: 480000,
-                buffer: buf.clone(),
-            }
-        ],
+        regions: vec![],
     }
 }
 
@@ -97,4 +80,84 @@ pub fn compute(store: &mut Store) -> Output {
     let z = z.min(0.999).max(-0.999);
     store.playhead = store.playhead + 1;
     z
+}
+
+pub fn read(mut doc: Element) -> Store {
+
+    let (mut doc, params) = param_map(doc);
+    let (mut doc, marks) = mark_map(doc);
+
+    let mut wav_f = WaveFile::open("Who.wav").unwrap();
+    let mut wav_iter = wav_f.iter();
+    let mut buf: Vec<f32> = Vec::new();
+    while let Some(s) = wav_iter.next() {
+        // TODO: int to float sample conversion
+        buf.push(s[0] as f32 * 0.0000001);
+    };
+
+    let mut store =  Store {
+        bpm: *params.get("bpm").unwrap() as u16,
+        duration: (*marks.get("seq_out").unwrap() - 
+                  *marks.get("seq_in").unwrap()),
+        time_beat: *params.get("time_beat").unwrap() as usize,
+        time_note: *params.get("time_note").unwrap() as usize,
+        loop_on: false,
+        loop_in: *marks.get("loop_in").unwrap(),
+        loop_out: *marks.get("loop_out").unwrap(),
+        playhead: 0,
+        playing: false,
+        regions: vec![
+            Region {
+                offset: 100,
+                gain: 1.0,
+                duration: 480000,
+                buffer: buf.clone(),
+            },
+            Region {
+                gain: 1.0,
+                offset: 1320000,
+                duration: 480000,
+                buffer: buf.clone(),
+            }
+        ],
+    };
+
+    // Only take one track 
+    if let Some(mut track) = doc.take_child("track") {
+        let t_id: &str = track.attributes.get("id").unwrap();
+        let in_id: &str = track.attributes.get("input").unwrap();
+        let out_id: &str = track.attributes.get("output").unwrap();
+        let t = t_id.parse::<u16>().unwrap();
+
+        while let Some(region) = track.take_child("region") {
+
+            let r_id: &str = region.attributes.get("id").unwrap();
+            let a_id: &str = region.attributes.get("asset").unwrap();
+            let offset: &str = region.attributes.get("offset").unwrap();
+            let a_in: &str = region.attributes.get("in").unwrap();
+            let a_out: &str = region.attributes.get("out").unwrap();
+
+            store.regions.push(Region {
+                offset: 100,
+                gain: 1.0,
+                duration: 480000,
+                buffer: buf.clone(),
+            });
+        }
+    }
+
+    /*
+    while let Some(asset) = doc.take_child("asset") {
+        let a_id: &str = asset.attributes.get("id").unwrap();
+        let duration: &str = asset.attributes.get("size").unwrap();
+        state.assets.insert(a_id.parse::<u16>().unwrap(), Asset {
+            src: asset.attributes.get("src").unwrap().parse().unwrap(),
+            duration: duration.parse().unwrap(),
+            channels: 2,
+            waveform: vec![],
+        });
+    }
+    */
+    
+    return store;
 }

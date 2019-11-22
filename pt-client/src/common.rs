@@ -35,7 +35,6 @@ pub enum Rate {
 pub type Param = i16;
 pub type Offset = u32;
 pub type Key = u8;
-pub type DocID = u16;
 
 #[derive(Clone, Debug)]
 pub enum Direction {

@@ -8,7 +8,7 @@ use wavefile::WaveFile;
 use itertools::Itertools;
 use xmltree::Element;
 
-use crate::common::{Color, Rate, DocID};
+use crate::common::{Color, Rate};
 
 #[derive(Debug, Clone)]
 pub struct Asset {

@@ -58,14 +58,22 @@ pub struct MultiFocus<State> {
 pub fn render_focii<T>(mut out: RawTerminal<Stdout>, window: Window, 
         focus: (usize, usize), focii: &Vec<Vec<MultiFocus<T>>>, state: &T) 
         -> RawTerminal<Stdout> {
-    if let Some(_) = focii[focus.1][focus.0].active {
-        out = focii[focus.1][focus.0].render(out, window, &state, true);
+    // If the current focus has been selected, render only it.
+    let current_focus = &focii[focus.1][focus.0];
+    if let Some(_) = current_focus.active {
+        out = current_focus.render(out, window, &state, true);
     } else {
         for (j, col) in focii.iter().enumerate() {
             for (i, _focus) in col.iter().enumerate() {
-                out = _focus.render(out, window, &state, focus == (i,j));
+                // Wait until deselected focii have been rendered...
+                if focus == (i,j) {
+                    continue;
+                }
+                out = _focus.render(out, window, &state, false);
             }
         }
+        // ... then render the selection on top
+        out = current_focus.render(out, window, &state, true);
     }
     out
 }
