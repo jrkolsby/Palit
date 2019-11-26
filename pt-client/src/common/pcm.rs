@@ -37,10 +37,10 @@ pub struct Track {
     pub index: u16,
 }
 
-pub fn beat_offset(sample_offset: u32, rate: u32, bpm: u16, zoom: usize) -> u32 {
+pub fn beat_offset(sample_offset: u32, rate: u32, bpm: u16, zoom: usize) -> u16 {
     // return how many beats passed based on a given sample rate
     let samples_per_beat = (60 * rate) / (bpm as u32);
-    zoom as u32 * (sample_offset / samples_per_beat)
+    (zoom as u32 * (sample_offset / samples_per_beat)) as u16
 
 }
 

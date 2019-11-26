@@ -66,6 +66,8 @@ pub fn read(mut doc: Element) -> TimelineState {
             let a_in: &str = region.attributes.get("in").unwrap();
             let a_out: &str = region.attributes.get("out").unwrap();
 
+            eprintln!("offset {}", offset);
+
             state.regions.insert(r_id.parse::<u16>().unwrap(), Region {
                 asset_id: a_id.parse().unwrap(),
                 asset_in: a_in.parse().unwrap(),

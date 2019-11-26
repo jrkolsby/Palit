@@ -45,7 +45,7 @@ pub struct TimelineState {
 
     // Ephemeral variables
     pub tick: bool,
-    pub playhead: u16,
+    pub playhead: u32,
     pub zoom: usize,
     pub scroll_x: u16,
     pub scroll_y: u16,
@@ -80,8 +80,9 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         tick: (state.playhead % 2) == 0,
         playhead: match action {
             Action::Tick => state.playhead + 1,
-            Action::Right => state.playhead + 1,
-            Action::Left => if state.playhead == 0 { 0 } else { state.playhead - 1 },
+            Action::Right => state.playhead + state.sample_rate,
+            Action::Left => if state.playhead < state.sample_rate { 0 } 
+                else { state.playhead - state.sample_rate },
             _ => state.playhead.clone(),
         },
         zoom: state.zoom.clone(),
@@ -235,10 +236,10 @@ impl Timeline {
                     (FocusType::Region, **r_id));
 
             // TODO: bin[1] bin[2] bin[3
-            let (y, y_t, y_id) = (void_render, void_transform, void_id.clone());
-            let (p, p_t, p_id) = (void_render, void_transform, void_id.clone());
-            let (b, b_t, b_id) = (void_render, void_transform, void_id.clone());
-            let (r, r_t, r_id) = (void_render, void_transform, void_id.clone());
+            let (y, y_t, y_id) = (void_render, void_transform, g_id.clone());
+            let (p, p_t, p_id) = (void_render, void_transform, g_id.clone());
+            let (b, b_t, b_id) = (void_render, void_transform, g_id.clone());
+            let (r, r_t, r_id) = (void_render, void_transform, g_id.clone());
 
             focii[region.track as usize].push(MultiFocus::<TimelineState> {
                 r, r_t, r_id,
@@ -277,6 +278,12 @@ impl Layer for Timeline {
                 id).unwrap();
         }
 
+        let playhead_offset = beat_offset(
+            self.state.playhead,
+            self.state.sample_rate,
+            self.state.tempo,
+            self.state.zoom) as u16;
+
         // print tempo
         out = ruler::render(out, REGIONS_X, 6, 
             self.width-4,
@@ -284,7 +291,7 @@ impl Layer for Timeline {
             self.state.time_beat,
             self.state.zoom,
             self.state.scroll_x,
-            self.state.playhead);
+            playhead_offset);
 
         out = render_focii(out, win, self.state.focus.clone(), &self.focii, &self.state);
 
@@ -306,10 +313,9 @@ impl Layer for Timeline {
             // Only shift focus horizontally if playhead has exceeded current region
             Action::Left => match multi_focus.r_id.0 {
                 FocusType::Region => {
-                    let next_focus = &mut self.focii[self.state.focus.1][self.state.focus.0-1];
-                    let region_id = next_focus.r_id.1;
-                    let region = self.state.regions.get(&region_id).unwrap();
-                    if region.offset <= self.state.playhead.into() {
+                    let region = self.state.regions.get(&multi_focus.r_id.1).unwrap();
+
+                    if self.state.playhead <= region.offset  {
                         shift_focus(self.state.focus, &self.focii, Action::Left)
                     } else {
                         (self.state.focus, None)
@@ -323,9 +329,10 @@ impl Layer for Timeline {
                         (self.state.focus, None)
                     } else {
                         let next_focus = &mut self.focii[self.state.focus.1][self.state.focus.0+1];
-                        let region_id = next_focus.r_id.1;
-                        let region = self.state.regions.get(&region_id).unwrap();
-                        if region.offset <= self.state.playhead.into() {
+                        let next_region = self.state.regions.get(&next_focus.r_id.1).unwrap();
+                        eprintln!("next_offset: {}  playhead: {}", next_region.offset, self.state.playhead);
+
+                        if self.state.playhead >= next_region.offset {
                             shift_focus(self.state.focus, &self.focii, Action::Right)
                         } else {
                             (self.state.focus, None)
