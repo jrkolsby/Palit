@@ -26,7 +26,6 @@ static TIMELINE_Y: u16 = 5;
 static SCROLL_R: u16 = 40;
 static SCROLL_L: u16 = 10;
 static ASSET_PREFIX: &str = "storage/";
-
 #[derive(Clone, Debug)]
 pub struct TimelineState {
     // Requires XML write/read
@@ -46,8 +45,8 @@ pub struct TimelineState {
     // Ephemeral variables
     pub tick: bool,
     pub playhead: u32,
-    pub zoom: usize,
     pub scroll_x: u16,
+    pub zoom: usize,
     pub scroll_y: u16,
     pub focus: (usize, usize),
 }
@@ -105,7 +104,7 @@ impl Timeline {
         let void_render: fn(RawTerminal<Stdout>, Window, ID, &TimelineState) -> RawTerminal<Stdout> =
             |mut out, window, id, state| out;
         let void_transform: fn(Action, ID, &mut TimelineState) -> Action = 
-            |action, id, state| action;
+            |action, id, state| Action::Noop;
 
         let record_id: ID = (FocusType::Button, 0);
         let record_render: fn(RawTerminal<Stdout>, Window, ID, &TimelineState) -> RawTerminal<Stdout> = 
@@ -176,10 +175,10 @@ impl Timeline {
                     b_t: |action, id, _| Action::Solo(id.1),
 
                     p: |mut out, win, id, state| out,
-                    p_t: |action, id, state| action,
+                    p_t: |action, id, state| Action::Noop,
 
                     y: |mut out, win, id, state| out,
-                    y_t: |action, id, state| action,
+                    y_t: |action, id, state| Action::Noop,
 
                     active: None,
                 }
@@ -197,41 +196,70 @@ impl Timeline {
                         let region = state.regions.get(&id.1).unwrap();
                         let waveform = &state.assets.get(&region.asset_id).unwrap().waveform;
 
+                        let region_offset = beat_offset(
+                            region.offset,
+                            state.sample_rate,
+                            state.tempo,
+                            state.zoom,
+                        );
+
                         let asset_start_offset = beat_offset(
                             region.asset_in,
                             state.sample_rate,
                             state.tempo,
                             state.zoom,
-                        ) as usize;
+                        );
 
                         let asset_length_offset = beat_offset(
                             region.asset_out - region.asset_in,
                             state.sample_rate,
                             state.tempo,
                             state.zoom,
-                        ) as usize;
+                        );
 
-                        let wave_slice = &waveform[asset_start_offset..(
-                                                   asset_start_offset+asset_length_offset)];
+                        // Region appears to left of timeline
+                        if asset_length_offset + region_offset < state.scroll_x {
+                            return out;
+                        } 
+                        // Region appears to right of timeline
+                        else if asset_length_offset + region_offset > state.scroll_x + window.w {
+                            return out;
+                        } 
 
-                        let timeline_offset: u16 = state.scroll_x + 
-                            beat_offset(region.offset, 
-                                        state.sample_rate,
-                                        state.tempo, 
-                                        state.zoom) as u16;
+                        // Region split by left edge of timeline
+                        let wave_in_i: usize = if region_offset < state.scroll_x {
+                            (state.scroll_x - region_offset) as usize
+                        // Left edge of region appears unclipped
+                        } else {
+                            asset_start_offset as usize
+                        };
+
+                        // Region split by right edge of timeline
+                        let wave_out_i: usize = if state.scroll_x + window.w < region_offset + asset_length_offset {
+                            (asset_start_offset + asset_length_offset) as usize - 
+                            (region_offset + asset_length_offset - (state.scroll_x + window.w)) as usize
+                        } else {
+                            (asset_start_offset + asset_length_offset) as usize
+                        };
+
+                        let wave_slice = &waveform[wave_in_i..wave_out_i];
+
+                        let timeline_offset = if region_offset >= state.scroll_x {
+                            region_offset - state.scroll_x
+                        } else { 0 };
 
                         let region_x = window.x + REGIONS_X + timeline_offset;
                         let region_y = window.y + 1 + TIMELINE_Y + 2 * region.track;
 
                         waveform::render(out, wave_slice, region_x, region_y)
                     },
-                    |action, id, state| match action {
-                        _ => Action::Noop,
+                    |action, id, mut state| match action {
                         Action::Right => { 
-                            let mut region = state.regions.get_mut(&id.1).unwrap();
-                            region.offset += (state.sample_rate/2);
+                            (*state.regions.get_mut(&id.1).unwrap()).offset
+                                += (state.sample_rate/2);
                             Action::MoveRegion(id.1, 0, 0) 
-                        }
+                        },
+                        _ => Action::Noop,
                     },
                     (FocusType::Region, **r_id));
 
@@ -282,7 +310,7 @@ impl Layer for Timeline {
             self.state.playhead,
             self.state.sample_rate,
             self.state.tempo,
-            self.state.zoom) as u16;
+            self.state.zoom);
 
         // print tempo
         out = ruler::render(out, REGIONS_X, 6, 
@@ -344,8 +372,21 @@ impl Layer for Timeline {
             _ => (self.state.focus, None)
         };
 
-        // Set focus, if the multifocus defaults, take no further action
+        let new_focus = &self.focii[focus.1][focus.0];
+
+        // Set state if the multifocus defaults, take no further action
+        match new_focus.r_id.0 {
+            FocusType::Region => { 
+                self.state.scroll_x = beat_offset(
+                    self.state.regions[&new_focus.r_id.1].offset,
+                    self.state.sample_rate,
+                    self.state.tempo,
+                    self.state.zoom)
+            },
+            _ => {}
+        }
         self.state.focus = focus;
+
         if let Some(_default) = default {
             match _default {
                 Action::Up | Action::Down => return _default,
