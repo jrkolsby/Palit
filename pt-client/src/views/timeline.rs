@@ -26,6 +26,7 @@ static TIMELINE_Y: u16 = 5;
 static SCROLL_R: u16 = 40;
 static SCROLL_L: u16 = 10;
 static ASSET_PREFIX: &str = "storage/";
+
 #[derive(Clone, Debug)]
 pub struct TimelineState {
     // Requires XML write/read
@@ -257,6 +258,11 @@ impl Timeline {
                         Action::Right => { 
                             (*state.regions.get_mut(&id.1).unwrap()).offset
                                 += (state.sample_rate/2);
+                            Action::MoveRegion(id.1, 0, 0) 
+                        },
+                        Action::Left => { 
+                            (*state.regions.get_mut(&id.1).unwrap()).offset
+                                -= (state.sample_rate/2);
                             Action::MoveRegion(id.1, 0, 0) 
                         },
                         _ => Action::Noop,
