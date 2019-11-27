@@ -166,14 +166,14 @@ pub fn event_loop<F: 'static>(
         midi_keys: NodeIndex,
         keys: NodeIndex,
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
-    where F: Fn(&mut Graph<[Output; CHANNELS], Module>, Action) -> Action {
+    where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) -> Action {
 
     // The callback we'll use to pass to the Stream. It will request audio from our dsp_graph.
     let callback = move |pa::OutputStreamCallbackArgs { buffer, time, .. }| {
 
         let ipc_actions: Vec<Action> = ipc_action(&ipc_in);
 
-        match ipc_dispatch(ipc_actions, keys, operator, &mut patch, &dispatch_f) {
+        match ipc_dispatch(ipc_actions, keys, operator, &mut patch, &mut dispatch_f) {
             Action::Exit => { return pa::Complete; },
             _ => {}
         }
@@ -387,23 +387,19 @@ fn ipc_dispatch<F: 'static>(
         keys: NodeIndex, 
         operator: NodeIndex, 
         patch: &mut Graph<[Output; CHANNELS], Module>,
-        root_dispatch: &F) -> Action 
+        root_dispatch: &mut F) -> Action 
 
-    where F: Fn(&mut Graph<[Output; CHANNELS], Module>, Action) -> Action {
+    where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) -> Action {
 
     for action in ipc_actions.iter() {
         match action {
             // Pass graph mutations to root_dispatch
-            Action::AddRoute(_, _, _, _) |
-            Action::DeleteRoute(_) |
-            Action::OpenProject(_) => {
-                root_dispatch(patch, action.clone());
-            }
             // Give action directly to indexed node
             Action::SetParam(nid, _, _) => {
                 // TODO: Make sure that node index exists!
                 // ... be careful when nodes are removed that the
-                // ... indicies are shifted accordingly
+                // ... indicies are shifted accordingly, or...
+                // ... don't ever remove nodes just disconnect them
                 let id = NodeIndex::new(*nid);
                 patch[id].dispatch(action.clone());
             },
@@ -415,7 +411,8 @@ fn ipc_dispatch<F: 'static>(
                 patch[operator].dispatch(action.clone());
             },
             Action::Exit => { return Action::Exit; },
-            _ => { println!("Unimplemented: {:?}", action);}
+            // Pass any other action to root
+            _ => { root_dispatch(patch, action.clone()); }
         };
     }
     Action::Noop
@@ -469,7 +466,7 @@ pub fn event_loop<F: 'static>(
         keys: NodeIndex,
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
 
-    where F: Fn(&mut Graph<[Output; CHANNELS], Module>, Action) -> Action {
+    where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) -> Action {
     
     // Get audio devices
     let (audio_dev, rate) = open_audio_dev()?;

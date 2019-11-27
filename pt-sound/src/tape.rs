@@ -82,7 +82,7 @@ pub fn compute(store: &mut Store) -> Output {
     z
 }
 
-pub fn read(mut doc: Element) -> Store {
+pub fn read(mut doc: Element) -> Option<Store> {
 
     let (mut doc, params) = param_map(doc);
     let (mut doc, marks) = mark_map(doc);
@@ -144,6 +144,8 @@ pub fn read(mut doc: Element) -> Store {
                 buffer: buf.clone(),
             });
         }
+    } else {
+        return None;
     }
 
     /*
@@ -159,5 +161,5 @@ pub fn read(mut doc: Element) -> Store {
     }
     */
     
-    return store;
+    return Some(store);
 }
