@@ -11,6 +11,8 @@ pub enum Action {
 
     AddRoute(u16),
 
+    AddModule(u16, String),
+
     PatchIn(u16, u16, u16),
     PatchOut(u16, u16, u16),
 

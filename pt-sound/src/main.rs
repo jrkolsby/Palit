@@ -125,6 +125,8 @@ fn main() -> Result<(), Box<error::Error>> {
     let mut operators: HashMap<u16, NodeIndex> = HashMap::new();
     let mut routes: HashMap<u16, NodeIndex> = HashMap::new();
 
+    routes.insert(0, master);
+
     event_loop(ipc_in, ipc_client, graph, operator, midi_keys, keys, move |mut patch, a| { 
         // ROOT DISPATCH
         match a {

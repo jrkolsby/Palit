@@ -21,8 +21,9 @@ pub fn render(mut out: RawTerminal<Stdout>,
     }
     let mut beat = 0;
     let _zoom = zoom as u16;
+    eprintln!("{}, {}", playhead, scroll);
     for i in 0..width {
-        if i+scroll == playhead {
+        if i == playhead-scroll {
             for j in 1..height {
                 write!(out, "{}|", cursor::Goto(origin_x+i, origin_y+j));
             }
