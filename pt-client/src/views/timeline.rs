@@ -185,7 +185,7 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                         return out;
                     } 
                     // Region appears to right of timeline
-                    else if asset_length_offset + region_offset > state.scroll_x + window.w {
+                    else if region_offset > state.scroll_x + window.w {
                         return out;
                     } 
 
@@ -229,11 +229,11 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                     },
                     Action::Up => { 
                         let r = state.regions.get(&id.1).unwrap();
-                        Action::MoveRegion(id.1, r.track+1, r.offset) 
+                        Action::MoveRegion(id.1, r.track-1, r.offset) 
                     },
                     Action::Down => { 
                         let r = state.regions.get(&id.1).unwrap();
-                        Action::MoveRegion(id.1, r.track-1, r.offset) 
+                        Action::MoveRegion(id.1, r.track+1, r.offset) 
                     },
                     _ => Action::Noop,
                 },
@@ -347,6 +347,8 @@ impl Layer for Timeline {
 
         let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
 
+        out = render_focii(out, win, self.state.focus.clone(), &self.focii, &self.state);
+
         // Print track numbers
         for (id, track) in self.state.tracks.iter() {
             let track_y: u16 = win.y + 1 + TIMELINE_Y + (id*2) as u16;
@@ -372,12 +374,7 @@ impl Layer for Timeline {
             self.state.scroll_x,
             playhead_offset);
 
-        out = render_focii(out, win, self.state.focus.clone(), &self.focii, &self.state);
-
-        write!(out, "{}", color::Bg(color::Reset)).unwrap();
-
         out.flush().unwrap();
-
         out
     }
     fn dispatch(&mut self, action: Action) -> Action {
@@ -421,9 +418,25 @@ impl Layer for Timeline {
                 },
                 _ => shift_focus(self.state.focus, &self.focii, Action::Right),
             },
-            Action::MoveRegion(_, _, _) => {
-                //self.focii = generate_focii(&self.state.tracks, &self.state.regions);
-                (self.state.focus, None)
+            Action::Deselect => {
+                // Get the red ID of the current focus, generate a new focii
+                // array based on the new tracks and regions, Then find the
+                // focus that shares the ID of our current focus, and return 
+                // that focus
+                let current_id = self.focii[self.state.focus.1][self.state.focus.0].r_id.clone();
+                self.focii = generate_focii(&self.state.tracks, &self.state.regions);
+                let mut new_focus: (usize, usize) = self.state.focus;
+
+                'search: for (j, col) in self.focii.iter().enumerate() {
+                    for (i, focus) in col.iter().enumerate() {
+                        if focus.r_id == current_id {
+                            new_focus = (i,j);
+                            break 'search;
+                        }
+                    }
+                }
+
+                (new_focus, None)
             },
             _ => (self.state.focus, None)
         };

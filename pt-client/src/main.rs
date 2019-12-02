@@ -9,7 +9,7 @@ use std::ffi::CString;
 
 use std::collections::VecDeque;
 
-use termion::{clear, cursor, terminal_size};
+use termion::{clear, color, cursor, terminal_size};
 use termion::raw::{IntoRawMode, RawTerminal};
 
 // NOTE: These need to be here
@@ -21,7 +21,7 @@ mod modules;
 use views::{Layer, Home, Timeline, Help, Title, Piano, Routes};
 use modules::{read_document};
 
-use common::{Action};
+use common::Action;
 
 fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<(u16, Box<Layer>)>) -> RawTerminal<Stdout> {
     /*
@@ -241,7 +241,7 @@ fn main() -> std::io::Result<()> {
         }
 
         // Clears screen
-        write!(stdout, "{}", clear::All).unwrap();
+        write!(stdout, "{}{}", color::Bg(color::Reset), clear::All).unwrap();
         stdout.flush().unwrap();
 
         // Renders layers

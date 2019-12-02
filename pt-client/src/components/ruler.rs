@@ -1,7 +1,6 @@
 use termion::raw::{RawTerminal};
 use termion::{cursor};
 use std::io::{Write, Stdout};
-use crate::common::{Color, write_fg, write_bg};
 
 const WIDTH: u16 = 10;
 const HEIGHT: u16 = 3;
@@ -27,9 +26,6 @@ pub fn render(mut out: RawTerminal<Stdout>,
             for j in 1..height {
                 write!(out, "{}|", cursor::Goto(origin_x+i, origin_y+j));
             }
-            out = write_fg(out, Color::Red);
-        } else {
-            out = write_fg(out, Color::White);
         }
         if i % _zoom == 0 {
             let glyph = if (beat+scroll+1) % time_beat as u16 == 0 { "!" } else { "." };

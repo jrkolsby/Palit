@@ -40,21 +40,21 @@
             <param value="4" name="time_beat" />
             <param value="4" name="time_note" />
             <param value="127" name="bpm" />
-            <asset id="0" size="960000" src="/usr/local/palit/assets/Who.wav" />
+            <asset id="0" size="1488000" src="/usr/local/palit/assets/Who.wav" />
+            <asset id="1" size="336000" src="/usr/local/palit/assets/Loop.wav" />
+            <asset id="2" size="1728000" src="/usr/local/palit/assets/Keyboard.wav" />
             <track id="1" output="2" input="2">
-                <region id="1" asset="0" in="0" out="48000" offset="4800" />
-                <region id="2" asset="0" in="0" out="48000" offset="6400" />
-                <region id="3" asset="0"  in="0" out="48000" offset="8000" />
+		<region id="1" asset="0" in="0" out="1488000" offset="0" />
+		<region id="2" asset="2" in="0" out="148800" offset="1808000" />
             </track>
             <track id="2" output="3" input="3">
-                <region id="4" asset="0" in="0" out="48000" offset="0" />
-                <region id="5" asset="0" in="0" out="48000" offset="1600" />
-                <region id="6" asset="0"  in="0" out="48000" offset="3200" />
+		<region id="4" asset="1" in="0" out="336000" offset="0" />
+		<region id="3" asset="2" in="0" out="148800" offset="1808000" />
+		<region id="8" asset="0" in="0" out="1488000" offset="80000" />
             </track>
             <track id="3" output="4" input="4">
-                <region id="7" asset="0" in="0" out="48000" offset="9600" />
-                <region id="8" asset="0" in="0" out="48000" offset="11200" />
-                <region id="9" asset="0"  in="0" out="48000" offset="12800" />
+		<region id="7" asset="2" in="0" out="1728000" offset="0" />
+		<region id="5" asset="2" in="0" out="708800" offset="1808000" />
             </track>
         </timeline>
 
