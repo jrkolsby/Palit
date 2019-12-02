@@ -16,7 +16,7 @@ pub enum Action {
     Route,
     Instrument,
     Undo,
-    Do,
+    Redo,
     Shift,
     Back,
     Save,
@@ -33,15 +33,23 @@ pub enum Action {
     Help,
     Tick,
     Exit,
+    Deselect,
 
     NoteOn(u16, f32),
     NoteOff(u16),
+    SetParam(u16, f32),
+    PatchIn(u16, u16), // route id, input id
+    PatchOut(u16, u16), // route id, output id
+    MoveRegion(u16, u16, u32), // module id, region id, offset
+    Solo(u16),
+    Record(u16),
+    Mute(u16),
 
-    // ABSTRACT ACTIONS
+    // Default actions
     OpenProject(String),
     CreateProject(String),
     Pepper,
     InputTitle,
-
     Noop,
 }
+

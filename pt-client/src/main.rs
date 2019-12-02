@@ -9,19 +9,21 @@ use std::ffi::CString;
 
 use std::collections::VecDeque;
 
-use termion::{clear, cursor, terminal_size};
+use termion::{clear, color, cursor, terminal_size};
 use termion::raw::{IntoRawMode, RawTerminal};
 
 // NOTE: These need to be here
 mod views;
 mod common;
 mod components; 
+mod modules;
 
 use views::{Layer, Home, Timeline, Help, Title, Piano, Routes};
+use modules::{read_document};
 
-use common::{Action};
+use common::Action;
 
-fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<Box<Layer>>) -> RawTerminal<Stdout> {
+fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<(u16, Box<Layer>)>) -> RawTerminal<Stdout> {
     /*
         LAYERS:
         4:   ---    <- End render here
@@ -33,12 +35,12 @@ fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<Box<Layer>>) -> Raw
     // Determine bottom layer
     if layers.len() == 0 { return stdout; }
     let mut bottom = layers.len()-1;
-    for layer in (*layers).iter().rev() {
+    for (id, layer) in (*layers).iter().rev() {
         if layer.alpha() { bottom -= 1 }
         else { break }
     };
     for i in bottom..(*layers).len() {
-        stdout = layers[i].render(stdout);
+        stdout = layers[i].1.render(stdout);
     }
     stdout
 }
@@ -83,6 +85,8 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
 
             "EXIT" => Action::Exit,
 
+            "DESELECT" => Action::Deselect,
+
             _ => { Action::Noop },
         };
 
@@ -94,6 +98,10 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
 
     events
 }
+fn add_layer(a: &mut VecDeque<(u16, Box<Layer>)>, b: Box<Layer>, id: u16) {
+    a.push_back((id, b));
+}
+
 fn main() -> std::io::Result<()> {
 
     // Public action fifo /tmp/pt-client
@@ -128,10 +136,14 @@ fn main() -> std::io::Result<()> {
     let size: (u16, u16) = terminal_size().unwrap();
 
     // Configure UI layers
-    let mut layers: VecDeque<Box<Layer>> = VecDeque::new();
-    layers.push_back(Box::new(Home::new(1, 1, size.0, size.1)));
-    layers.push_back(Box::new(Piano::new(20, 1, size.0/2, size.1/2)));
-    layers.push_back(Box::new(Routes::new(1, 1, 4, size.1)));
+    let mut layers: VecDeque<(u16, Box<Layer>)> = VecDeque::new();
+
+    add_layer(&mut layers, Box::new(Home::new(1, 1, size.0, size.1)), 0);
+
+    /*
+    add_layer(&mut layers, Box::new(Piano::new(5, 10, size.0/2, size.1/2)));
+    add_layer(&mut layers, Box::new(Routes::new(1, 1, 4, size.1)));
+    */
 
     // Hide cursor and clear screen
     write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
@@ -160,23 +172,23 @@ fn main() -> std::io::Result<()> {
             // Execute toplevel actions, capture default from view
             let default: Action = match next {
                 Action::Help => { 
-                    layers.push_back(Box::new(Help::new(10, 10, 44, 15))); 
+                    add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15)), 0); 
                     Action::Noop
                 },
-                Action::Back => { 
+                Action::Exit => { 
+                    break 'event;
+                },
+                Action::Back => {
                     if let Some(current) = layers.pop_front() {
                         layers.push_back(current);
                     }
                     Action::Noop
-                }, 
-                Action::Exit => { 
-                    break 'event;
                 },
                 // Dispatch toplevel action to front layer
                 a => {
                     let target_i = (layers.len() as i16)-1;
                     if target_i >= 0 {
-                        let target = layers.get_mut(target_i as usize).unwrap();
+                        let (id, target) = layers.get_mut(target_i as usize).unwrap();
                         target.dispatch(a)
                     } else {
                         Action::Noop
@@ -187,19 +199,37 @@ fn main() -> std::io::Result<()> {
             // capture default action if returned from layer
             match default {
                 Action::InputTitle => {
-                    layers.push_back(Box::new(Title::new(23, 5, 36, 23)));
+                    add_layer(&mut layers, Box::new(Title::new(23, 5, 36, 23)), 0);
                 },
+                /*
                 Action::CreateProject(title) => {
                     ipc_sound.write(format!("NEW_PROJECT:{} ", title).as_bytes());
-                    layers.push_back(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
+                    add_layer(&mut layers, Box::new(Timeline::new(1, 1, size.0, size.1, title)));
                 },
+                */
                 Action::OpenProject(title) => {
                     ipc_sound.write(format!("OPEN_PROJECT:{} ", title).as_bytes());
-                    layers.push_back(Box::new(Timeline::new(1, 1, size.0, size.1, title)));
+                    let doc = read_document(title);
+                    for (id, el) in doc.modules.iter() {
+                        match &el.name[..] {
+                            "timeline" => add_layer(&mut layers, 
+                                Box::new(Timeline::new(1, 1, size.0, size.1, (*el).to_owned())), *id),
+                            _ => {}
+                        }
+                    }
                 },
-                Action::Back => { layers.pop_back(); }, 
+                Action::Up | Action::Left => {
+                    if let Some(current) = layers.pop_front() {
+                        layers.push_back(current);
+                    }
+                }, 
+                Action::Down | Action::Right => {
+                    if let Some(current) = layers.pop_back() {
+                        layers.push_front(current);
+                    }
+                }, 
                 Action::Pepper => {
-                    layers.push_back(Box::new(Help::new(10, 10, 44, 15))); 
+                    add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15)), 0); 
                 },
                 /*
                 Action::Error(message) => {
@@ -211,7 +241,7 @@ fn main() -> std::io::Result<()> {
         }
 
         // Clears screen
-        write!(stdout, "{}", clear::All).unwrap();
+        write!(stdout, "{}{}", color::Bg(color::Reset), clear::All).unwrap();
         stdout.flush().unwrap();
 
         // Renders layers

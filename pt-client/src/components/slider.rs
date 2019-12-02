@@ -1,20 +1,22 @@
 use termion::raw::{RawTerminal};
-use termion::{color, cursor};
+use termion::{cursor};
 
 use std::io::{Write, Stdout};
 
-use crate::common::Direction;
+use crate::common::{Direction};
 
-pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16, title: String, mut len: i16, dir: Direction) -> RawTerminal<Stdout> {    
+pub fn render(mut out: RawTerminal<Stdout>, 
+    x: u16, 
+    y: u16, 
+    title: String, 
+    mut len: i16, 
+    dir: Direction) -> RawTerminal<Stdout> 
+{    
+    write!(out, "{}{}", cursor::Goto(x, y+1), title).unwrap();
     let _x: i16 = x as i16;
     let _y: i16 = y as i16;
     let mut dx: i16 = 0;
     let mut dy: i16 = 0;
-    write!(out, "{}{}{}{}",
-        cursor::Goto(x as u16, (y+1) as u16),
-        color::Fg(color::White),
-        color::Bg(color::Reset),
-        title).unwrap();
     let ticks_per_char = match dir {
         Direction::East | Direction::West => 2,
         _ => 4,
@@ -46,9 +48,8 @@ pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16, title: String, mut l
                             [0][1],
     };
     while len >= ticks_per_char {
-        write!(out, "{}{}{}",
+        write!(out, "{}{} ",
             cursor::Goto((_x+dx) as u16, (_y+dy) as u16),
-            color::Fg(color::White),
             glyph).unwrap();
         dx = match dir {
             Direction::North |
@@ -118,9 +119,8 @@ pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16, title: String, mut l
                             [0][l2]
                             [0][l3],
     };
-    write!(out, "{}{}{}",
+    write!(out, "{}{} ",
         cursor::Goto((_x+dx) as u16, (_y+dy) as u16),
-        color::Fg(color::White),
         over_glyph).unwrap();
     out
 }

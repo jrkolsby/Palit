@@ -1,4 +1,3 @@
-use dsp::{NodeIndex, EdgeIndex};
 use crate::core::{Offset, Volume, Key};
 
 #[derive(Debug, Clone)]
@@ -10,8 +9,14 @@ pub enum Action {
     Octave(bool), 
     Volume(bool), 
 
-    AddRoute(NodeIndex, u8, NodeIndex, u8),
-    DeleteRoute(EdgeIndex),
+    AddRoute(u16),
+
+    AddModule(u16, String),
+
+    PatchIn(u16, u16, u16),
+    PatchOut(u16, u16, u16),
+
+    DeleteRoute(u16),
 
     // ABSTRACT ACTIONS
     OpenProject(String),
@@ -26,6 +31,9 @@ pub enum Action {
     SetParam(usize, u32, i32),
 
     Arm(Offset),
+
+    MoveRegion(u16, u16, u16, u16), // Module ID, region ID, new track, new offset
+
 
     Play,
     Stop,

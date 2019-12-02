@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE notedoc>
+
+<nd>
+    <meta title="Baseball Sucks" />
+    <format samplerate="48000" bitrate="12"/>
+    <tempo bpm="127" beat="4" note="4" />
+    <duration measure="10" beat="4" />
+    <assets>
+	<asset size="130000" id="a1" src="/usr/local/palit/assets/Keyboard.wav" />
+	<asset size="130000" id="a2" src="/usr/local/palit/assets/Loop.wav" />
+	<asset size="130000" id="a3" src="/usr/local/palit/assets/Who.wav" />
+    </assets>
+    <tracks>
+		<track id="t1" color="yellow">
+			<region id="r1" asset="a1" offset="48000" in="0" out="480000" />
+			<region id="r2" asset="a2" offset="1800000" in="0" out="960000" />
+			<region id="r3" asset="a3" offset="130000" in="0" out="800000"/>
+		</track>
+    </tracks>
+</nd>

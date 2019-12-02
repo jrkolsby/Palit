@@ -57,11 +57,12 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 - [ ] INF-5: Unicode Support in linux TTY with KMSCON
 
+- [X] UI-20: Refactor components to be color-independent
 - [ ] UI-3: Keyboard display with feedback for keypress events
-- [ ] UI-10: Render partial waveforms
+- [X] UI-10: Render partial waveforms
 - [ ] UI-13: Synth view
-- [ ] UI-18: Routes view
-- [ ] UI-19: Timeline editing
+- [X] UI-18: Routes view
+- [X] UI-19: Timeline editing
 
 ### JANUARY 1
 

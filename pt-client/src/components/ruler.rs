@@ -1,6 +1,5 @@
 use termion::raw::{RawTerminal};
-use termion::{color, cursor};
-
+use termion::{cursor};
 use std::io::{Write, Stdout};
 
 const WIDTH: u16 = 10;
@@ -19,26 +18,22 @@ pub fn render(mut out: RawTerminal<Stdout>,
     if scroll == 0 {
         write!(out, "{}{{{{", cursor::Goto(origin_x-2, origin_y)).unwrap()
     }
+    let mut beat = 0;
+    let _zoom = zoom as u16;
+    eprintln!("{}, {}", playhead, scroll);
     for i in 0..width {
-        let beat = if (i+scroll+1) % time_beat as u16 == 0 { "!" } else { "." };
-        let space = {
-            let mut a: String = " ".to_string();
-            for _i in 0..zoom {
-                a = format!("{}{}", a, a).to_string();
-            }
-            a
-        };
-        if i+scroll == playhead {
-            for j in 0..height {
+        if i == playhead-scroll {
+            for j in 1..height {
                 write!(out, "{}|", cursor::Goto(origin_x+i, origin_y+j));
             }
-            write!(out, "{}", color::Fg(color::Red));
-        } else {
-            write!(out, "{}", color::Fg(color::White));
         }
-        write!(out, "{}{}{}",
-            cursor::Goto(origin_x+i, origin_y),
-            beat, space).unwrap()
+        if i % _zoom == 0 {
+            let glyph = if (beat+scroll+1) % time_beat as u16 == 0 { "!" } else { "." };
+            write!(out, "{}{}",
+                cursor::Goto(origin_x+i, origin_y),
+                glyph).unwrap();
+            beat += 1;
+        }
     }
     out
 }

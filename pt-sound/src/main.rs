@@ -7,12 +7,13 @@ use std::{iter, error};
 use std::fs::{OpenOptions, File};
 use std::os::unix::fs::OpenOptionsExt;
 use std::io::prelude::*;
+use std::collections::HashMap;
 
 use sample::signal;
 
 use wavefile::{WaveFile, WaveFileIterator};
 
-use dsp::{sample::ToFrameSliceMut, Frame, FromSample, Graph, Node, Sample, Walker};
+use dsp::{NodeIndex, Frame, FromSample, Graph, Node, Sample, Walker};
 
 mod core;
 mod midi;
@@ -21,8 +22,11 @@ mod tape;
 mod action;
 mod chord;
 mod arpeggio;
+mod document;
 
 use crate::core::{event_loop, Module, Frequency};
+use crate::document::{Document, read_document};
+use crate::action::Action;
 
 const A5_HZ: Frequency = 440.0;
 const D5_HZ: Frequency = 587.33;
@@ -62,10 +66,13 @@ fn main() -> Result<(), Box<error::Error>> {
     let operator = graph.add_node(Module::Passthru(vec![]));
     let octave = graph.add_node(Module::Octave(vec![], 4));
 
-    let tape = graph.add_node(Module::Tape(tape::init()));
+    // Pasting some useful stuff here
+
+    /*
     let synth = graph.add_node(Module::Synth(synth::init()));
     let chord_gen = graph.add_node(Module::Chord(chord::init()));
     let arpeggio = graph.add_node(Module::Arpeggio(arpeggio::init()));
+    */
 
     // Connect keys -> octave -> chord_gen -> synth -> master
     /*
@@ -76,6 +83,7 @@ fn main() -> Result<(), Box<error::Error>> {
     graph.add_connection(tape, master);
     */
 
+    /*
     graph.add_connection(keys, octave);
     graph.add_connection(octave, arpeggio);
 
@@ -90,8 +98,7 @@ fn main() -> Result<(), Box<error::Error>> {
 
     // Set the master node for the graph.
     graph.set_master(Some(master));
-
-    // Pasting some useful stuff here
+    */
 
     /*
     // Connect a few oscillators to the synth.
@@ -115,5 +122,46 @@ fn main() -> Result<(), Box<error::Error>> {
     }
     */
 
-    event_loop(ipc_in, ipc_client, graph, operator, midi_keys, keys, |a| { a })
+    let mut operators: HashMap<u16, NodeIndex> = HashMap::new();
+    let mut routes: HashMap<u16, NodeIndex> = HashMap::new();
+
+    routes.insert(0, master);
+
+    event_loop(ipc_in, ipc_client, graph, operator, midi_keys, keys, move |mut patch, a| { 
+        // ROOT DISPATCH
+        match a {
+            Action::AddRoute(r_id) => {
+                let route = patch.add_node(Module::Passthru(vec![]));
+                routes.insert(r_id, route);
+                Action::Noop
+            },
+            Action::OpenProject(name) => {
+                *patch = Graph::new();
+                let doc = read_document(name);
+                for (id, el) in doc.modules.iter() {
+                    match &el.name[..] {
+                        "timeline" => {
+                            let operator = patch.add_node(Module::Passthru(vec![]));
+                            while let Some(store) = tape::read(el.to_owned()) {
+                                let tape = patch.add_node(Module::Tape(store));
+                                patch.add_connection(operator, tape);
+                            }
+                            operators.insert(*id, operator);
+                        },
+                        _ => {}
+                    }
+                }
+                Action::Noop
+            },
+            Action::MoveRegion(m_id, r_id, track, offset) => {
+                if let Some(n_id) = operators.get(&m_id) {
+                    if let Some(node) = patch.node_mut(*n_id) {
+                        node.dispatch(a)
+                    }
+                }
+                return Action::Noop
+            },
+            _ => { eprintln!("unimplemented: {:?}", a); Action::Noop }
+        }
+    })
 }

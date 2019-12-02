@@ -79,7 +79,7 @@ impl Layer for Title {
         write!(out, "{}{}{}  clear  ", cursor::Goto(self.x+24, self.y+18), color::Bg(color::Yellow), color::Fg(color::Black)).unwrap();
         write!(out, "{}{}{}  .xml  ", cursor::Goto(self.x+24, self.y+20), color::Bg(color::Green), color::Fg(color::Black)).unwrap();
 
-        out = button::render(out, self.x+2, self.y+18, 20, "Create", Color::Red, true);
+        out = button::render(out, self.x+2, self.y+18, 20, "Create");
 
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
 

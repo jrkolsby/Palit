@@ -1,0 +1,34 @@
+CLIENT->SOUND
+    SOUND->CLIENT
+
+NEW_PROJECT:funstuff.txt 
+
+MODULE:TIMELINE
+    OPERATOR:1 // Returns the Node Index of the new module's operator
+    
+FOCUS:1 // All input until the next FOCUS action should go to this operator
+
+TRACK:MIDI
+    ROUTE:0 // Declares a new route exists
+
+MODULE:INST
+    OPERATOR:10
+    ROUTE:1:out
+    ROUTE:2:keys
+
+FOCUS:10
+PARAM:0:0.144
+
+PATCH:0:2 // Connect midi track to instrument keys
+
+FOCUS:1
+
+TRACK:AUDIO
+    ROUTE:3
+
+PATCH:1:3 // Connect keyboard output to 
+
+MODULE:ARPEGGIO
+    OPERATOR:20
+    ROUTE:2
+

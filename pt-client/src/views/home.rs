@@ -123,10 +123,7 @@ impl Layer for Home {
     out = logo::render(out, self.x, self.y);
 
 	// New Button
-	out = button::render(out, self.x + 10, self.y + 10, 17, 
-        "New Project", Color::Red, self.state.focus == 0);
-
-    out = slider::render(out, self.x, self.y+10, "SLIDER".to_string(), 10, Direction::East);
+	out = button::render(out, self.x + 10, self.y + 10, 17, "New Project");
 
 	// Project Listing
 	let mut col: [u16; 2] = [4,4];
@@ -194,9 +191,12 @@ impl Layer for Home {
                 } else { Action::Noop }
             },
             Action::Up => { 
-                if self.state.focus == 2 { Action::Pepper } else { Action::Noop }
+                if self.state.focus == 2 { Action::Up } else { Action::Noop }
             },
-            _ => Action::Noop
+            Action::Down => {
+                if self.state.focus == 0 { Action::Down } else { Action::Noop }
+            },
+            _ => Action::Noop,
         }
     }
     fn undo(&mut self) {
