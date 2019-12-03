@@ -33,6 +33,20 @@ pub fn mark_map(mut doc: Element) -> (Element, HashMap<String, Offset>) {
     return (doc, marks);
 }
 
+pub fn param_add<T>(el: &mut Element, value: T, name: String) 
+    where T: std::string::ToString {
+    let mut param = Element::new("param");
+    param.attributes.insert("value".to_string(), value.to_string());
+    param.attributes.insert("name".to_string(), name);
+}
+
+pub fn mark_add<T>(el: &mut Element, value: T, name: String) 
+    where T: std::string::ToString {
+    let mut param = Element::new("mark");
+    param.attributes.insert("value".to_string(), value.to_string());
+    param.attributes.insert("name".to_string(), name);
+}
+
 pub fn read_document(filename: String) -> Document {
 
     let doc_path: String = format!("{}{}", PALIT_ROOT, filename);

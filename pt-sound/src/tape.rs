@@ -10,12 +10,14 @@ use wavefile::{WaveFile, WaveFileIterator};
 
 use crate::core::{SF, SigGen, Output};
 use crate::action::Action;
-use crate::document::{param_map, mark_map};
+use crate::document::{param_map, param_add, mark_map, mark_add};
 
 pub struct Region {
     pub buffer: Vec<Output>,
     pub offset: u32,
     pub duration: u32,
+    pub asset_in: u32,
+    pub asset_out: u32,
     pub gain: f32,
 }
 
@@ -82,23 +84,35 @@ pub fn compute(store: &mut Store) -> Output {
     z
 }
 
+pub fn write(s: Store, doc: Option<Element>) -> Element {
+    let mut el = Element::new("timeline");
+
+    param_add(&mut el, s.bpm, "bpm".to_string());
+    param_add(&mut el, s.time_beat, "time_beat".to_string());
+    param_add(&mut el, s.time_note, "time_note".to_string());
+
+    mark_add(&mut el, s.loop_in, "loop_in".to_string());
+    mark_add(&mut el, s.loop_out, "loop_out".to_string());
+    mark_add(&mut el, s.duration, "seq_out".to_string());
+    mark_add(&mut el, 0, "seq_in".to_string());
+
+    /*
+    Element::new("asset")
+    Element::new("track")
+        Element::new("region")
+        */
+    el 
+}
+
 pub fn read(mut doc: Element) -> Option<Store> {
 
     let (mut doc, params) = param_map(doc);
     let (mut doc, marks) = mark_map(doc);
 
-    let mut wav_f = WaveFile::open("Who.wav").unwrap();
-    let mut wav_iter = wav_f.iter();
-    let mut buf: Vec<f32> = Vec::new();
-    while let Some(s) = wav_iter.next() {
-        // TODO: int to float sample conversion
-        buf.push(s[0] as f32 * 0.0000001);
-    };
-
     let mut store =  Store {
         bpm: *params.get("bpm").unwrap() as u16,
         duration: (*marks.get("seq_out").unwrap() - 
-                  *marks.get("seq_in").unwrap()),
+                   *marks.get("seq_in").unwrap()),
         time_beat: *params.get("time_beat").unwrap() as usize,
         time_note: *params.get("time_note").unwrap() as usize,
         loop_on: false,
@@ -106,21 +120,15 @@ pub fn read(mut doc: Element) -> Option<Store> {
         loop_out: *marks.get("loop_out").unwrap(),
         playhead: 0,
         playing: false,
-        regions: vec![
-            Region {
-                offset: 100,
-                gain: 1.0,
-                duration: 480000,
-                buffer: buf.clone(),
-            },
-            Region {
-                gain: 1.0,
-                offset: 1320000,
-                duration: 480000,
-                buffer: buf.clone(),
-            }
-        ],
+        regions: vec![],
     };
+
+    let mut assets: HashMap<u16, Element> = HashMap::new();
+
+    while let Some(asset) = doc.take_child("asset") {
+        let a_id: &str = asset.attributes.get("id").unwrap();
+        assets.insert(a_id.parse().unwrap(), asset);
+    }
 
     // Only take one track 
     if let Some(mut track) = doc.take_child("track") {
@@ -137,29 +145,41 @@ pub fn read(mut doc: Element) -> Option<Store> {
             let a_in: &str = region.attributes.get("in").unwrap();
             let a_out: &str = region.attributes.get("out").unwrap();
 
+            let _a_id: u16 = a_id.parse().unwrap();
+            let _a_in: u32 = a_in.parse().unwrap();
+            let _a_out: u32 = a_out.parse().unwrap();
+
+            let mut buffer: Vec<f32> = vec![];
+
+            if let Some(asset) = assets.remove(&_a_id) {
+                let src: &str = asset.attributes.get("src").unwrap();
+                let duration: &str = asset.attributes.get("size").unwrap();
+
+                let mut wav_f = WaveFile::open("Who.wav").unwrap();
+                let mut wav_iter = wav_f.iter();
+
+                buffer = wav_iter.map(|f| f[0] as f32 * 0.0000001).collect();
+
+            } else {
+                panic!("No such asset! {}", a_id);
+            }
+
             store.regions.push(Region {
-                offset: 100,
+                offset: offset.parse().unwrap(),
                 gain: 1.0,
-                duration: 480000,
-                buffer: buf.clone(),
+                duration: _a_out - _a_in,
+                asset_in: _a_in,
+                asset_out: _a_out,
+                buffer,
             });
         }
     } else {
         return None;
     }
 
-    /*
-    while let Some(asset) = doc.take_child("asset") {
-        let a_id: &str = asset.attributes.get("id").unwrap();
-        let duration: &str = asset.attributes.get("size").unwrap();
-        state.assets.insert(a_id.parse::<u16>().unwrap(), Asset {
-            src: asset.attributes.get("src").unwrap().parse().unwrap(),
-            duration: duration.parse().unwrap(),
-            channels: 2,
-            waveform: vec![],
-        });
+    for (id, asset) in assets.drain() {
+        doc.children.push(asset);
     }
-    */
-    
+
     return Some(store);
 }

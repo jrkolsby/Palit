@@ -12,11 +12,11 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 ## Sprints
 
 ### OCTOBER 1
+
 - [X] SOUND-1: build a dsp file
 - [X] SOUND-2: Implement play and stop to ALSA output
 - [X] SOUND-5: Multitrack mixing
 - [X] SOUND-6: Receive Midi events in pt-sound
-- [ ] SOUND-7: Send midi events from pt-client
 
 - [X] UI-1: Display the splash graphic
 - [X] UI-2: Splash screen with project listings
@@ -48,39 +48,56 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 ### DECEMBER 1
 
-- [ ] SOUND-3: Faust synth output from keyboard MIDI
-- [ ] SOUND-4: Recording from ALSA input
+- [X] UI-20: Refactor components to be color-independent
+- [X] UI-10: Render partial waveforms
+- [X] UI-18: Routes view
+- [X] UI-19: Timeline editing
+
+### JANUARY 1 2020
+
 - [ ] SOUND-10: Midi Tape
 - [ ] SOUND-13: Timeline looping
 - [ ] SOUND-14: Timeline editing
 - [ ] SOUND-15: Timeline XML save/load
 
+### FEBRUARY 1 2020
+
 - [ ] INF-5: Unicode Support in linux TTY with KMSCON
 
-- [X] UI-20: Refactor components to be color-independent
-- [ ] UI-3: Keyboard display with feedback for keypress events
-- [X] UI-10: Render partial waveforms
-- [ ] UI-13: Synth view
-- [X] UI-18: Routes view
-- [X] UI-19: Timeline editing
+- [ ] UI-17: Add module modal
+- [ ] UI-21: Add route, patch io
 
-### JANUARY 1
+- [ ] SOUND-20: Import audio file to timeline
 
+### MARCH 1 ( v1.0 )
+
+- [ ] SOUND-3: Faust synth compilation
+- [ ] SOUND-4: ALSA input module
+- [ ] SOUND-19: Timeline recording
+
+- [ ] INF-10: Faust UI generation
+
+### APRIL 1
+
+- [ ] UI-14: Network setup
+- [ ] SOUND-18: Radio module and directory API
+
+### MAY 1
+
+- [ ] SOUND-7: Send midi events from pt-client
 - [ ] SOUND-8: Fix audio underruns
 - [ ] SOUND-16: VST audio host (Steinberg API)
 - [ ] SOUND-17: VST client host (XML UI to text layout)
 
 - [ ] UI-7: Loading screen
 - [ ] UI-12: Error Screen
-- [ ] UI-14: Network setup
 - [ ] UI-15: Keyboard setup
-- [ ] UI-16: Add track modal
-- [ ] UI-17: Select instrument modal
 
 - [ ] HARD-3: Purchase functional android phone
-- [ ] HARD-4: Replace laptop sreen with android phone
+- [ ] HARD-4: Replace laptop sreen with android phone replacement screen
 - [ ] HARD-5: Document undetectable keybed note combinations and map to chords
 - [ ] HARD-6: Determine a set of keys which require redundant connections to unused keys in order to maximize chord combinations for the top (polyphonic) keybed.
+- [ ] HARD-7: Encoder usage with function keys
 
 - [ ] DG-3: Paint four function keys
 - [ ] DG-5: Paint laptop casing and general keys CLASSIC BEIGE
