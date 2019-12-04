@@ -71,12 +71,6 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
     let void_transform: fn(Action, ID, &mut TimelineState) -> Action = 
         |action, id, state| Action::Noop;
 
-    let record_id: ID = (FocusType::Button, 0);
-    let record_render: fn(RawTerminal<Stdout>, Window, ID, &TimelineState, bool) -> RawTerminal<Stdout> = 
-        |mut out, window, id, state, focus| button::render(out, 2, 3, 56, "RECORD");
-    let record_transform: fn(Action, ID, &mut TimelineState) -> Action = 
-        |a, id, _| match a { Action::SelectR => Action::Record(id.1), _ => Action::Noop };
-
     /* TIMELINE LAYOUT
     Rec, In, loop In, loop Out, Out
     */
@@ -86,13 +80,17 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
             w: |mut out, window, id, state, focus| out,
             w_id: void_id.clone(),
 
-            r_id: record_id.clone(),
-            r: record_render,
-            r_t: |action, id, state| action,
+            r_id: (FocusType::Button, 0),
+            r: |mut out, window, id, state, focus| 
+                button::render(out, 2, 2, 20, "RECORD"),
+            r_t: |a, id, _| match a { 
+                Action::SelectR => Action::Record(id.1), 
+                _ => Action::Noop 
+            },
 
             g_id: (FocusType::Button, 1),
             g: |mut out, window, id, state, focus|
-                button::render(out, 60, 3, 19, "IMPORT"),
+                button::render(out, 24, 2, 19, "IMPORT"),
             g_t: |action, id, state| action,
             
             y_id: (FocusType::Param, 0),
@@ -210,7 +208,25 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
 
                 waveform::render(out, wave_slice, region_x, region_y)
             }, 
-            r: void_render, 
+            r: |mut out, window, id, state, focus| {
+                if focus {
+                    let region = state.regions.get(&id.1).unwrap();
+
+                    let region_offset = beat_offset(region.offset,
+                        state.sample_rate, state.tempo, state.zoom);
+
+                    let timeline_offset = if region_offset >= state.scroll_x {
+                        region_offset - state.scroll_x
+                    } else { 0 };
+
+                    let region_x = window.x + 7 + REGIONS_X + timeline_offset;
+                    let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
+
+                    write!(out, "{} TRIM ",
+                        cursor::Goto(region_x, region_y));
+                }
+                out
+            },
             r_t: void_transform,
             r_id: void_id.clone(),
             g: |mut out, window, id, state, focus| {
@@ -227,7 +243,7 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                     let region_x = window.x + REGIONS_X + timeline_offset;
                     let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
 
-                    write!(out, "{}MOVE",
+                    write!(out, "{} MOVE ",
                         cursor::Goto(region_x, region_y));
                 }
 
@@ -255,7 +271,26 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                 _ => Action::Noop,
             },
             g_id: void_id.clone(),
-            y: void_render, 
+            y: |mut out, window, id, state, focus| {
+                if focus {
+                    let region = state.regions.get(&id.1).unwrap();
+
+                    let region_offset = beat_offset(region.offset,
+                        state.sample_rate, state.tempo, state.zoom);
+
+                    let timeline_offset = if region_offset >= state.scroll_x {
+                        region_offset - state.scroll_x
+                    } else { 0 };
+
+                    let region_x = window.x + 14 + REGIONS_X + timeline_offset;
+                    let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
+
+                    write!(out, "{} SPLIT ",
+                        cursor::Goto(region_x, region_y));
+                }
+
+                out
+            }, 
             y_t: void_transform,
             y_id: void_id.clone(),
             p: void_render, 

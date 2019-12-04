@@ -193,6 +193,12 @@ impl<T> MultiFocus<T> {
             out = write_fg(out, Color::White); 
             out = write_bg(out, Color::Black); 
             out = (self.w)(out, window, self.w_id.clone(), state, focused);
+            out = write_fg(out, Color::Black); 
+            if full_red { out = write_bg(out, Color::Red) };
+            if full_green { out = write_bg(out, Color::Green) };
+            if full_yellow { out = write_bg(out, Color::Yellow) };
+            if full_pink { out = write_bg(out, Color::Pink) };
+            if full_blue { out = write_bg(out, Color::Blue) };
         } else {
             out = (self.w)(out, window, self.w_id.clone(), state, focused);
         }
