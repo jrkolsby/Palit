@@ -71,12 +71,12 @@ impl Piano {
             state: initial_state,
             focii: vec![vec![
                 MultiFocus::<PianoState> {
-                    r: |mut out, window, id, state| {
+                    r: |mut out, window, id, state, focus| {
                         button::render(out, window.x+2, window.y+16, 20, "Record")
                     },
                     r_t: |action, id, state| { action },
                     r_id: (FocusType::Button, 0),
-                    g: |mut out, window, id, state| {
+                    g: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+8, window.y+5, "20Hz".to_string(), 
                             state.eq_mid, Direction::North)
                     },
@@ -86,7 +86,7 @@ impl Piano {
                         _ => Action::Noop
                     },
                     g_id: (FocusType::Button, 0),
-                    y: |mut out, window, id, state| {
+                    y: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+14, window.y+5, "80Hz".to_string(), 
                             state.eq_hi, Direction::North)
                     },
@@ -96,7 +96,7 @@ impl Piano {
                         _ => Action::Noop
                     },
                     y_id: (FocusType::Button, 0),
-                    p: |mut out, window, id, state| {
+                    p: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+20, window.y+5, "120Hz".to_string(), 
                             state.eq_low, Direction::North)
                     },
@@ -106,7 +106,7 @@ impl Piano {
                         _ => Action::Noop
                     },
                     p_id: (FocusType::Button, 0),
-                    b: |mut out, window, id, state| {
+                    b: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+26, window.y+5, "400Hz".to_string(), 
                             state.eq_low, Direction::North)
                     },
@@ -116,33 +116,37 @@ impl Piano {
                         _ => Action::Noop
                     },
                     b_id: (FocusType::Button, 0),
+                    w: |mut out, window, id, state, focus| out,
+                    w_id: (FocusType::Void, 0),
                     active: None,
                 },
                 MultiFocus::<PianoState> {
-                    r: |mut out, window, id, state| {
+                    w: |mut out, window, id, state, focus| out,
+                    w_id: (FocusType::Void, 0),
+                    r: |mut out, window, id, state, focus| {
                         button::render(out, window.x+32, window.y+16, 10, "Play")
                     },
                     r_t: |action, id, state| action,
                     r_id: (FocusType::Button, 0),
-                    g: |mut out, window, id, state| {
+                    g: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+32, window.y+5, "6KHz".to_string(), 
                             state.eq_mid, Direction::North)
                     },
                     g_t: |action, id, state| action,
                     g_id: (FocusType::Button, 0),
-                    y: |mut out, window, id, state| {
+                    y: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+38, window.y+5, "12KHz".to_string(), 
                             state.eq_hi, Direction::North)
                     },
                     y_t: |action, id, state| action,
                     y_id: (FocusType::Button, 0),
-                    p: |mut out, window, id, state| {
+                    p: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+44, window.y+5, "14KHz".to_string(), 
                             state.eq_low, Direction::North)
                     },
                     p_t: |action, id, state| action,
                     p_id: (FocusType::Button, 0),
-                    b: |mut out, window, id, state| {
+                    b: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+50, window.y+5, "20KHz".to_string(), 
                             state.eq_low, Direction::North)
                     },

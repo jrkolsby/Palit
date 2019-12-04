@@ -38,22 +38,31 @@ pub enum Focus {
 }
 
 pub struct MultiFocus<State> {
-    pub r: fn(RawTerminal<Stdout>, Window, ID, &State) -> RawTerminal<Stdout>,
-    pub g: fn(RawTerminal<Stdout>, Window, ID, &State) -> RawTerminal<Stdout>,
-    pub y: fn(RawTerminal<Stdout>, Window, ID, &State) -> RawTerminal<Stdout>,
-    pub p: fn(RawTerminal<Stdout>, Window, ID, &State) -> RawTerminal<Stdout>,
-    pub b: fn(RawTerminal<Stdout>, Window, ID, &State) -> RawTerminal<Stdout>,
+
+    // Render functions
+    pub w: fn(RawTerminal<Stdout>, Window, ID, &State, bool) -> RawTerminal<Stdout>,
+    pub r: fn(RawTerminal<Stdout>, Window, ID, &State, bool) -> RawTerminal<Stdout>,
+    pub g: fn(RawTerminal<Stdout>, Window, ID, &State, bool) -> RawTerminal<Stdout>,
+    pub y: fn(RawTerminal<Stdout>, Window, ID, &State, bool) -> RawTerminal<Stdout>,
+    pub p: fn(RawTerminal<Stdout>, Window, ID, &State, bool) -> RawTerminal<Stdout>,
+    pub b: fn(RawTerminal<Stdout>, Window, ID, &State, bool) -> RawTerminal<Stdout>,
+
+    // Transform functions
     pub r_t: fn(Action, ID, &mut State) -> Action,
     pub g_t: fn(Action, ID, &mut State) -> Action,
     pub y_t: fn(Action, ID, &mut State) -> Action,
     pub p_t: fn(Action, ID, &mut State) -> Action,
     pub b_t: fn(Action, ID, &mut State) -> Action,
-    pub active: Option<Focus>,
+
+    // IDs
+    pub w_id: ID,
     pub r_id: ID,
     pub g_id: ID,
     pub y_id: ID,
     pub p_id: ID,
     pub b_id: ID,
+
+    pub active: Option<Focus>,
 }
 
 pub fn render_focii<T>(mut out: RawTerminal<Stdout>, window: Window, 
@@ -148,7 +157,6 @@ pub fn shift_focus<T>(focus: (usize, usize), focii: &Vec<Vec<MultiFocus<T>>>, a:
 impl<T> MultiFocus<T> {
     pub fn render(&self, mut out: RawTerminal<Stdout>, window: Window,
             state: &T, focused: bool) -> RawTerminal<Stdout> {
-        eprintln!("Multifocus render");
 
         let mut fullscreen: bool = false;
         let mut full_red: bool = false;
@@ -168,83 +176,111 @@ impl<T> MultiFocus<T> {
             };
         }
 
+        // Fallback to white id if any ids weren't specified
+        let (r_id, g_id, y_id, p_id, b_id) = (
+            if self.r_id.0 == FocusType::Void { self.w_id.clone() } else { self.r_id.clone() },
+            if self.g_id.0 == FocusType::Void { self.w_id.clone() } else { self.g_id.clone() },
+            if self.y_id.0 == FocusType::Void { self.w_id.clone() } else { self.y_id.clone() },
+            if self.p_id.0 == FocusType::Void { self.w_id.clone() } else { self.p_id.clone() },
+            if self.b_id.0 == FocusType::Void { self.w_id.clone() } else { self.b_id.clone() }
+        );
+
+        if focused && !fullscreen {
+            out = write_fg(out, Color::Black);
+            out = write_bg(out, Color::White);
+            out = (self.w)(out, window, self.w_id.clone(), state, focused);
+        } else if fullscreen {
+            out = write_fg(out, Color::White); 
+            out = write_bg(out, Color::Black); 
+            out = (self.w)(out, window, self.w_id.clone(), state, focused);
+        } else {
+            out = (self.w)(out, window, self.w_id.clone(), state, focused);
+        }
+
         // Focused but not selected
         if focused && !fullscreen { 
             out = write_fg(out, Color::Black); 
             out = write_bg(out, Color::Red); 
-            out = (self.r)(out, window, self.r_id.clone(), state);
+            out = (self.r)(out, window, r_id, state, focused);
         // Focused and selected
         } else if full_red {
             out = write_fg(out, Color::White); 
             out = write_bg(out, Color::Black); 
-            out = (self.r)(out, window, self.r_id.clone(), state);
+            out = (self.r)(out, window, r_id, state, focused);
             out = write_fg(out, Color::Black); 
             out = write_bg(out, Color::Red); 
         // Neither focused nor selected
         } else {
-            out = (self.r)(out, window, self.r_id.clone(), state);
+            out = (self.r)(out, window, r_id, state, focused);
         }
 
         if focused && !fullscreen { 
             out = write_fg(out, Color::Black); 
             out = write_bg(out, Color::Green); 
-            out = (self.g)(out, window, self.g_id.clone(), state);
+            out = (self.g)(out, window, g_id, state, focused);
         } else if full_green {
             out = write_fg(out, Color::White); 
             out = write_bg(out, Color::Black); 
-            out = (self.g)(out, window, self.g_id.clone(), state);
+            out = (self.g)(out, window, g_id, state, focused);
             out = write_fg(out, Color::Black); 
             out = write_bg(out, Color::Green); 
         } else {
-            out = (self.g)(out, window, self.g_id.clone(), state);
+            out = (self.g)(out, window, g_id, state, focused);
         }
 
         if focused && !fullscreen { 
             out = write_fg(out, Color::Black); 
             out = write_bg(out, Color::Yellow); 
-            out = (self.y)(out, window, self.y_id.clone(),  state);
+            out = (self.y)(out, window, y_id, state, focused);
         } else if full_yellow {
             out = write_fg(out, Color::White); 
             out = write_bg(out, Color::Black); 
-            out = (self.y)(out, window, self.y_id.clone(),  state);
+            out = (self.y)(out, window, y_id, state, focused);
             out = write_fg(out, Color::Black); 
             out = write_bg(out, Color::Yellow); 
         } else {
-            out = (self.y)(out, window, self.y_id.clone(),  state);
+            out = (self.y)(out, window, y_id, state, focused);
         }
 
         if focused && !fullscreen { 
             out = write_fg(out, Color::Black); 
             out = write_bg(out, Color::Pink); 
-            out = (self.p)(out, window, self.p_id.clone(), state);
+            out = (self.p)(out, window, p_id, state, focused);
         } else if full_pink {
             out = write_fg(out, Color::White); 
             out = write_bg(out, Color::Black); 
-            out = (self.p)(out, window, self.p_id.clone(), state);
+            out = (self.p)(out, window, p_id, state, focused);
             out = write_fg(out, Color::Black); 
             out = write_bg(out, Color::Pink); 
         } else {
-            out = (self.p)(out, window, self.p_id.clone(), state);
+            out = (self.p)(out, window, p_id, state, focused);
         }
 
         if focused && !fullscreen { 
             out = write_fg(out, Color::Black); 
             out = write_bg(out, Color::Blue); 
-            out = (self.b)(out, window, self.b_id.clone(), state);
+            out = (self.b)(out, window, b_id, state, focused);
         } else if full_blue {
             out = write_fg(out, Color::White); 
             out = write_bg(out, Color::Black); 
-            out = (self.b)(out, window, self.b_id.clone(), state);
+            out = (self.b)(out, window, b_id, state, focused);
             out = write_fg(out, Color::Black); 
             out = write_bg(out, Color::Blue); 
         } else {
-            out = (self.b)(out, window, self.b_id.clone(), state);
+            out = (self.b)(out, window, b_id, state, focused);
         }
 
         out
     }
     pub fn transform(&mut self, action: Action, state: &mut T) -> Action {
-        eprintln!("Multifocus transform {:?}", action);
+        // Fallback to white ID if any of our ids weren't specified
+        let (r_id, g_id, y_id, p_id, b_id) = (
+            if self.r_id.0 == FocusType::Void { self.w_id.clone() } else { self.r_id.clone() },
+            if self.g_id.0 == FocusType::Void { self.w_id.clone() } else { self.g_id.clone() },
+            if self.y_id.0 == FocusType::Void { self.w_id.clone() } else { self.y_id.clone() },
+            if self.p_id.0 == FocusType::Void { self.w_id.clone() } else { self.p_id.clone() },
+            if self.b_id.0 == FocusType::Void { self.w_id.clone() } else { self.b_id.clone() }
+        );
         match action {
             Action::SelectR => { self.active = Some(Focus::Red) },
             Action::SelectG => { self.active = Some(Focus::Green) },
@@ -255,11 +291,11 @@ impl<T> MultiFocus<T> {
             _ => {},
         };
         match self.active {
-            Some(Focus::Red) => (self.r_t)(action, self.r_id.clone(), state),
-            Some(Focus::Green) => (self.g_t)(action, self.g_id.clone(), state),
-            Some(Focus::Yellow) => (self.y_t)(action, self.y_id.clone(), state),
-            Some(Focus::Pink) => (self.p_t)(action, self.p_id.clone(), state),
-            Some(Focus::Blue) => (self.b_t)(action, self.b_id.clone(), state),
+            Some(Focus::Red) => (self.r_t)(action, r_id, state),
+            Some(Focus::Green) => (self.g_t)(action, g_id, state),
+            Some(Focus::Yellow) => (self.y_t)(action, y_id, state),
+            Some(Focus::Pink) => (self.p_t)(action, p_id, state),
+            Some(Focus::Blue) => (self.b_t)(action, b_id, state),
             _ => action
         }
     }

@@ -76,7 +76,9 @@ impl Routes {
             state: initial_state,
             focii: vec![vec![
                 MultiFocus::<RoutesState> {
-                    r: |mut out, window, id, state| {
+                    w: |mut out, window, id, state, focus| out,
+                    w_id: (FocusType::Void, 0),
+                    r: |mut out, window, id, state, focus| {
                         button::render(out, window.x+2, window.y+2, 20, "Add Route")
                     },
                     r_t: |action, id, state| {  
@@ -86,16 +88,16 @@ impl Routes {
                         }
                     },
                     r_id: (FocusType::Button, 0),
-                    g: |mut out, window, id, state| out,
+                    g: |mut out, window, id, state, focus| out,
                     g_t: |action, id, state| action,
                     g_id: (FocusType::Button, 0),
-                    y: |mut out, window, id, state| out,
+                    y: |mut out, window, id, state, focus| out,
                     y_t: |action, id, state| action,
                     y_id: (FocusType::Button, 0),
-                    p: |mut out, window, id, state| out,
+                    p: |mut out, window, id, state, focus| out,
                     p_t: |action, id, state| action,
                     p_id: (FocusType::Button, 0),
-                    b: |mut out, window, id, state| out,
+                    b: |mut out, window, id, state, focus| out,
                     b_t: |action, id, state| action,
                     b_id: (FocusType::Button, 0),
                     active: None,
