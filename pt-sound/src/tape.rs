@@ -63,8 +63,8 @@ pub fn dispatch_requested(store: &mut Store) -> (
 
 pub fn dispatch(store: &mut Store, a: Action) {
     match a {
-        Action::Play => { store.playing = true; },
-        Action::Stop => { store.playing = false; },
+        Action::Play(_) => { store.playing = true; },
+        Action::Stop(_) => { store.playing = false; },
         _ => {}
     }
 }

@@ -1,5 +1,8 @@
+use xmltree::Element;
+
 use crate::core::{Note, Key, Offset};
 use crate::action::Action;
+use crate::document::{note_list};
 
 pub struct Store {
     thru_queue: Vec<Action>,
@@ -11,6 +14,13 @@ pub fn init() -> Store {
         thru_queue: vec![],
         intervals: vec![0,4,7], // Major Chord 1,4,7
     }
+}
+
+pub fn read(mut doc: Element) -> Option<Store> {
+    let (mut doc, notes) = note_list(doc);
+    let mut store: Store = init();
+    store.intervals = notes;
+    Some(store)
 }
 
 pub fn dispatch(store: &mut Store, action: Action) {

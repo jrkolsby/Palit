@@ -162,18 +162,15 @@ pub fn event_loop<F: 'static>(
         mut ipc_in: File, 
         mut ipc_client: File, 
         mut patch: Graph<[Output; CHANNELS], Module>, 
-        operator: NodeIndex,
-        midi_keys: NodeIndex,
-        keys: NodeIndex,
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
-    where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) -> Action {
+    where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) {
 
     // The callback we'll use to pass to the Stream. It will request audio from our dsp_graph.
     let callback = move |pa::OutputStreamCallbackArgs { buffer, time, .. }| {
 
         let ipc_actions: Vec<Action> = ipc_action(&ipc_in);
 
-        match ipc_dispatch(ipc_actions, keys, operator, &mut patch, &mut dispatch_f) {
+        match ipc_dispatch(ipc_actions, &mut patch, &mut dispatch_f) {
             Action::Exit => { return pa::Complete; },
             _ => {}
         }
@@ -384,32 +381,13 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
 
 fn ipc_dispatch<F: 'static>(
         ipc_actions: Vec<Action>, 
-        keys: NodeIndex, 
-        operator: NodeIndex, 
         patch: &mut Graph<[Output; CHANNELS], Module>,
         root_dispatch: &mut F) -> Action 
 
-    where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) -> Action {
+    where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) {
 
     for action in ipc_actions.iter() {
         match action {
-            // Pass graph mutations to root_dispatch
-            // Give action directly to indexed node
-            Action::SetParam(nid, _, _) => {
-                // TODO: Make sure that node index exists!
-                // ... be careful when nodes are removed that the
-                // ... indicies are shifted accordingly, or...
-                // ... don't ever remove nodes just disconnect them
-                let id = NodeIndex::new(*nid);
-                patch[id].dispatch(action.clone());
-            },
-            // Give notes to the outputs of keyboard
-            Action::NoteOn(_,_) | Action::NoteOff(_) => {
-                patch[keys].dispatch(action.clone());
-            },
-            Action::Play | Action::Stop | Action::Octave(_) => {
-                patch[operator].dispatch(action.clone());
-            },
             Action::Exit => { return Action::Exit; },
             // Pass any other action to root
             _ => { root_dispatch(patch, action.clone()); }
@@ -430,13 +408,20 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
 
         let action = match argv[0] {
 
-            "PLAY" => Action::Play,
-            "STOP" => Action::Stop,
+            "PLAY" => Action::Play(argv[1].parse::<u16>().unwrap()),
+            "STOP" => Action::Stop(argv[1].parse::<u16>().unwrap()),
 
             "NOTE_ON" => Action::NoteOn(argv[1].parse::<u8>().unwrap(), 
                                         argv[2].parse::<f64>().unwrap()),
 
             "NOTE_OFF" => Action::NoteOff(argv[1].parse::<u8>().unwrap()),
+
+            "NOTE_ON_AT" => Action::NoteOnAt(argv[1].parse::<u16>().unwrap(),
+                                             argv[2].parse::<u8>().unwrap(),
+                                             argv[3].parse::<f64>().unwrap()),
+
+            "NOTE_OFF_AT" => Action::NoteOffAt(argv[1].parse::<u16>().unwrap(),
+                                               argv[2].parse::<u8>().unwrap()),
 
             "EXIT" => Action::Exit,
 
@@ -461,12 +446,9 @@ pub fn event_loop<F: 'static>(
         mut ipc_in: File, 
         mut ipc_client: File, 
         mut patch: Graph<[Output; CHANNELS], Module>, 
-        operator: NodeIndex,
-        midi_keys: NodeIndex,
-        keys: NodeIndex,
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
 
-    where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) -> Action {
+    where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) {
     
     // Get audio devices
     let (audio_dev, rate) = open_audio_dev()?;
@@ -491,7 +473,7 @@ pub fn event_loop<F: 'static>(
 
         let ipc_actions: Vec<Action> = ipc_action(&ipc_in);
 
-        match ipc_dispatch(ipc_actions, keys, operator, &mut patch, &dispatch_f) {
+        match ipc_dispatch(ipc_actions, &mut patch, &dispatch_f) {
             Action::Exit => { return Ok(()) },
             _ => {}
         }

@@ -22,12 +22,12 @@
                 <output id="4" />
             </route>
         </patch>
-        <device id="2" output="200" />
-        <device id="3" output="201" />
-        <device id="4" input="200" />
-        <device id="5" input="201" />
-        <keyboard id="6" output="203" octave="4" key="0" />
-        <keyboard id="7" output="204" octave="4" key="0" />
+        <device id="100" output="200" />
+        <device id="101" output="201" />
+        <device id="102" input="200" />
+        <device id="103" input="201" />
+        <keyboard id="104" output="203" octave="4" key="0" />
+        <keyboard id="105" output="204" octave="4" key="0" />
 
         <timeline id="8">
             <!-- Note that ids only within a module are distinct -->
@@ -73,13 +73,13 @@
         </hammond>
 
         <arpeggio id="10">
-            <param value="0" name="pattern" />
-            <mark name="playhead" offset="0" />
-            <track input="5" output="5">
-                <note key="69" vel="0.4" offset="0" />
-                <note key="72" vel="0.4" offset="400" />
-                <note key="72" vel="0.4" offset="800" />
-            </track>
+            <param value="24" name="length" />
         </arpeggio>
+
+        <chord id="11">
+            <note key="0" />
+            <note key="4" />
+            <note key="7" />
+        </chord>
     </modules>
 </project>

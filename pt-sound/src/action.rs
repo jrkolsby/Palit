@@ -28,15 +28,17 @@ pub enum Action {
     NoteOn(Key, Volume),
     NoteOff(Key),
 
-    SetParam(usize, u32, i32),
+    NoteOnAt(u16, Key, Volume),
+    NoteOffAt(u16, Key),
+
+    SetParam(u16, u32, i32),
 
     Arm(Offset),
 
     MoveRegion(u16, u16, u16, u16), // Module ID, region ID, new track, new offset
 
-
-    Play,
-    Stop,
+    Play(u16),
+    Stop(u16),
 
     Tick,
 

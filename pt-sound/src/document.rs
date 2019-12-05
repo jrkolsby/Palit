@@ -3,7 +3,7 @@ use std::fs;
 
 use xmltree::Element;
 
-use crate::core::{Param, Offset};
+use crate::core::{Param, Offset, Key};
 
 pub struct Document {
     pub title: String,
@@ -18,6 +18,7 @@ pub fn param_map(mut doc: Element) -> (Element, HashMap<String, Param>) {
     while let Some(param) = doc.take_child("param") {
         let key = param.attributes.get("name").unwrap();
         let val = param.attributes.get("value").unwrap();
+        eprintln!("PARAM {} {}", key, val);
         params.insert(key.to_string(), val.parse::<Param>().unwrap());
     }
     return (doc, params);
@@ -28,9 +29,20 @@ pub fn mark_map(mut doc: Element) -> (Element, HashMap<String, Offset>) {
     while let Some(param) = doc.take_child("mark") {
         let key = param.attributes.get("name").unwrap();
         let val = param.attributes.get("value").unwrap();
+        eprintln!("MARK {} {}", key, val);
         marks.insert(key.to_string(), val.parse::<Offset>().unwrap());
     }
     return (doc, marks);
+}
+
+pub fn note_list(mut doc: Element) -> (Element, Vec<Key>) {
+    let mut notes: Vec<Key> = vec![];
+    while let Some(param) = doc.take_child("note") {
+        let note = param.attributes.get("key").unwrap();
+        eprintln!("NOTE {}", note);
+        notes.push(note.parse::<Key>().unwrap());
+    }
+    return (doc, notes);
 }
 
 pub fn param_add<T>(el: &mut Element, value: T, name: String) 

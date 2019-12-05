@@ -1,11 +1,13 @@
+use std::borrow::BorrowMut;
+use xmltree::Element;
+
+use crate::document::{param_map};
 use crate::core::{Note, Key, Offset};
 use crate::action::Action;
-use std::borrow::BorrowMut;
 
 pub struct Store {
     timer: Offset,
     length: Offset,
-    rate: usize,
     notes: Vec<Note>,
     queue: Vec<Action>,
 }
@@ -13,8 +15,8 @@ pub struct Store {
 pub fn init() -> Store {
     Store {
         timer: 0,
-        rate: 4, // notes per bar
-        length: 24000, // samples per bar
+        length: 24000, // samples per bar/rate
+
         notes: vec![],
         queue: vec![],
     }
@@ -61,6 +63,16 @@ pub fn dispatch(store: &mut Store, action: Action) {
         },
         _ => {}
     }
+}
+
+pub fn read(mut doc: Element) -> Option<Store> {
+    let (mut doc, params) = param_map(doc);
+    let mut store: Store = init();
+    store.length = match params.get("length") {
+        Some(a) => (*a * 1000) as Offset,
+        None => return None,
+    };
+    Some(store)
 }
 
 pub fn compute(store: &mut Store) {

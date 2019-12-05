@@ -1,9 +1,10 @@
 use std::{iter};
 
 use sample::{signal, Signal, Sample};
-
 use wavefile::{WaveFile, WaveFileIterator};
+use xmltree::Element;
 
+use crate::document::{param_map};
 use crate::core::{SF, SigGen, Output};
 use crate::action::Action;
 
@@ -75,6 +76,23 @@ pub fn dispatch(store: &mut Store, action: Action) {
         }
         _ => {}
     }
+}
+
+pub fn read(mut doc: Element) -> Option<Store> {
+    let (mut doc, params) = param_map(doc);
+    let mut store = init();
+    store.bar_values = [
+        *params.get("16").unwrap() as f64 / 1000.,
+        *params.get("5.3").unwrap() as f64 / 1000.,
+        *params.get("8").unwrap() as f64 / 1000.,
+        *params.get("4").unwrap() as f64 / 1000.,
+        *params.get("2.6").unwrap() as f64 / 1000.,
+        *params.get("2").unwrap() as f64 / 1000.,
+        *params.get("1.6").unwrap() as f64 / 1000.,
+        *params.get("1.3").unwrap() as f64 / 1000.,
+        *params.get("1").unwrap() as f64 / 1000.
+    ];
+    Some(store)
 }
 
 pub fn compute(store: &mut Store) -> Output {
