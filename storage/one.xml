@@ -59,7 +59,7 @@
         </timeline>
 
         <hammond id="9" input="6" output="6">
-            <param name="16'" value="1000" />
+            <param name="16" value="1000" />
             <param name="5.3" value="1000" />
             <param name="8" value="1000" />
             <param name="4" value="1000" />

@@ -16,7 +16,7 @@ pub fn init() -> Store {
     }
 }
 
-pub fn read(mut doc: Element) -> Option<Store> {
+pub fn read(doc: &mut Element) -> Option<Store> {
     let (mut doc, notes) = note_list(doc);
     let mut store: Store = init();
     store.intervals = notes;

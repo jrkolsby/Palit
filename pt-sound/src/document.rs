@@ -13,7 +13,7 @@ pub struct Document {
 
 const PALIT_ROOT: &str = "/usr/local/palit/";
 
-pub fn param_map(mut doc: Element) -> (Element, HashMap<String, Param>) {
+pub fn param_map(doc: &mut Element) -> (&mut Element, HashMap<String, Param>) {
     let mut params: HashMap<String, Param> = HashMap::new();
     while let Some(param) = doc.take_child("param") {
         let key = param.attributes.get("name").unwrap();
@@ -24,7 +24,7 @@ pub fn param_map(mut doc: Element) -> (Element, HashMap<String, Param>) {
     return (doc, params);
 }
 
-pub fn mark_map(mut doc: Element) -> (Element, HashMap<String, Offset>) {
+pub fn mark_map(doc: &mut Element) -> (&mut Element, HashMap<String, Offset>) {
     let mut marks: HashMap<String, Offset> = HashMap::new();
     while let Some(param) = doc.take_child("mark") {
         let key = param.attributes.get("name").unwrap();
@@ -35,7 +35,7 @@ pub fn mark_map(mut doc: Element) -> (Element, HashMap<String, Offset>) {
     return (doc, marks);
 }
 
-pub fn note_list(mut doc: Element) -> (Element, Vec<Key>) {
+pub fn note_list(doc: &mut Element) -> (&mut Element, Vec<Key>) {
     let mut notes: Vec<Key> = vec![];
     while let Some(param) = doc.take_child("note") {
         let note = param.attributes.get("key").unwrap();
@@ -50,13 +50,15 @@ pub fn param_add<T>(el: &mut Element, value: T, name: String)
     let mut param = Element::new("param");
     param.attributes.insert("value".to_string(), value.to_string());
     param.attributes.insert("name".to_string(), name);
+    el.children.push(param)
 }
 
 pub fn mark_add<T>(el: &mut Element, value: T, name: String) 
     where T: std::string::ToString {
-    let mut param = Element::new("mark");
-    param.attributes.insert("value".to_string(), value.to_string());
-    param.attributes.insert("name".to_string(), name);
+    let mut mark = Element::new("mark");
+    mark.attributes.insert("value".to_string(), value.to_string());
+    mark.attributes.insert("name".to_string(), name);
+    el.children.push(mark)
 }
 
 pub fn read_document(filename: String) -> Document {

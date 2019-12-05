@@ -78,7 +78,7 @@ pub fn dispatch(store: &mut Store, action: Action) {
     }
 }
 
-pub fn read(mut doc: Element) -> Option<Store> {
+pub fn read(doc: &mut Element) -> Option<Store> {
     let (mut doc, params) = param_map(doc);
     let mut store = init();
     store.bar_values = [

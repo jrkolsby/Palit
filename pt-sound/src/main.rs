@@ -8,6 +8,7 @@ use std::fs::{OpenOptions, File};
 use std::os::unix::fs::OpenOptionsExt;
 use std::io::prelude::*;
 use std::collections::HashMap;
+use std::borrow::BorrowMut;
 
 use sample::signal;
 
@@ -152,13 +153,14 @@ fn main() -> Result<(), Box<error::Error>> {
             },
             Action::OpenProject(name) => {
                 *patch = Graph::new();
-                let doc = read_document(name);
-                for (id, el) in doc.modules.iter() {
+                let mut doc = read_document(name);
+                for (id, el) in doc.modules.iter_mut() {
                     eprintln!("opened {} with id {:?}", &el.name, id);
                     match &el.name[..] {
                         "timeline" => {
                             let operator = patch.add_node(Module::Passthru(vec![]));
-                            while let Some(store) = tape::read(el.to_owned()) {
+                            while let Some(store) = tape::read(el) {
+                                eprintln!("tape read");
                                 let tape = patch.add_node(Module::Tape(store));
                                 patch.add_connection(operator, tape);
                             }
@@ -166,21 +168,27 @@ fn main() -> Result<(), Box<error::Error>> {
                         },
                         "hammond" => {
                             let operator = patch.add_node(Module::Passthru(vec![]));
-                            let store = synth::read(el.to_owned()).unwrap();
+                            let store = match synth::read(el) {
+                                Some(a) => a,
+                                None => panic!("Invalid module {}", id)
+                            };
                             let instrument = patch.add_node(Module::Synth(store));
                             patch.add_connection(operator, instrument);
                             operators.insert(*id, operator);
                         },
                         "arpeggio" => {
                             let operator = patch.add_node(Module::Passthru(vec![]));
-                            let store = arpeggio::read(el.to_owned()).unwrap();
+                            let store = match arpeggio::read(el) {
+                                Some(a) => a,
+                                None => panic!("Invalid module {}", id)
+                            };
                             let midi_node = patch.add_node(Module::Arpeggio(store));
                             patch.add_connection(operator, midi_node);
                             operators.insert(*id, operator);
                         },
                         "chord" => {
                             let operator = patch.add_node(Module::Passthru(vec![]));
-                            let store = chord::read(el.to_owned()).unwrap();
+                            let store = chord::read(el).unwrap();
                         },
                         "keyboard" => {
                             let operator = patch.add_node(Module::Passthru(vec![]));

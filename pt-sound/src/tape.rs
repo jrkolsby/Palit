@@ -104,10 +104,10 @@ pub fn write(s: Store, doc: Option<Element>) -> Element {
     el 
 }
 
-pub fn read(mut doc: Element) -> Option<Store> {
+pub fn read(doc: &mut Element) -> Option<Store> {
 
-    let (mut doc, params) = param_map(doc);
-    let (mut doc, marks) = mark_map(doc);
+    let (mut doc, mut params) = param_map(doc);
+    let (mut doc, mut marks) = mark_map(doc);
 
     let mut store =  Store {
         bpm: *params.get("bpm").unwrap() as u16,
@@ -123,6 +123,14 @@ pub fn read(mut doc: Element) -> Option<Store> {
         regions: vec![],
     };
 
+    for (name, value) in params.drain() {
+        param_add(doc, value, name);
+    }
+
+    for (name, offset) in marks.drain() {
+        mark_add(doc, offset, name);
+    }
+
     let mut assets: HashMap<u16, Element> = HashMap::new();
 
     while let Some(asset) = doc.take_child("asset") {
@@ -133,11 +141,13 @@ pub fn read(mut doc: Element) -> Option<Store> {
     // Only take one track 
     if let Some(mut track) = doc.take_child("track") {
         let t_id: &str = track.attributes.get("id").unwrap();
+        eprintln!("Track {}", t_id);
         let in_id: &str = track.attributes.get("input").unwrap();
         let out_id: &str = track.attributes.get("output").unwrap();
         let t = t_id.parse::<u16>().unwrap();
 
         while let Some(region) = track.take_child("region") {
+            eprintln!("Region");
 
             let r_id: &str = region.attributes.get("id").unwrap();
             let a_id: &str = region.attributes.get("asset").unwrap();
@@ -151,17 +161,16 @@ pub fn read(mut doc: Element) -> Option<Store> {
 
             let mut buffer: Vec<f32> = vec![];
 
-            if let Some(asset) = assets.remove(&_a_id) {
-                let src: &str = asset.attributes.get("src").unwrap();
-                let duration: &str = asset.attributes.get("size").unwrap();
+            for (id, asset) in assets.iter() {
+                if (_a_id == *id) {
+                    let src: &str = asset.attributes.get("src").unwrap();
+                    let duration: &str = asset.attributes.get("size").unwrap();
 
-                let mut wav_f = WaveFile::open("Who.wav").unwrap();
-                let mut wav_iter = wav_f.iter();
+                    let mut wav_f = WaveFile::open("Who.wav").unwrap();
+                    let mut wav_iter = wav_f.iter();
 
-                buffer = wav_iter.map(|f| f[0] as f32 * 0.0000001).collect();
-
-            } else {
-                panic!("No such asset! {}", a_id);
+                    buffer = wav_iter.map(|f| f[0] as f32 * 0.0000001).collect();
+                }
             }
 
             store.regions.push(Region {
