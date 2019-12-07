@@ -214,7 +214,11 @@ fn main() -> std::io::Result<()> {
                         match &el.name[..] {
                             "timeline" => add_layer(&mut layers, 
                                 Box::new(Timeline::new(1, 1, size.0, size.1, (*el).to_owned())), *id),
-                            _ => {}
+                            "hammond" => add_layer(&mut layers,
+                                Box::new(Piano::new(1,1,size.0,size.1, (*el).to_owned())), *id),
+                            "patch" => add_layer(&mut layers,
+                                Box::new(Routes::new(1,1,size.0,size.1, (*el).to_owned())), *id),
+                            name @ _ => { eprintln!("unimplemented module {:?}", name)}
                         }
                     }
                 },

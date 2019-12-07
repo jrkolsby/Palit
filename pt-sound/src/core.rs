@@ -213,6 +213,7 @@ pub enum Module {
     // and every second or so will send all corresponding NoteOff actions.
     // Useful for debugging on OSX where keyup events aren't accessed.
     DebugKeys(Vec<Action>, Vec<Action>, u16),
+    Operator(Vec<Action>, Vec<(NodeIndex)>, Vec<NodeIndex>),
     Synth(synth::Store),
     Tape(tape::Store),
     Chord(chord::Store),
@@ -223,6 +224,7 @@ impl Module {
     pub fn dispatch(&mut self, a: Action) {
         match *self {
             Module::Master => {}
+            Module::Operator(ref mut queue, _, _) |
             Module::Passthru(ref mut queue) => { queue.push(a.clone()) }
             Module::DebugKeys(ref mut onqueue, _, _) => { onqueue.push(a.clone()); }
             Module::Synth(ref mut store) => synth::dispatch(store, a.clone()),
@@ -246,6 +248,7 @@ impl Module {
         ) {
 
         match *self {
+            Module::Operator(ref mut queue, _, _) |
             Module::Passthru(ref mut queue) => {
                 let carry = queue.clone();
                 queue.clear();

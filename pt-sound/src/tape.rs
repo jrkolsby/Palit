@@ -19,6 +19,7 @@ pub struct Region {
     pub asset_in: u32,
     pub asset_out: u32,
     pub gain: f32,
+    pub asset_id: u16,
 }
 
 pub struct Store {
@@ -32,6 +33,7 @@ pub struct Store {
     pub playhead: u32, 
     pub regions: Vec<Region>,
     pub playing: bool,
+    pub track_id: u16,
 }
 
 pub fn init() -> Store {
@@ -46,6 +48,7 @@ pub fn init() -> Store {
         playhead: 0,
         playing: false,
         regions: vec![],
+        track_id: 0,
     }
 }
 
@@ -96,6 +99,11 @@ pub fn write(s: Store, doc: Option<Element>) -> Element {
     mark_add(&mut el, s.duration, "seq_out".to_string());
     mark_add(&mut el, 0, "seq_in".to_string());
 
+    let track = Element::new("track");
+    for region in s.regions.iter() {
+        let r = Element::new("region");
+    }
+
     /*
     Element::new("asset")
     Element::new("track")
@@ -105,23 +113,18 @@ pub fn write(s: Store, doc: Option<Element>) -> Element {
 }
 
 pub fn read(doc: &mut Element) -> Option<Store> {
+    let mut store = init();
 
     let (mut doc, mut params) = param_map(doc);
     let (mut doc, mut marks) = mark_map(doc);
 
-    let mut store =  Store {
-        bpm: *params.get("bpm").unwrap() as u16,
-        duration: (*marks.get("seq_out").unwrap() - 
-                   *marks.get("seq_in").unwrap()),
-        time_beat: *params.get("time_beat").unwrap() as usize,
-        time_note: *params.get("time_note").unwrap() as usize,
-        loop_on: false,
-        loop_in: *marks.get("loop_in").unwrap(),
-        loop_out: *marks.get("loop_out").unwrap(),
-        playhead: 0,
-        playing: false,
-        regions: vec![],
-    };
+    store.bpm = (*params.get("bpm").unwrap()).try_into().unwrap();
+    store.duration = (*marks.get("seq_out").unwrap() - 
+                   *marks.get("seq_in").unwrap()).try_into().unwrap();
+    store.time_beat = (*params.get("time_beat").unwrap()).try_into().unwrap();
+    store.time_note = (*params.get("time_note").unwrap()).try_into().unwrap();
+    store.loop_in = (*marks.get("loop_in").unwrap()).try_into().unwrap();
+    store.loop_out = (*marks.get("loop_out").unwrap()).try_into().unwrap();
 
     for (name, value) in params.drain() {
         param_add(doc, value, name);
@@ -141,14 +144,11 @@ pub fn read(doc: &mut Element) -> Option<Store> {
     // Only take one track 
     if let Some(mut track) = doc.take_child("track") {
         let t_id: &str = track.attributes.get("id").unwrap();
-        eprintln!("Track {}", t_id);
         let in_id: &str = track.attributes.get("input").unwrap();
         let out_id: &str = track.attributes.get("output").unwrap();
         let t = t_id.parse::<u16>().unwrap();
 
         while let Some(region) = track.take_child("region") {
-            eprintln!("Region");
-
             let r_id: &str = region.attributes.get("id").unwrap();
             let a_id: &str = region.attributes.get("asset").unwrap();
             let offset: &str = region.attributes.get("offset").unwrap();
@@ -177,6 +177,7 @@ pub fn read(doc: &mut Element) -> Option<Store> {
                 offset: offset.parse().unwrap(),
                 gain: 1.0,
                 duration: _a_out - _a_in,
+                asset_id: _a_id,
                 asset_in: _a_in,
                 asset_out: _a_out,
                 buffer,

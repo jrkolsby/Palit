@@ -49,11 +49,6 @@ pub enum Direction {
     SE,
 }
 
-pub trait Module {
-    fn read_state(&self, object: xmltree::Element);
-    fn write_state(&self) -> xmltree::Element;
-}
-
 pub type DirectAction = (u16, Action);
 
 #[derive(Clone, Copy, Debug)]

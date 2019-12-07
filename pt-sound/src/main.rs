@@ -151,6 +151,24 @@ fn main() -> Result<(), Box<error::Error>> {
                 let route = patch.add_node(Module::Passthru(vec![]));
                 routes.insert(r_id, route);
             },
+            Action::PatchIn(n_id, in_id, r_id) => {
+                let route = routes.get(&r_id).unwrap();
+                let module = match &patch[*operators.get(&n_id).unwrap()] {
+                    Module::Operator(_, inputs, _) => {
+                        patch.add_connection(*route, inputs[in_id]);
+                    }
+                    _ => {}
+                };
+            },
+            Action::PatchOut(n_id, out_id, r_id) => {
+                let route = routes.get(&r_id).unwrap();
+                let module = match &patch[*operators.get(&n_id).unwrap()] {
+                    Module::Operator(_, _, outputs) => {
+                        patch.add_connection(outputs[out_id], *route);
+                    }
+                    _ => {}
+                };
+            },
             Action::OpenProject(name) => {
                 *patch = Graph::new();
                 let mut doc = read_document(name);
@@ -158,45 +176,67 @@ fn main() -> Result<(), Box<error::Error>> {
                     eprintln!("opened {} with id {:?}", &el.name, id);
                     match &el.name[..] {
                         "timeline" => {
-                            let operator = patch.add_node(Module::Passthru(vec![]));
+                            let mut inputs: Vec<NodeIndex> = vec![];
+                            let mut outputs: Vec<NodeIndex> = vec![];
                             while let Some(store) = tape::read(el) {
-                                eprintln!("tape read");
                                 let tape = patch.add_node(Module::Tape(store));
-                                patch.add_connection(operator, tape);
+                                inputs.push(tape);
+                                outputs.push(tape);
+                            }
+                            let operator = patch.add_node(Module::Operator(vec![], 
+                                inputs.clone(), 
+                                outputs.clone())
+                            );
+                            for input in inputs.iter() {
+                                patch.add_connection(operator, *input);
                             }
                             operators.insert(*id, operator);
                         },
                         "hammond" => {
-                            let operator = patch.add_node(Module::Passthru(vec![]));
                             let store = match synth::read(el) {
                                 Some(a) => a,
                                 None => panic!("Invalid module {}", id)
                             };
                             let instrument = patch.add_node(Module::Synth(store));
+                            let operator = patch.add_node(Module::Operator(vec![], 
+                                vec![instrument], // INS
+                                vec![instrument]) // OUTS
+                            );
                             patch.add_connection(operator, instrument);
                             operators.insert(*id, operator);
                         },
                         "arpeggio" => {
-                            let operator = patch.add_node(Module::Passthru(vec![]));
                             let store = match arpeggio::read(el) {
                                 Some(a) => a,
                                 None => panic!("Invalid module {}", id)
                             };
-                            let midi_node = patch.add_node(Module::Arpeggio(store));
-                            patch.add_connection(operator, midi_node);
+                            let inst = patch.add_node(Module::Arpeggio(store));
+                            let operator = patch.add_node(Module::Operator(vec![], 
+                                vec![inst], 
+                                vec![inst])
+                            );
+                            patch.add_connection(operator, inst);
                             operators.insert(*id, operator);
                         },
                         "chord" => {
-                            let operator = patch.add_node(Module::Passthru(vec![]));
                             let store = chord::read(el).unwrap();
+                            let inst = patch.add_node(Module::Chord(store));
+                            let operator = patch.add_node(Module::Operator(vec![], 
+                                vec![inst], 
+                                vec![inst])
+                            );
+                            patch.add_connection(operator, inst);
                         },
                         "keyboard" => {
-                            let operator = patch.add_node(Module::Passthru(vec![]));
                             let octave = patch.add_node(Module::Octave(vec![], 4));
+                            let operator = patch.add_node(Module::Operator(vec![], 
+                                vec![octave], 
+                                vec![octave])
+                            );
                             patch.add_connection(operator, octave);
                             operators.insert(*id, operator);
                         },
-                        _ => {}
+                        name @ _ => { eprintln!("Unimplemented module {:?}", name)}
                     }
                 }
             },
@@ -207,7 +247,7 @@ fn main() -> Result<(), Box<error::Error>> {
                     }
                 }
             },
-            _ => { eprintln!("unimplemented: {:?}", a); }
+            _ => { eprintln!("unimplemented action {:?}", a); }
         }
     })
 }

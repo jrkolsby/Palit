@@ -13,8 +13,9 @@ pub enum Action {
 
     AddModule(u16, String),
 
-    PatchIn(u16, u16, u16),
-    PatchOut(u16, u16, u16),
+    // Node ID, I/O ID, Route ID
+    PatchIn(u16, usize, u16),
+    PatchOut(u16, usize, u16),
 
     DeleteRoute(u16),
 
@@ -35,7 +36,8 @@ pub enum Action {
 
     Arm(Offset),
 
-    MoveRegion(u16, u16, u16, u16), // Module ID, region ID, new track, new offset
+    // Module ID, region ID, new track, new offset
+    MoveRegion(u16, u16, u16, u16), 
 
     Play(u16),
     Stop(u16),

@@ -1,6 +1,7 @@
 use std::io::{Write, Stdout};
 use termion::{color, cursor};
 use termion::raw::{RawTerminal};
+use xmltree::Element;
 
 use crate::common::{Action, Direction, MultiFocus, shift_focus, render_focii, FocusType, Window};
 use crate::views::{Layer};
@@ -50,7 +51,7 @@ fn reduce(state: PianoState, action: Action) -> PianoState {
 }
 
 impl Piano {
-    pub fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
+    pub fn new(x: u16, y: u16, width: u16, height: u16, doc: Element) -> Self {
 
         let mut path: String = "/usr/local/palit/".to_string();
 

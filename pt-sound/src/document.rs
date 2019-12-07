@@ -18,7 +18,6 @@ pub fn param_map(doc: &mut Element) -> (&mut Element, HashMap<String, Param>) {
     while let Some(param) = doc.take_child("param") {
         let key = param.attributes.get("name").unwrap();
         let val = param.attributes.get("value").unwrap();
-        eprintln!("PARAM {} {}", key, val);
         params.insert(key.to_string(), val.parse::<Param>().unwrap());
     }
     return (doc, params);
@@ -29,7 +28,6 @@ pub fn mark_map(doc: &mut Element) -> (&mut Element, HashMap<String, Offset>) {
     while let Some(param) = doc.take_child("mark") {
         let key = param.attributes.get("name").unwrap();
         let val = param.attributes.get("value").unwrap();
-        eprintln!("MARK {} {}", key, val);
         marks.insert(key.to_string(), val.parse::<Offset>().unwrap());
     }
     return (doc, marks);
@@ -39,7 +37,6 @@ pub fn note_list(doc: &mut Element) -> (&mut Element, Vec<Key>) {
     let mut notes: Vec<Key> = vec![];
     while let Some(param) = doc.take_child("note") {
         let note = param.attributes.get("key").unwrap();
-        eprintln!("NOTE {}", note);
         notes.push(note.parse::<Key>().unwrap());
     }
     return (doc, notes);
@@ -88,7 +85,7 @@ pub fn read_document(filename: String) -> Document {
             if let Some(i) = module.attributes.get("id") {
                 result.modules.insert(i.parse::<u16>().unwrap(), module.to_owned());
             } else {
-                panic!("Module '{} 'missing ID", module.name);
+                panic!("Module {} missing ID", module.name);
             }
         }
     } else {

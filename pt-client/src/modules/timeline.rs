@@ -6,7 +6,7 @@ use xmltree::Element;
 use crate::views::TimelineState;
 use crate::views::Timeline;
 use crate::modules::{param_map, mark_map};
-use crate::common::{Module, Region, Track, Asset};
+use crate::common::{Region, Track, Asset};
 
 pub fn write(state: TimelineState) -> Element {
     Element::new("param")
@@ -65,8 +65,6 @@ pub fn read(mut doc: Element) -> TimelineState {
             let offset: &str = region.attributes.get("offset").unwrap();
             let a_in: &str = region.attributes.get("in").unwrap();
             let a_out: &str = region.attributes.get("out").unwrap();
-
-            eprintln!("offset {}", offset);
 
             state.regions.insert(r_id.parse::<u16>().unwrap(), Region {
                 asset_id: a_id.parse().unwrap(),

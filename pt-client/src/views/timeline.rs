@@ -12,7 +12,7 @@ use std::collections::HashMap;
 
 use crate::components::{waveform, tempo, button, ruler};
 use crate::common::{MultiFocus, render_focii, shift_focus, FocusType, Window, ID};
-use crate::common::{Module, Action, Color, Asset, Region, Track};
+use crate::common::{Action, Color, Asset, Region, Track};
 use crate::common::{beat_offset, offset_beat, generate_waveforms};
 use crate::modules::timeline;
 use crate::views::{Layer};
