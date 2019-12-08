@@ -25,7 +25,7 @@ mod chord;
 mod arpeggio;
 mod document;
 
-use crate::core::{event_loop, Module, Frequency};
+use crate::core::{event_loop, Module, Frequency, Key};
 use crate::document::{Document, read_document};
 use crate::action::Action;
 
@@ -57,56 +57,9 @@ fn main() -> Result<(), Box<error::Error>> {
     // Construct our dsp graph.
     let mut graph = Graph::new();
 
-    // Construct Master
-    let master = graph.add_node(Module::Master);
-
-    // Construct special event nodes
-    //let keys = graph.add_node(Module::DebugKeys(vec![], vec![], 0));
-    let keys = graph.add_node(Module::Passthru(vec![]));
-    let midi_keys = graph.add_node(Module::Passthru(vec![]));
-    let operator = graph.add_node(Module::Passthru(vec![]));
-    let octave = graph.add_node(Module::Octave(vec![], 4));
-
-    // Pasting some useful stuff here
+    // Pasting some useful stuff heref
 
     /*
-    let synth = graph.add_node(Module::Synth(synth::init()));
-    let chord_gen = graph.add_node(Module::Chord(chord::init()));
-    let arpeggio = graph.add_node(Module::Arpeggio(arpeggio::init()));
-    */
-
-    // Connect keys -> octave -> chord_gen -> synth -> master
-    /*
-    graph.add_connection(keys, octave);
-    graph.add_connection(octave, chord_gen);
-    graph.add_connection(chord_gen, synth);
-    graph.add_connection(synth, master);
-    graph.add_connection(tape, master);
-    */
-
-    /*
-    graph.add_connection(keys, octave);
-    graph.add_connection(octave, arpeggio);
-
-    // Connect arpeggio -> keys -> master
-    graph.add_connection(arpeggio, synth);
-    graph.add_connection(synth, master);
-
-    // Connect operator to nodes which it controls
-    graph.add_connection(operator, tape);
-    graph.add_connection(operator, octave);
-    graph.add_connection(operator, arpeggio);
-
-    // Set the master node for the graph.
-    graph.set_master(Some(master));
-    */
-
-    /*
-    // Connect a few oscillators to the synth.
-    graph.add_input(Module::Oscillator(0.0, A5_HZ, 0.2), master);
-    graph.add_input(Module::Oscillator(0.0, D5_HZ, 0.1), master);
-    graph.add_input(Module::Oscillator(0.0, F5_HZ, 0.15), master);
-
     if let Err(err) = graph.add_connection(master, oscillator_a) {
         println!(
             "Testing for cycle error: {:?}",
@@ -125,8 +78,6 @@ fn main() -> Result<(), Box<error::Error>> {
 
     let mut operators: HashMap<u16, NodeIndex> = HashMap::new();
     let mut routes: HashMap<u16, NodeIndex> = HashMap::new();
-
-    routes.insert(0, master);
 
     event_loop(ipc_in, ipc_client, graph, move |mut patch, a| { 
         // ROOT DISPATCH
@@ -171,9 +122,11 @@ fn main() -> Result<(), Box<error::Error>> {
             },
             Action::OpenProject(name) => {
                 *patch = Graph::new();
+                operators = HashMap::new();
+                routes = HashMap::new();
+
                 let mut doc = read_document(name);
                 for (id, el) in doc.modules.iter_mut() {
-                    eprintln!("opened {} with id {:?}", &el.name, id);
                     match &el.name[..] {
                         "timeline" => {
                             let mut inputs: Vec<NodeIndex> = vec![];
@@ -190,7 +143,7 @@ fn main() -> Result<(), Box<error::Error>> {
                             for input in inputs.iter() {
                                 patch.add_connection(operator, *input);
                             }
-                            operators.insert(*id, operator);
+                            //operators.insert(*id, operator);
                         },
                         "hammond" => {
                             let store = match synth::read(el) {
@@ -228,7 +181,10 @@ fn main() -> Result<(), Box<error::Error>> {
                             patch.add_connection(operator, inst);
                         },
                         "keyboard" => {
-                            let octave = patch.add_node(Module::Octave(vec![], 4));
+                            let shift = el.attributes.get("octave").unwrap();
+                            let _shift = shift.parse::<Key>().unwrap();
+                            let octave = patch.add_node(Module::Octave(vec![], _shift));
+                            //let shift = patch.add_node(Module::Octave(vec![], 4));
                             let operator = patch.add_node(Module::Operator(vec![], 
                                 vec![octave], 
                                 vec![octave])
@@ -236,9 +192,52 @@ fn main() -> Result<(), Box<error::Error>> {
                             patch.add_connection(operator, octave);
                             operators.insert(*id, operator);
                         },
+                        // This module should always be last in doc.modules
+                        "patch" => {
+                            while let Some(mut route_el) = el.take_child("route") {
+                                let r_id = route_el.attributes.get("id").unwrap();
+                                let _r_id = r_id.parse::<u16>().unwrap();
+                                let route = patch.add_node(Module::Passthru(vec![]));
+                                routes.insert(_r_id, route);
+                                while let Some(input) = route_el.take_child("input") {
+                                    let m_id = input.attributes.get("module").unwrap();
+                                    let _m_id = m_id.parse::<u16>().unwrap();
+
+                                    let io_id = input.attributes.get("id").unwrap();
+                                    let _io_id = io_id.parse::<usize>().unwrap() - 1;
+                                    
+                                    let op_id = operators.get(&_m_id).unwrap();
+
+                                    let in_id = match &patch[*op_id] {
+                                        Module::Operator(_, ins, _) => ins[_io_id],
+                                        _ => panic!("No such input {}", io_id)
+                                    };
+                                    patch.add_connection(route, in_id);
+                                }
+                                while let Some(output) = route_el.take_child("output") {
+                                    let m_id = output.attributes.get("module").unwrap();
+                                    let _m_id = m_id.parse::<u16>().unwrap();
+                                    
+                                    let io_id = output.attributes.get("id").unwrap();
+                                    let _io_id = io_id.parse::<usize>().unwrap() - 1;
+
+                                    let op_id = operators.get(&_m_id).unwrap();
+
+                                    let out_id = match &patch[*op_id] {
+                                        Module::Operator(_, _, outs) => outs[_io_id],
+                                        _ => panic!("No such output {}", io_id)
+                                    };
+                                    patch.add_connection(out_id ,route);
+                                }
+                            }
+                            eprintln!("Project Loaded");
+                        }
                         name @ _ => { eprintln!("Unimplemented module {:?}", name)}
                     }
                 }
+                let root = patch.add_node(Module::Master);
+                patch.set_master(Some(root));
+                patch.add_connection(*routes.get(&0).unwrap(), root);
             },
             Action::MoveRegion(m_id, r_id, track, offset) => {
                 if let Some(n_id) = operators.get(&m_id) {

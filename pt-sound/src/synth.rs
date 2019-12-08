@@ -39,6 +39,7 @@ pub fn init() -> Store {
 pub fn dispatch(store: &mut Store, action: Action) {
     match action {
         Action::NoteOn(note, vol) => {
+            eprintln!("NOTEON");
             let hz = 440. * 2_f64.powf((note as f64 - 69.)/12.);
 
             for (baridx, barfreq) in BAR_FREQS.iter().enumerate() {
@@ -52,6 +53,7 @@ pub fn dispatch(store: &mut Store, action: Action) {
             }
         },
         Action::NoteOff(note) => {
+            eprintln!("NOTEOFF");
             for i in store.sigs.iter_mut() {
                 if let &mut Some(ref mut i) = i {
                     if i.note == note { i.targetvol = 0. }

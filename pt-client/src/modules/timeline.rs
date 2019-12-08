@@ -45,13 +45,10 @@ pub fn read(mut doc: Element) -> TimelineState {
 
     while let Some(mut track) = doc.take_child("track") {
         let t_id: &str = track.attributes.get("id").unwrap();
-        let in_id: &str = track.attributes.get("input").unwrap();
-        let out_id: &str = track.attributes.get("output").unwrap();
-        let t = t_id.parse::<u16>().unwrap();
+        let _t_id = t_id.parse::<u16>().unwrap();
 
-        state.tracks.insert(t, Track {
-            input: in_id.parse().unwrap(),
-            output: out_id.parse().unwrap(),
+        state.tracks.insert(_t_id, Track {
+            id: _t_id,
             record: false,
             mute: false,
             solo: false,
@@ -71,7 +68,7 @@ pub fn read(mut doc: Element) -> TimelineState {
                 asset_in: a_in.parse().unwrap(),
                 asset_out: a_out.parse().unwrap(),
                 offset: offset.parse().unwrap(),
-                track: t,
+                track: _t_id,
             });
         }
 

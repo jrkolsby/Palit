@@ -144,8 +144,6 @@ pub fn read(doc: &mut Element) -> Option<Store> {
     // Only take one track 
     if let Some(mut track) = doc.take_child("track") {
         let t_id: &str = track.attributes.get("id").unwrap();
-        let in_id: &str = track.attributes.get("input").unwrap();
-        let out_id: &str = track.attributes.get("output").unwrap();
         let t = t_id.parse::<u16>().unwrap();
 
         while let Some(region) = track.take_child("region") {

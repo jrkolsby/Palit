@@ -8,7 +8,7 @@ use crate::core::{Param, Offset, Key};
 pub struct Document {
     pub title: String,
     pub sample_rate: u32,
-    pub modules: HashMap<u16, Element>,
+    pub modules: Vec<(u16, Element)>,
 }
 
 const PALIT_ROOT: &str = "/usr/local/palit/";
@@ -63,11 +63,12 @@ pub fn read_document(filename: String) -> Document {
     let doc_path: String = format!("{}{}", PALIT_ROOT, filename);
     let doc_str: String = fs::read_to_string(doc_path).unwrap();
     let mut doc: Element = Element::parse(doc_str.as_bytes()).unwrap();
+    let mut patch: Option<(u16, Element)> = None;
 
     let mut result = Document {
         title: "Untitled".to_string(),
         sample_rate: 48000,
-        modules: HashMap::new(),
+        modules: Vec::new(),
     };
 
     if let Some(title) = doc.take_child("title") {
@@ -83,13 +84,23 @@ pub fn read_document(filename: String) -> Document {
     if let Some(modules) = doc.take_child("modules") {
         for module in modules.children.iter() {
             if let Some(i) = module.attributes.get("id") {
-                result.modules.insert(i.parse::<u16>().unwrap(), module.to_owned());
+                // Make sure that patch is the last module in the group
+                if module.name == "patch" {
+                    patch = Some((i.parse::<u16>().unwrap(), module.to_owned()));
+                    continue;
+                }
+                result.modules.push((i.parse::<u16>().unwrap(), module.to_owned()));
             } else {
                 panic!("Module {} missing ID", module.name);
             }
         }
     } else {
         panic!("No modules defined!");
+    }
+
+    match patch {
+        Some(p) => result.modules.push(p),
+        None => panic!("No patch defined!")
     }
 
     result

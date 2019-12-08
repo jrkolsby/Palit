@@ -32,9 +32,8 @@ pub struct Track {
     pub mute: bool,
     pub solo: bool,
     pub record: bool,
-    pub input: u16,
-    pub output: u16,
     pub index: u16,
+    pub id: u16,
 }
 
 pub fn beat_offset(sample_offset: u32, rate: u32, bpm: u16, zoom: usize) -> u16 {
