@@ -5,6 +5,7 @@ use std::{iter, error};
 use std::ffi::CString;
 use std::fs::File;
 use std::io::prelude::*;
+use std::thread;
 
 #[cfg(target_os = "linux")]
 extern crate alsa;

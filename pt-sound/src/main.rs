@@ -143,7 +143,7 @@ fn main() -> Result<(), Box<error::Error>> {
                             for input in inputs.iter() {
                                 patch.add_connection(operator, *input);
                             }
-                            //operators.insert(*id, operator);
+                            operators.insert(*id, operator);
                         },
                         "hammond" => {
                             let store = match synth::read(el) {
@@ -179,6 +179,7 @@ fn main() -> Result<(), Box<error::Error>> {
                                 vec![inst])
                             );
                             patch.add_connection(operator, inst);
+                            operators.insert(*id, operator);
                         },
                         "keyboard" => {
                             let shift = el.attributes.get("octave").unwrap();
@@ -203,7 +204,7 @@ fn main() -> Result<(), Box<error::Error>> {
                                     let m_id = input.attributes.get("module").unwrap();
                                     let _m_id = m_id.parse::<u16>().unwrap();
 
-                                    let io_id = input.attributes.get("id").unwrap();
+                                    let io_id = input.attributes.get("channel").unwrap();
                                     let _io_id = io_id.parse::<usize>().unwrap() - 1;
                                     
                                     let op_id = operators.get(&_m_id).unwrap();
@@ -218,7 +219,7 @@ fn main() -> Result<(), Box<error::Error>> {
                                     let m_id = output.attributes.get("module").unwrap();
                                     let _m_id = m_id.parse::<u16>().unwrap();
                                     
-                                    let io_id = output.attributes.get("id").unwrap();
+                                    let io_id = output.attributes.get("channel").unwrap();
                                     let _io_id = io_id.parse::<usize>().unwrap() - 1;
 
                                     let op_id = operators.get(&_m_id).unwrap();
@@ -230,11 +231,13 @@ fn main() -> Result<(), Box<error::Error>> {
                                     patch.add_connection(out_id ,route);
                                 }
                             }
-                            eprintln!("Project Loaded");
                         }
                         name @ _ => { eprintln!("Unimplemented module {:?}", name)}
                     }
                 }
+                eprintln!("Project Loaded");
+                eprintln!("{} Nodes", patch.node_count());
+                eprintln!("{} Edges", patch.connection_count());
                 let root = patch.add_node(Module::Master);
                 patch.set_master(Some(root));
                 patch.add_connection(*routes.get(&0).unwrap(), root);
