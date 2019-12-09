@@ -21,6 +21,7 @@ pub struct Sig {
 }
 
 pub struct Store {
+    pub queue: Vec<Action>,
     pub sigs: Vec<Option<Sig>>,
     pub sample_rate: signal::Rate,
     pub stored_sample: Option<Output>,
@@ -29,6 +30,7 @@ pub struct Store {
 
 pub fn init() -> Store {
     Store {
+        queue: vec![],
         sigs: iter::repeat(None).take(256).collect(),
         sample_rate: signal::rate(f64::from(48000)),
         stored_sample: None,
@@ -39,7 +41,7 @@ pub fn init() -> Store {
 pub fn dispatch(store: &mut Store, action: Action) {
     match action {
         Action::NoteOn(note, vol) => {
-            eprintln!("NOTEON");
+            store.queue.push(action);
             let hz = 440. * 2_f64.powf((note as f64 - 69.)/12.);
 
             for (baridx, barfreq) in BAR_FREQS.iter().enumerate() {
@@ -53,7 +55,7 @@ pub fn dispatch(store: &mut Store, action: Action) {
             }
         },
         Action::NoteOff(note) => {
-            eprintln!("NOTEOFF");
+            store.queue.push(action);
             for i in store.sigs.iter_mut() {
                 if let &mut Some(ref mut i) = i {
                     if i.note == note { i.targetvol = 0. }
@@ -127,4 +129,14 @@ pub fn compute(store: &mut Store) -> Output {
     let z = z.min(0.999).max(-0.999);
     store.stored_sample = Some(z);
     z
+}
+
+pub fn dispatch_requested(store: &mut Store) -> (
+        Option<Vec<Action>>, // Actions for outputs
+        Option<Vec<Action>>, // Actions for inputs
+        Option<Vec<Action>> // Actions for client
+    ) {
+        let carry = store.queue.clone();
+        store.queue.clear();
+        (None, None, Some(carry.clone()))
 }

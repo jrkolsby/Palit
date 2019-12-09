@@ -284,6 +284,7 @@ impl Module {
             Module::Tape(ref mut store) => tape::dispatch_requested(store),
             Module::Chord(ref mut store) => chord::dispatch_requested(store),
             Module::Arpeggio(ref mut store) => arpeggio::dispatch_requested(store),
+            Module::Synth(ref mut store) => synth::dispatch_requested(store),
             Module::Master => (None, None, None), // TODO: give master levels to client
             _ => (None, None, None)
         }
