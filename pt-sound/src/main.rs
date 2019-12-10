@@ -81,12 +81,13 @@ fn main() -> Result<(), Box<error::Error>> {
 
     event_loop(ipc_in, ipc_client, graph, move |mut patch, a| { 
         // ROOT DISPATCH
+        eprintln!("ACTION {:?}", a);
         match a {
             Action::SetParam(n_id, _, _) => {
                 let id = operators.get(&n_id).unwrap();
                 patch[*id].dispatch(a)
             },
-            Action::NoteOnAt(n_id, _, _) | Action::NoteOnAt(n_id, _, _) => {
+            Action::NoteOnAt(n_id, _, _) | Action::NoteOffAt(n_id, _) => {
                 let id = operators.get(&n_id).unwrap();
                 patch[*id].dispatch(a);
             },
@@ -120,11 +121,17 @@ fn main() -> Result<(), Box<error::Error>> {
                     _ => {}
                 };
             },
+            Action::MoveRegion(m_id, r_id, track, offset) => {
+                if let Some(n_id) = operators.get(&m_id) {
+                    if let Some(node) = patch.node_mut(*n_id) {
+                        node.dispatch(a)
+                    }
+                }
+            },
             Action::OpenProject(name) => {
                 *patch = Graph::new();
                 operators = HashMap::new();
                 routes = HashMap::new();
-
                 let mut doc = read_document(name);
                 for (id, el) in doc.modules.iter_mut() {
                     match &el.name[..] {
@@ -241,13 +248,6 @@ fn main() -> Result<(), Box<error::Error>> {
                 let root = patch.add_node(Module::Master);
                 patch.set_master(Some(root));
                 patch.add_connection(*routes.get(&0).unwrap(), root);
-            },
-            Action::MoveRegion(m_id, r_id, track, offset) => {
-                if let Some(n_id) = operators.get(&m_id) {
-                    if let Some(node) = patch.node_mut(*n_id) {
-                        node.dispatch(a)
-                    }
-                }
             },
             _ => { eprintln!("unimplemented action {:?}", a); }
         }

@@ -40,8 +40,8 @@ pub fn init() -> Store {
 
 pub fn dispatch(store: &mut Store, action: Action) {
     match action {
+        Action::NoteOnAt(_, note, vol) |
         Action::NoteOn(note, vol) => {
-            store.queue.push(action);
             let hz = 440. * 2_f64.powf((note as f64 - 69.)/12.);
 
             for (baridx, barfreq) in BAR_FREQS.iter().enumerate() {
@@ -53,14 +53,23 @@ pub fn dispatch(store: &mut Store, action: Action) {
                 let s = Sig { sig: hz.sine(), note, targetvol: vol, curvol: 0., baridx };
                 store.sigs[idx] = Some(s);
             }
+            // Only carry NoteOn/Off actions, NOT NoteOnAt
+            match action {
+                Action::NoteOn(_, _) => store.queue.push(action),
+                _ => {}
+            };
         },
+        Action::NoteOffAt(_, note) |
         Action::NoteOff(note) => {
-            store.queue.push(action);
             for i in store.sigs.iter_mut() {
                 if let &mut Some(ref mut i) = i {
                     if i.note == note { i.targetvol = 0. }
                 }
             }
+            match action {
+                Action::NoteOff(_) => store.queue.push(action),
+                _ => {}
+            };
         },
         Action::SetParam(_, ctrl, value) => {
             let idx = match ctrl {

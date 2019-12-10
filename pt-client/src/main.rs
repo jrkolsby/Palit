@@ -186,7 +186,7 @@ fn main() -> std::io::Result<()> {
                 },
                 // Dispatch toplevel action to front layer
                 a => {
-                    let target_i = (layers.len() as i16)-1;
+                    let target_i = (layers.len() as i16) - 1;
                     if target_i >= 0 {
                         let (id, target) = layers.get_mut(target_i as usize).unwrap();
                         target.dispatch(a)
@@ -197,9 +197,25 @@ fn main() -> std::io::Result<()> {
             };
 
             // capture default action if returned from layer
+            let target = match layers[layers.len()-1] {
+                (id, _) => id, _ => 0
+            };
+
             match default {
                 Action::InputTitle => {
                     add_layer(&mut layers, Box::new(Title::new(23, 5, 36, 23)), 0);
+                },
+                Action::Play => {
+                    ipc_sound.write(format!("PLAY:{} ", target).as_bytes());
+                }
+                Action::Stop => {
+                    ipc_sound.write(format!("STOP:{} ", target).as_bytes());
+                }
+                Action::NoteOn(k, v) => {
+                    ipc_sound.write(format!("NOTE_ON_AT:{}:{}:{} ", target, k, v).as_bytes());
+                },
+                Action::NoteOff(k) => {
+                    ipc_sound.write(format!("NOTE_OFF_AT:{}:{} ", target, k).as_bytes());
                 },
                 /*
                 Action::CreateProject(title) => {

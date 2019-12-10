@@ -3,6 +3,7 @@ mod action;
 mod color;
 mod render;
 mod multifocus;
+mod layout;
 
 pub use pcm::file_to_pairs;
 pub use pcm::generate_waveforms;
@@ -24,6 +25,9 @@ pub use multifocus::shift_focus;
 pub use multifocus::render_focii;
 pub use multifocus::FocusType;
 pub use multifocus::ID;
+
+pub use layout::REGIONS_X;
+pub use layout::TIMELINE_Y;
 
 #[derive(Clone, Debug)]
 pub enum Rate {

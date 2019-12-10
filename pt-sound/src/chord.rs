@@ -27,7 +27,6 @@ pub fn dispatch(store: &mut Store, action: Action) {
     match action {
         Action::NoteOn(note, vol) => {
             for dnote in store.intervals.iter() {
-                println!("Noteon {}", note);
                 store.thru_queue.push(Action::NoteOn(note+dnote, vol));
             }
         },

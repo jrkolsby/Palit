@@ -9,3 +9,4 @@ pub mod casette;
 pub mod piano;
 //pub mod knob;
 pub mod slider;
+pub mod region;

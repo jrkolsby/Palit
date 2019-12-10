@@ -10,19 +10,16 @@ use termion::raw::{RawTerminal};
 use std::io::{Write, Stdout};
 use std::collections::HashMap;
 
-use crate::components::{waveform, tempo, button, ruler};
+use crate::components::{waveform, tempo, button, ruler, region};
 use crate::common::{MultiFocus, render_focii, shift_focus, FocusType, Window, ID};
 use crate::common::{Action, Color, Asset, Region, Track};
 use crate::common::{beat_offset, offset_beat, generate_waveforms};
 use crate::modules::timeline;
 use crate::views::{Layer};
 
-//#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
+use crate::common::{REGIONS_X, TIMELINE_Y};
 
-static MARGIN: (u16, u16) = (3, 3);
 static TRACKS_X: u16 = 3;
-static REGIONS_X: u16 = 16;
-static TIMELINE_Y: u16 = 5;
 static SCROLL_R: u16 = 40;
 static SCROLL_L: u16 = 10;
 static ASSET_PREFIX: &str = "storage/";
@@ -141,10 +138,26 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                     button::render(out, win.x+TRACKS_X+8, win.y+TIMELINE_Y+(2*id.1), 3, "S"),
                 b_t: |action, id, _| Action::Solo(id.1),
 
-                p: |mut out, win, id, state, focus| out,
-                p_t: |action, id, state| Action::Noop,
+                p: |mut out, win, id, state, focus| {
+                    if focus {
+                        write!(out, "{}<O", cursor::Goto(
+                            win.x, 
+                            win.y+TIMELINE_Y+(2*id.1)
+                        ));
+                    }
+                    out
+                },
+                p_t: |action, id, state| Action::InputTitle,
 
-                y: |mut out, win, id, state, focus| out,
+                y: |mut out, win, id, state, focus| {
+                    if focus {
+                        write!(out, "{}<I", cursor::Goto(
+                            win.x,
+                            win.y+TIMELINE_Y+(2*id.1)+2
+                        ));
+                    }
+                    out
+                },
                 y_t: |action, id, state| Action::Noop,
 
                 active: None,
@@ -157,151 +170,9 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
 
     for (region_id, region) in region_vec.iter() {
 
-        focii[region.track as usize].push(MultiFocus::<TimelineState> {
-            w_id: (FocusType::Region, **region_id),
-            w: |mut out, window, id, state, focus| {
-                let region = state.regions.get(&id.1).unwrap();
-                let waveform = &state.assets.get(&region.asset_id).unwrap().waveform;
-
-                let region_offset = beat_offset(region.offset,
-                    state.sample_rate, state.tempo, state.zoom);
-
-                let asset_start_offset = beat_offset(region.asset_in,
-                    state.sample_rate, state.tempo, state.zoom);
-
-                let asset_length_offset = beat_offset(region.asset_out - region.asset_in,
-                    state.sample_rate, state.tempo, state.zoom);
-
-                // Region appears to left of timeline
-                if asset_length_offset + region_offset < state.scroll_x {
-                    return out;
-                } 
-                // Region appears to right of timeline
-                else if region_offset > state.scroll_x + window.w {
-                    return out;
-                } 
-
-                // Region split by left edge of timeline
-                let wave_in_i: usize = if region_offset < state.scroll_x {
-                    (state.scroll_x - region_offset) as usize
-                // Left edge of region appears unclipped
-                } else {
-                    asset_start_offset as usize
-                };
-
-                // Region split by right edge of timeline
-                let wave_out_i: usize = if state.scroll_x + window.w < region_offset + asset_length_offset {
-                    (asset_start_offset + asset_length_offset) as usize - 
-                    (region_offset + asset_length_offset - (state.scroll_x + window.w)) as usize
-                } else {
-                    (asset_start_offset + asset_length_offset) as usize
-                };
-
-                let wave_slice = &waveform[wave_in_i..wave_out_i];
-
-                let timeline_offset = if region_offset >= state.scroll_x {
-                    region_offset - state.scroll_x
-                } else { 0 };
-
-                let region_x = window.x + REGIONS_X + timeline_offset;
-                let region_y = window.y + 1 + TIMELINE_Y + 2 * region.track;
-
-                waveform::render(out, wave_slice, region_x, region_y)
-            }, 
-            r: |mut out, window, id, state, focus| {
-                if focus {
-                    let region = state.regions.get(&id.1).unwrap();
-
-                    let region_offset = beat_offset(region.offset,
-                        state.sample_rate, state.tempo, state.zoom);
-
-                    let timeline_offset = if region_offset >= state.scroll_x {
-                        region_offset - state.scroll_x
-                    } else { 0 };
-
-                    let region_x = window.x + 7 + REGIONS_X + timeline_offset;
-                    let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
-
-                    write!(out, "{} TRIM ",
-                        cursor::Goto(region_x, region_y));
-                }
-                out
-            },
-            r_t: void_transform,
-            r_id: void_id.clone(),
-            g: |mut out, window, id, state, focus| {
-                if focus {
-                    let region = state.regions.get(&id.1).unwrap();
-
-                    let region_offset = beat_offset(region.offset,
-                        state.sample_rate, state.tempo, state.zoom);
-
-                    let timeline_offset = if region_offset >= state.scroll_x {
-                        region_offset - state.scroll_x
-                    } else { 0 };
-
-                    let region_x = window.x + REGIONS_X + timeline_offset;
-                    let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
-
-                    write!(out, "{} MOVE ",
-                        cursor::Goto(region_x, region_y));
-                }
-
-                out
-            },
-            g_t: |action, id, mut state| match action {
-                Action::Right => { 
-                    let r = state.regions.get(&id.1).unwrap();
-                    let d_offset = offset_beat(1, state.sample_rate, state.tempo, state.zoom);
-                    Action::MoveRegion(id.1, r.track, r.offset+d_offset) 
-                },
-                Action::Left => { 
-                    let r = state.regions.get(&id.1).unwrap();
-                    let d_offset = offset_beat(1, state.sample_rate, state.tempo, state.zoom);
-                    Action::MoveRegion(id.1, r.track, r.offset-d_offset) 
-                },
-                Action::Up => { 
-                    let r = state.regions.get(&id.1).unwrap();
-                    Action::MoveRegion(id.1, r.track-1, r.offset) 
-                },
-                Action::Down => { 
-                    let r = state.regions.get(&id.1).unwrap();
-                    Action::MoveRegion(id.1, r.track+1, r.offset) 
-                },
-                _ => Action::Noop,
-            },
-            g_id: void_id.clone(),
-            y: |mut out, window, id, state, focus| {
-                if focus {
-                    let region = state.regions.get(&id.1).unwrap();
-
-                    let region_offset = beat_offset(region.offset,
-                        state.sample_rate, state.tempo, state.zoom);
-
-                    let timeline_offset = if region_offset >= state.scroll_x {
-                        region_offset - state.scroll_x
-                    } else { 0 };
-
-                    let region_x = window.x + 14 + REGIONS_X + timeline_offset;
-                    let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
-
-                    write!(out, "{} SPLIT ",
-                        cursor::Goto(region_x, region_y));
-                }
-
-                out
-            }, 
-            y_t: void_transform,
-            y_id: void_id.clone(),
-            p: void_render, 
-            p_t: void_transform,
-            p_id: void_id.clone(),
-            b: void_render, 
-            b_t: void_transform,
-            b_id: void_id.clone(),
-
-            active: None,
-        })
+        focii[region.track as usize].push(
+            region::new(**region_id)
+        )
     }
 
     return focii
@@ -486,7 +357,7 @@ impl Layer for Timeline {
 
                 (new_focus, None)
             },
-            _ => (self.state.focus, None)
+            _ => (self.state.focus, Some(_action))
         };
 
         self.state.focus = focus;

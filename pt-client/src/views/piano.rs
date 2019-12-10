@@ -197,6 +197,9 @@ impl Layer for Piano {
 
         // Default
         return match _action {
+            // Default actions which need to be given to pt-sound
+            Action::NoteOn(_,_) |
+            Action::NoteOff(_) |
             Action::SetParam(_,_) => _action,
             _ => Action::Noop
         };
