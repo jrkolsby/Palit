@@ -1,9 +1,9 @@
 extern crate libc;
 extern crate termion;
 
-use std::io::{BufReader, Write, Stdout, stdout, stdin};
+use std::io::{Write, Stdout, stdout};
 use std::io::prelude::*;
-use std::fs::{OpenOptions, read_to_string, File};
+use std::fs::{OpenOptions, File};
 use std::os::unix::fs::OpenOptionsExt;
 use std::ffi::CString;
 
@@ -21,7 +21,7 @@ mod modules;
 use views::{Layer, Home, Timeline, Help, Title, Piano, Routes};
 use modules::{read_document};
 
-use common::Action;
+use common::{Action, Anchor};
 
 fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<(u16, Box<Layer>)>) -> RawTerminal<Stdout> {
     /*
@@ -57,6 +57,8 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
         let argv: Vec<&str> = action_raw.split(":").collect();
 
         let action = match argv[0] {
+            "ROUTE" => Action::Route,
+
             "TICK" => Action::Tick,
 
             "?" => Action::Noop,
@@ -92,7 +94,7 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
 
         match action {
             Action::Noop => {},
-            _ => { events.push(action); }
+            a => { events.push(a); }
         };
     };
 
@@ -111,8 +113,8 @@ fn main() -> std::io::Result<()> {
 	    .open("/tmp/pt-client").unwrap();
 
     // Blocked by pt-sound reader
-    // If a process runs and nobody is around to hear it,
-    // should it really continue? 
+    // If a process writes to stdout and nobody 
+    // is around to read it, should it continue?
     println!("Waiting for pt-sound...");
 
     let mut ipc_sound = OpenOptions::new()
@@ -137,13 +139,9 @@ fn main() -> std::io::Result<()> {
 
     // Configure UI layers
     let mut layers: VecDeque<(u16, Box<Layer>)> = VecDeque::new();
+    let mut routes_id: Option<u16> = None;
 
     add_layer(&mut layers, Box::new(Home::new(1, 1, size.0, size.1)), 0);
-
-    /*
-    add_layer(&mut layers, Box::new(Piano::new(5, 10, size.0/2, size.1/2)));
-    add_layer(&mut layers, Box::new(Routes::new(1, 1, 4, size.1)));
-    */
 
     // Hide cursor and clear screen
     write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
@@ -152,10 +150,8 @@ fn main() -> std::io::Result<()> {
     stdout = render(stdout, &layers);
     stdout.flush().unwrap();
 
-    // Action queue
     let mut events: Vec<Action> = Vec::new();
 
-    // MAIN LOOP
     'event: loop {
 
         unsafe{
@@ -171,12 +167,12 @@ fn main() -> std::io::Result<()> {
         while let Some(next) = events.pop() {
             // Execute toplevel actions, capture default from view
             let default: Action = match next {
+                Action::Exit => { 
+                    break 'event;
+                },
                 Action::Help => { 
                     add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15)), 0); 
                     Action::Noop
-                },
-                Action::Exit => { 
-                    break 'event;
                 },
                 Action::Back => {
                     if let Some(current) = layers.pop_front() {
@@ -184,7 +180,6 @@ fn main() -> std::io::Result<()> {
                     }
                     Action::Noop
                 },
-                // Dispatch toplevel action to front layer
                 a => {
                     let target_i = (layers.len() as i16) - 1;
                     if target_i >= 0 {
@@ -198,24 +193,57 @@ fn main() -> std::io::Result<()> {
 
             // capture default action if returned from layer
             let target = match layers[layers.len()-1] {
-                (id, _) => id, _ => 0
+                (id, _) => id, 
+                _ => 0
             };
 
             match default {
+                Action::RouteAnchors(anchors) => {
+                    if let Some(r_id) = routes_id {
+                        let mut routes_index: Option<usize> = None;
+                        for (i, (id, layer)) in layers.iter_mut().enumerate() {
+                            if *id == r_id {
+                                routes_index = Some(i);
+                                break;
+                            }
+                        }
+                        if let Some(j) = routes_index {
+                            let (_, mut routes) = layers.remove(j).unwrap();
+                            let anchors_fill = anchors.iter().map(|a| Anchor {
+                                id: a.id,
+                                module_id: target,
+                                x: a.x,
+                                y: a.y,
+                                input: a.input
+                            }).collect();
+                            routes.dispatch(Action::RouteAnchors(anchors_fill));
+                            add_layer(&mut layers, routes, r_id);
+                        }
+                    } else {
+                        let patch_id = layers.len() as u16 + 1;
+                        add_layer(&mut layers, Box::new(
+                            Routes::new(1,1,size.0,size.1, None)
+                        ), patch_id) 
+                    }
+                },
                 Action::InputTitle => {
                     add_layer(&mut layers, Box::new(Title::new(23, 5, 36, 23)), 0);
                 },
                 Action::Play => {
-                    ipc_sound.write(format!("PLAY:{} ", target).as_bytes());
+                    ipc_sound.write(
+                        format!("PLAY:{} ", target).as_bytes()).unwrap();
                 }
                 Action::Stop => {
-                    ipc_sound.write(format!("STOP:{} ", target).as_bytes());
+                    ipc_sound.write(
+                        format!("STOP:{} ", target).as_bytes()).unwrap();
                 }
                 Action::NoteOn(k, v) => {
-                    ipc_sound.write(format!("NOTE_ON_AT:{}:{}:{} ", target, k, v).as_bytes());
+                    ipc_sound.write(
+                        format!("NOTE_ON_AT:{}:{}:{} ", target, k, v).as_bytes()).unwrap();
                 },
                 Action::NoteOff(k) => {
-                    ipc_sound.write(format!("NOTE_OFF_AT:{}:{} ", target, k).as_bytes());
+                    ipc_sound.write(
+                        format!("NOTE_OFF_AT:{}:{} ", target, k).as_bytes()).unwrap();
                 },
                 /*
                 Action::CreateProject(title) => {
@@ -224,7 +252,8 @@ fn main() -> std::io::Result<()> {
                 },
                 */
                 Action::OpenProject(title) => {
-                    ipc_sound.write(format!("OPEN_PROJECT:{} ", title).as_bytes());
+                    ipc_sound.write(
+                        format!("OPEN_PROJECT:{} ", title).as_bytes()).unwrap();
                     let doc = read_document(title);
                     for (id, el) in doc.modules.iter() {
                         match &el.name[..] {
@@ -232,9 +261,13 @@ fn main() -> std::io::Result<()> {
                                 Box::new(Timeline::new(1, 1, size.0, size.1, (*el).to_owned())), *id),
                             "hammond" => add_layer(&mut layers,
                                 Box::new(Piano::new(1,1,size.0,size.1, (*el).to_owned())), *id),
-                            "patch" => add_layer(&mut layers,
-                                Box::new(Routes::new(1,1,size.0,size.1, (*el).to_owned())), *id),
-                            name @ _ => { eprintln!("unimplemented module {:?}", name)}
+                            "patch" => { 
+                                routes_id = Some(*id);
+                                add_layer(&mut layers, Box::new(
+                                    Routes::new(1,1,size.0,size.1, Some((*el).to_owned()))
+                                ), *id) 
+                            },
+                            name => { eprintln!("unimplemented module {:?}", name)}
                         }
                     }
                 },

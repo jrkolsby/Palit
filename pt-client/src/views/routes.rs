@@ -1,18 +1,23 @@
 use std::io::{Write, Stdout};
-use std::collections::HashMap;
 use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 use xmltree::Element;
 
-use crate::common::{Action, MultiFocus, shift_focus, render_focii, FocusType, Window};
+use crate::common::{MultiFocus, shift_focus, render_focii, FocusType};
+use crate::common::{Action, Window, Anchor};
 use crate::views::{Layer};
 use crate::components::{button};
 
 #[derive(Clone, Debug)]
+struct Route {
+    id: u16,
+    patch: Vec<Anchor>,
+}
+
+#[derive(Clone, Debug)]
 pub struct RoutesState {
-    routes: HashMap<u16, (Vec<u16>, Vec<u16>)>, // id, in ids, out ids
-    ins: HashMap<u16, (u16, u16, u16)>, // id, layer_id, x, y
-    outs: HashMap<u16, (u16, u16, u16)>, // ^
+    routes: Vec<Route>,
+    anchors: Vec<Anchor>,
     focus: (usize, usize),
 }
 
@@ -25,47 +30,43 @@ pub struct Routes {
     focii: Vec<Vec<MultiFocus<RoutesState>>>
 }
 
-type Route = (u16, Vec<u16>); // id, vector of input or output ids
+fn generate_focii(
+    routes: &Vec<Route>, 
+    anchors: &Vec<Anchor>
+) -> Vec<Vec<MultiFocus::<RoutesState>>> {
+    vec![vec![]]
+}
 
 fn reduce(state: RoutesState, action: Action) -> RoutesState {
     RoutesState {
         routes: match action {
-            Action::PatchIn(a,b) => {
+            Action::AddRoute(a) => {
                 let mut new_routes = state.routes.clone();
-                if let Some(entry) = new_routes.get_mut(&a) {
-                    entry.0.push(b);
-                } else {
-                    new_routes.insert(a, (vec![b], vec![]));
-                }
-                new_routes
-            },
-            Action::PatchOut(a,b) => {
-                let mut new_routes = state.routes.clone();
-                if let Some(entry) = new_routes.get_mut(&a) {
-                    entry.1.push(b);
-                } else {
-                    new_routes.insert(a, (vec![], vec![b]));
-                }
+                new_routes.push(Route {
+                    id: a,
+                    patch: vec![]
+                });
                 new_routes
             },
             _ => state.routes.clone()
         },
-        ins: state.ins.clone(),
-        outs: state.outs.clone(),
+        anchors: match action {
+            Action::RouteAnchors(a) => a,
+            _ => state.anchors.clone()
+        },
         focus: state.focus,
     }
 }
 
 impl Routes {
-    pub fn new(x: u16, y: u16, width: u16, height: u16, doc: Element) -> Self {
+    pub fn new(x: u16, y: u16, width: u16, height: u16, doc: Option<Element>) -> Self {
 
         let mut path: String = "/usr/local/palit/".to_string();
 
         // Initialize State
         let initial_state: RoutesState = RoutesState {
-            routes: HashMap::new(),
-            ins: HashMap::new(),
-            outs: HashMap::new(),
+            routes: vec![],
+            anchors: vec![],
             focus: (0,0),
         };
 
@@ -79,15 +80,8 @@ impl Routes {
                 MultiFocus::<RoutesState> {
                     w: |mut out, window, id, state, focus| out,
                     w_id: (FocusType::Void, 0),
-                    r: |mut out, window, id, state, focus| {
-                        button::render(out, window.x+2, window.y+2, 20, "Add Route")
-                    },
-                    r_t: |action, id, state| {  
-                        match action {
-                            Action::SelectR => Action::PatchIn(0,0),
-                            _ => Action::Noop
-                        }
-                    },
+                    r: |mut out, window, id, state, focus| out,
+                    r_t: |action, id, state| action,
                     r_id: (FocusType::Button, 0),
                     g: |mut out, window, id, state, focus| out,
                     g_t: |action, id, state| action,
@@ -103,7 +97,6 @@ impl Routes {
                     b_id: (FocusType::Button, 0),
                     active: None,
                 }
-
             ]],
         }
     }
@@ -115,6 +108,8 @@ impl Layer for Routes {
         let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
 
         out = render_focii(out, win, self.state.focus.clone(), &self.focii, &self.state);
+
+        println!("{} ANCHORS", self.state.anchors.len());
 
         out.flush().unwrap();
         out
@@ -139,7 +134,6 @@ impl Layer for Routes {
         self.state = reduce(self.state.clone(), _action.clone());
 
         match _action {
-            Action::PatchIn(_,_) | Action::PatchOut(_,_) => _action,
             _ => Action::Noop
         }
     }

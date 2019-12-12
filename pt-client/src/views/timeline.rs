@@ -1,18 +1,16 @@
 extern crate wavefile;
 
-use wavefile::WaveFile;
-
 use xmltree::Element;
 
-use termion::{color, cursor, terminal_size};
+use termion::cursor;
 use termion::raw::{RawTerminal};
 
 use std::io::{Write, Stdout};
 use std::collections::HashMap;
 
-use crate::components::{waveform, tempo, button, ruler, region};
+use crate::components::{tempo, button, ruler, region};
 use crate::common::{MultiFocus, render_focii, shift_focus, FocusType, Window, ID};
-use crate::common::{Action, Color, Asset, Region, Track};
+use crate::common::{Action, Asset, Region, Track, Anchor};
 use crate::common::{beat_offset, offset_beat, generate_waveforms};
 use crate::modules::timeline;
 use crate::views::{Layer};
@@ -59,23 +57,19 @@ pub struct Timeline {
     focii: Vec<Vec<MultiFocus<TimelineState>>>,
 }
 
+static VOID_ID: ID = (FocusType::Void, 0);
+static VOID_RENDER: fn( RawTerminal<Stdout>, 
+        Window, ID, &TimelineState, bool) -> RawTerminal<Stdout> =
+    |mut out, window, id, state, focus| out;
+static VOID_TRANSFORM: fn(Action, ID, &mut TimelineState) -> Action = 
+    |action, id, state| Action::Noop;
+
 fn generate_focii(tracks: &HashMap<u16, Track>, 
                   regions: &HashMap<u16, Region>) -> Vec<Vec<MultiFocus<TimelineState>>> {
-    // Create empty select
-    let void_id: ID = (FocusType::Void, 0);
-    let void_render: fn(RawTerminal<Stdout>, Window, ID, &TimelineState, bool) -> RawTerminal<Stdout> =
-        |mut out, window, id, state, focus| out;
-    let void_transform: fn(Action, ID, &mut TimelineState) -> Action = 
-        |action, id, state| Action::Noop;
-
-    /* TIMELINE LAYOUT
-    Rec, In, loop In, loop Out, Out
-    */
-
     let mut focii: Vec<Vec<MultiFocus<TimelineState>>> = vec![vec![
         MultiFocus::<TimelineState> {
             w: |mut out, window, id, state, focus| out,
-            w_id: void_id.clone(),
+            w_id: VOID_ID.clone(),
 
             r_id: (FocusType::Button, 0),
             r: |mut out, window, id, state, focus| 
@@ -117,14 +111,14 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
     for (t_id, track) in track_vec.iter() {
         focii.push(vec![
             MultiFocus::<TimelineState> {
-                w: void_render,
+                w: VOID_RENDER,
                 w_id: (FocusType::Button, **t_id),
 
-                r_id: void_id.clone(),
-                g_id: void_id.clone(),
-                y_id: void_id.clone(),
-                p_id: void_id.clone(),
-                b_id: void_id.clone(),
+                r_id: VOID_ID.clone(),
+                g_id: VOID_ID.clone(),
+                y_id: VOID_ID.clone(),
+                p_id: VOID_ID.clone(),
+                b_id: VOID_ID.clone(),
 
                 r: |mut out, win, id, state, focus|
                     button::render(out, win.x+TRACKS_X, win.y+TIMELINE_Y+2*id.1, 3, "R"),
@@ -141,9 +135,8 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                 p: |mut out, win, id, state, focus| {
                     if focus {
                         write!(out, "{}<O", cursor::Goto(
-                            win.x, 
-                            win.y+TIMELINE_Y+(2*id.1)
-                        ));
+                            win.x, win.y+TIMELINE_Y+(2*id.1)
+                        )).unwrap();
                     }
                     out
                 },
@@ -152,9 +145,8 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                 y: |mut out, win, id, state, focus| {
                     if focus {
                         write!(out, "{}<I", cursor::Goto(
-                            win.x,
-                            win.y+TIMELINE_Y+(2*id.1)+2
-                        ));
+                            win.x, win.y+TIMELINE_Y+(2*id.1)+2
+                        )).unwrap();
                     }
                     out
                 },
@@ -169,7 +161,6 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
     region_vec.sort_by(|(_, a), (_, b)| a.offset.cmp(&b.offset));
 
     for (region_id, region) in region_vec.iter() {
-
         focii[region.track as usize].push(
             region::new(**region_id)
         )
@@ -220,9 +211,8 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
 
             match action {
                 Action::Left => 
-                    if (playhead_offset > 0 && 
-                        state.scroll_x > 0 && 
-                        playhead_offset < state.scroll_x + SCROLL_L) {
+                    if playhead_offset > 0 && state.scroll_x > 0 && 
+                        playhead_offset < state.scroll_x + SCROLL_L {
                         state.scroll_x-1
                     } else { 
                         state.scroll_x.clone() 
@@ -296,6 +286,7 @@ impl Layer for Timeline {
         out.flush().unwrap();
         out
     }
+
     fn dispatch(&mut self, action: Action) -> Action {
 
         // Let the focus transform the action 
@@ -306,7 +297,6 @@ impl Layer for Timeline {
         
         // Intercept arrow actions to change focus or to return
         let (focus, default) = match _action {
-            Action::Up | Action::Down => shift_focus(self.state.focus, &self.focii, _action.clone()),
             // Only shift focus horizontally if playhead has exceeded current region
             Action::Left => match multi_focus.w_id.0 {
                 FocusType::Region => {
@@ -337,6 +327,7 @@ impl Layer for Timeline {
                 },
                 _ => shift_focus(self.state.focus, &self.focii, Action::Right),
             },
+            Action::Up | Action::Down => shift_focus(self.state.focus, &self.focii, _action.clone()),
             Action::Deselect => {
                 // Get the red ID of the current focus, generate a new focii
                 // array based on the new tracks and regions, Then find the
@@ -357,7 +348,29 @@ impl Layer for Timeline {
 
                 (new_focus, None)
             },
-            _ => (self.state.focus, Some(_action))
+            Action::Route => {
+                let mut anchors = vec![];
+                for (id, track) in self.state.tracks.iter() {
+                    // Track output
+                    anchors.push(Anchor {
+                        id: *id, 
+                        module_id: 0,
+                        x: TRACKS_X,
+                        y: TIMELINE_Y + 2 * id,
+                        input: false,
+                    });
+                    // Track input
+                    anchors.push(Anchor {
+                        id: *id, 
+                        module_id: 0,
+                        x: TRACKS_X,
+                        y: TIMELINE_Y + 2 * id,
+                        input: true,
+                    });
+                }
+                (self.state.focus, Some(Action::RouteAnchors(anchors)))
+            }
+            _ => (self.state.focus, None)
         };
 
         self.state.focus = focus;

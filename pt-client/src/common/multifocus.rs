@@ -84,7 +84,7 @@ pub fn render_focii<T>(mut out: RawTerminal<Stdout>, window: Window,
         };
         let space = (0..size.0).map(|_| " ").collect::<String>();
         for j in 1..size.1 {
-            write!(out, "{}{}", cursor::Goto(1, j), space);
+            write!(out, "{}{}", cursor::Goto(1, j), space).unwrap();
         }
         out = write_fg(out, Color::Black);
     } else {

@@ -12,9 +12,9 @@ pub fn write(state: TimelineState) -> Element {
     Element::new("param")
 }
 
-pub fn read(mut doc: Element) -> TimelineState {
+pub fn read(doc: Element) -> TimelineState {
 
-    let (mut doc, params) = param_map(doc);
+    let (doc, params) = param_map(doc);
     let (mut doc, marks) = mark_map(doc);
 
     let mut state = TimelineState {

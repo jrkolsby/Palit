@@ -3,8 +3,8 @@ use std::io::{Write, Stdout};
 use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 
-use crate::common::{Action, Color};
-use crate::views::{Layer};
+use crate::common::Action;
+use crate::views::Layer;
 use crate::components::{popup, casette, button};
 
 pub struct Title {

@@ -84,7 +84,7 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                 let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
 
                 write!(out, "{} TRIM ",
-                    cursor::Goto(region_x, region_y));
+                    cursor::Goto(region_x, region_y)).unwrap();
             }
             out
         },
@@ -105,12 +105,12 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                 let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
 
                 write!(out, "{} MOVE ",
-                    cursor::Goto(region_x, region_y));
+                    cursor::Goto(region_x, region_y)).unwrap();
             }
 
             out
         },
-        g_t: |action, id, mut state| match action {
+        g_t: |action, id, state| match action {
             Action::Right => { 
                 let r = state.regions.get(&id.1).unwrap();
                 let d_offset = offset_beat(1, state.sample_rate, state.tempo, state.zoom);
@@ -147,7 +147,7 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                 let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
 
                 write!(out, "{} SPLIT ",
-                    cursor::Goto(region_x, region_y));
+                    cursor::Goto(region_x, region_y)).unwrap();
             }
             out
         }, 

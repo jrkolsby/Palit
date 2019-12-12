@@ -28,6 +28,6 @@ pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16,
             }).unwrap();
     }}
     let title_x = x + (width/2) - (title_len/2);
-    write!(out, "{}{}", cursor::Goto(title_x, y+1), title);
+    write!(out, "{}{}", cursor::Goto(title_x, y+1), title).unwrap();
     out
 }

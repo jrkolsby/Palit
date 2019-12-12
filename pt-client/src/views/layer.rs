@@ -27,4 +27,5 @@ pub trait Layer {
     fn undo(&mut self);
     fn redo(&mut self);
     fn alpha(&self) -> bool;
+    //fn shift(&self, u16, u16);
 }

@@ -6,9 +6,9 @@ use std::path::Path;
 use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 
-use crate::common::{Action, Color, Direction};
+use crate::common::Action;
 use crate::views::{Layer};
-use crate::components::{logo, button, piano, slider};
+use crate::components::{logo, button};
 
 const PALIT_ROOT: &str = "/usr/local/palit/";
 const NUM_FOCII: usize = 3;

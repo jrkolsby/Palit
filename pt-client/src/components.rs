@@ -10,3 +10,4 @@ pub mod piano;
 //pub mod knob;
 pub mod slider;
 pub mod region;
+pub mod border;

@@ -23,7 +23,7 @@ pub fn render(mut out: RawTerminal<Stdout>,
     for i in 0..width {
         if i == playhead-scroll {
             for j in 1..height {
-                write!(out, "{}|", cursor::Goto(origin_x+i, origin_y+j));
+                write!(out, "{}|", cursor::Goto(origin_x+i, origin_y+j)).unwrap();
             }
         }
         if i % _zoom == 0 {

@@ -1,9 +1,9 @@
 use std::io::{Write, Stdout};
-use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 use xmltree::Element;
 
-use crate::common::{Action, Direction, MultiFocus, shift_focus, render_focii, FocusType, Window};
+use crate::common::{MultiFocus, shift_focus, render_focii};
+use crate::common::{Action, Direction, FocusType, Window, Anchor};
 use crate::views::{Layer};
 use crate::components::{piano, slider, button};
 
@@ -172,7 +172,6 @@ impl Layer for Piano {
 
         out = render_focii(out, win, self.state.focus.clone(), &self.focii, &self.state);
 
-        write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
         out.flush().unwrap();
         out
     }
@@ -183,26 +182,39 @@ impl Layer for Piano {
         let multi_focus = &mut self.focii[self.state.focus.1][self.state.focus.0];
         let _action = multi_focus.transform(action, &mut self.state);
 
-        // Intercept arrow actions to change focus
-        let (focus, default) = shift_focus(self.state.focus, &self.focii, _action.clone());
-
-        // Set focus, if the multifocus defaults, take no further action
-        self.state.focus = focus;
-        if let Some(_default) = default {
-            return _default;
-        }
-
-        // Perform our state reduction
         self.state = reduce(self.state.clone(), _action.clone());
 
-        // Default
-        return match _action {
-            // Default actions which need to be given to pt-sound
-            Action::NoteOn(_,_) |
-            Action::NoteOff(_) |
-            Action::SetParam(_,_) => _action,
-            _ => Action::Noop
+        // Intercept arrow actions to change focus
+        let (focus, default) = match _action {
+            Action::Route => {
+                (self.state.focus, Some(Action::RouteAnchors(vec![
+                    Anchor {
+                        id: 0, 
+                        module_id: 0,
+                        x: 10,
+                        y: 10,
+                        input: true,
+                    }, Anchor {
+                        id: 1, 
+                        module_id: 0,
+                        x: 15,
+                        y: 10,
+                        input: false,
+                    }
+                ])))
+            },
+            Action::Up | Action::Down | Action::Left | Action::Right => {
+                shift_focus(self.state.focus, &self.focii, _action.clone())
+            },
+            _ => (self.state.focus, None)
         };
+
+        self.state.focus = focus;
+
+        match default {
+            Some(a) => a,
+            None => Action::Noop
+        }
     }
     fn undo(&mut self) {
         self.state = self.state.clone()

@@ -53,12 +53,19 @@ pub enum Direction {
     SE,
 }
 
-pub type DirectAction = (u16, Action);
-
 #[derive(Clone, Copy, Debug)]
 pub struct Window {
     pub x: u16,
     pub y: u16,
     pub w: u16,
     pub h: u16,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Anchor {
+    pub id: u16,
+    pub module_id: u16,
+    pub x: u16,
+    pub y: u16,
+    pub input: bool,
 }
