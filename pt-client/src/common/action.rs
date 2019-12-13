@@ -37,7 +37,8 @@ pub enum Action {
     Deselect,
 
     Route,
-    RouteAnchors(Vec<Anchor>),
+    ShowAnchors(Vec<Anchor>),
+    CountRoutes(u16),
     PatchAnchor(u16),
     PatchRoute(u16),
     AddRoute(u16),

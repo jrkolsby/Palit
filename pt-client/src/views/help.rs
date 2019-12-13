@@ -85,4 +85,8 @@ impl Layer for Help {
     fn alpha(&self) -> bool {
         true
     }
+    fn shift(&mut self, x: u16, y: u16) {
+        self.x = x;
+        self.y = y;
+    }
 }

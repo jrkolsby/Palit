@@ -368,7 +368,7 @@ impl Layer for Timeline {
                         input: true,
                     });
                 }
-                (self.state.focus, Some(Action::RouteAnchors(anchors)))
+                (self.state.focus, Some(Action::ShowAnchors(anchors)))
             }
             _ => (self.state.focus, None)
         };
@@ -388,5 +388,9 @@ impl Layer for Timeline {
     }
     fn alpha(&self) -> bool {
         false
+    }
+    fn shift(&mut self, x: u16, y: u16) {
+        self.x = x;
+        self.y = y;
     }
 }

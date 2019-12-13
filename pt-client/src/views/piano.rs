@@ -187,7 +187,7 @@ impl Layer for Piano {
         // Intercept arrow actions to change focus
         let (focus, default) = match _action {
             Action::Route => {
-                (self.state.focus, Some(Action::RouteAnchors(vec![
+                (self.state.focus, Some(Action::ShowAnchors(vec![
                     Anchor {
                         id: 0, 
                         module_id: 0,
@@ -224,5 +224,9 @@ impl Layer for Piano {
     }
     fn alpha(&self) -> bool {
         false
+    }
+    fn shift(&mut self, x: u16, y: u16) {
+        self.x = x;
+        self.y = y;
     }
 }

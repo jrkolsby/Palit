@@ -165,6 +165,20 @@ fn main() -> std::io::Result<()> {
         } else { continue; };
 
         while let Some(next) = events.pop() {
+
+            // Target the top layer
+            let num_views = layers.len();
+            let (target_index, target_id) = if num_views > 0 {
+                let index = num_views - 1;
+                let id = match layers.get(index).unwrap() {
+                    (id, _) => *id,
+                    _ => 0
+                };
+                (index, id)
+            } else {
+                (0, 0)
+            };
+
             // Execute toplevel actions, capture default from view
             let default: Action = match next {
                 Action::Exit => { 
@@ -181,75 +195,74 @@ fn main() -> std::io::Result<()> {
                     Action::Noop
                 },
                 a => {
-                    let target_i = (layers.len() as i16) - 1;
-                    if target_i >= 0 {
-                        let (id, target) = layers.get_mut(target_i as usize).unwrap();
-                        target.dispatch(a)
-                    } else {
-                        Action::Noop
-                    }
+                    let (_, target) = layers.get_mut(target_index).unwrap();
+                    target.dispatch(a)
                 }
             };
 
             // capture default action if returned from layer
-            let target = match layers[layers.len()-1] {
-                (id, _) => id, 
-                _ => 0
-            };
-
             match default {
-                Action::RouteAnchors(anchors) => {
-                    if let Some(r_id) = routes_id {
-                        let mut routes_index: Option<usize> = None;
-                        for (i, (id, layer)) in layers.iter_mut().enumerate() {
-                            if *id == r_id {
-                                routes_index = Some(i);
-                                break;
-                            }
-                        }
-                        if let Some(j) = routes_index {
-                            let (_, mut routes) = layers.remove(j).unwrap();
-                            let anchors_fill = anchors.iter().map(|a| Anchor {
-                                id: a.id,
-                                module_id: target,
-                                x: a.x,
-                                y: a.y,
-                                input: a.input
-                            }).collect();
-                            routes.dispatch(Action::RouteAnchors(anchors_fill));
-                            add_layer(&mut layers, routes, r_id);
-                        }
-                    } else {
-                        let patch_id = layers.len() as u16 + 1;
-                        add_layer(&mut layers, Box::new(
-                            Routes::new(1,1,size.0,size.1, None)
-                        ), patch_id) 
-                    }
-                },
                 Action::InputTitle => {
                     add_layer(&mut layers, Box::new(Title::new(23, 5, 36, 23)), 0);
                 },
                 Action::Play => {
                     ipc_sound.write(
-                        format!("PLAY:{} ", target).as_bytes()).unwrap();
+                        format!("PLAY:{} ", target_id).as_bytes()).unwrap();
                 }
                 Action::Stop => {
                     ipc_sound.write(
-                        format!("STOP:{} ", target).as_bytes()).unwrap();
+                        format!("STOP:{} ", target_id).as_bytes()).unwrap();
                 }
                 Action::NoteOn(k, v) => {
                     ipc_sound.write(
-                        format!("NOTE_ON_AT:{}:{}:{} ", target, k, v).as_bytes()).unwrap();
+                        format!("NOTE_ON_AT:{}:{}:{} ", target_id, k, v).as_bytes()).unwrap();
                 },
                 Action::NoteOff(k) => {
                     ipc_sound.write(
-                        format!("NOTE_OFF_AT:{}:{} ", target, k).as_bytes()).unwrap();
+                        format!("NOTE_OFF_AT:{}:{} ", target_id, k).as_bytes()).unwrap();
                 },
+                a @ Action::Up | 
+                a @ Action::Down => {
+                    // If routes is the target view (top) remove it
+                    let mut routes: Option<(u16, Box<Layer>)> = None;
+                    if routes_id.is_some() && routes_id.unwrap() == target_id {
+                        if let Some(top) = layers.pop_back() {
+                            routes = Some(top);
+                        }
+                    };
+                    // Slide layers over
+                    match a {
+                        Action::Up => {
+                            if let Some(current) = layers.pop_front() {
+                                layers.push_back(current);
+                            }
+                        },
+                        Action::Down => {
+                            if let Some(current) = layers.pop_back() {
+                                layers.push_front(current);
+                            }
+                        },
+                        _ => {}
+                    }
+                    // Restore routes view if it was the target...
+                    if let Some(mut r) = routes { 
+                        // ... and give it a new set of anchors
+                        let action = layers[target_index-1].1.dispatch(Action::Route);
+                        r.1.dispatch(action); 
+                        layers.push_back(r);
+                    }
+                }, 
                 /*
+                Action::Pepper => {
+                    add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15)), 0); 
+                },
                 Action::CreateProject(title) => {
                     ipc_sound.write(format!("NEW_PROJECT:{} ", title).as_bytes());
                     add_layer(&mut layers, Box::new(Timeline::new(1, 1, size.0, size.1, title)));
                 },
+                Action::Error(message) => {
+                    layers.push(Box::new(Error::new(message))) ;
+                }
                 */
                 Action::OpenProject(title) => {
                     ipc_sound.write(
@@ -271,24 +284,45 @@ fn main() -> std::io::Result<()> {
                         }
                     }
                 },
-                Action::Up | Action::Left => {
-                    if let Some(current) = layers.pop_front() {
-                        layers.push_back(current);
+                Action::ShowAnchors(anchors) => {
+                    if let Some(r_id) = routes_id {
+                        let mut routes_index: Option<usize> = None;
+
+                        for (i, (id, layer)) in layers.iter_mut().enumerate() {
+                            if *id == r_id {
+                                routes_index = Some(i);
+                            }
+                        }
+
+                        if let Some(j) = routes_index {
+                            let (_, mut routes) = layers.remove(j).unwrap();
+
+                            let anchors_fill = anchors.iter().map(|a| Anchor {
+                                id: a.id,
+                                module_id: target_id,
+                                x: a.x,
+                                y: a.y,
+                                input: a.input
+                            }).collect();
+
+                            match routes.dispatch(Action::ShowAnchors(anchors_fill)) {
+                                Action::CountRoutes(num) => {
+                                    add_layer(&mut layers, routes, r_id);
+                                    for (_, l) in layers.iter_mut() {
+                                        l.shift(num+1, 1);
+                                    }
+                                },
+                                _ => { panic!("Patch failed to report number of routes"); }
+                            }
+                        }
+                    } else {
+                        routes_id = Some(1000);
+
+                        add_layer(&mut layers, Box::new(
+                            Routes::new(1,1,size.0,size.1, None)
+                        ), 1000);
                     }
-                }, 
-                Action::Down | Action::Right => {
-                    if let Some(current) = layers.pop_back() {
-                        layers.push_front(current);
-                    }
-                }, 
-                Action::Pepper => {
-                    add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15)), 0); 
                 },
-                /*
-                Action::Error(message) => {
-                    layers.push(Box::new(Error::new(message))) ;
-                }
-                */
                 _ => {}
             };	
         }

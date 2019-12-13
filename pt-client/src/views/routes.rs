@@ -51,7 +51,7 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
             _ => state.routes.clone()
         },
         anchors: match action {
-            Action::RouteAnchors(a) => a,
+            Action::ShowAnchors(a) => a,
             _ => state.anchors.clone()
         },
         focus: state.focus,
@@ -134,6 +134,7 @@ impl Layer for Routes {
         self.state = reduce(self.state.clone(), _action.clone());
 
         match _action {
+            Action::ShowAnchors(_) => Action::CountRoutes(self.state.routes.len() as u16),
             _ => Action::Noop
         }
     }
@@ -146,4 +147,5 @@ impl Layer for Routes {
     fn alpha(&self) -> bool {
         true
     }
+    fn shift(&mut self, x: u16, y: u16) {}
 }
