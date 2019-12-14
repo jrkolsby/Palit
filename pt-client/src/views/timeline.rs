@@ -356,7 +356,7 @@ impl Layer for Timeline {
                         id: *id, 
                         module_id: 0,
                         x: TRACKS_X,
-                        y: TIMELINE_Y + 2 * id,
+                        y: 1 + TIMELINE_Y + 2 * id,
                         input: false,
                     });
                     // Track input
@@ -364,7 +364,7 @@ impl Layer for Timeline {
                         id: *id, 
                         module_id: 0,
                         x: TRACKS_X,
-                        y: TIMELINE_Y + 2 * id,
+                        y: 3 + TIMELINE_Y + 2 * id,
                         input: true,
                     });
                 }

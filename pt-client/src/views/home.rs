@@ -8,7 +8,7 @@ use termion::raw::{RawTerminal};
 
 use crate::common::Action;
 use crate::views::{Layer};
-use crate::components::{logo, button};
+use crate::components::{logo, button, bigtext};
 
 const PALIT_ROOT: &str = "/usr/local/palit/";
 const NUM_FOCII: usize = 3;
@@ -120,7 +120,8 @@ impl Layer for Home {
     fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
 
 	// Logo
-    out = logo::render(out, self.x, self.y);
+    //out = logo::render(out, self.x, self.y);
+    out = bigtext::render(out, self.x, self.y, "Palit".to_string());
 
 	// New Button
 	out = button::render(out, self.x + 10, self.y + 10, 17, "New Project");

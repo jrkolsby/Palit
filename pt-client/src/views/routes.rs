@@ -109,7 +109,12 @@ impl Layer for Routes {
 
         out = render_focii(out, win, self.state.focus.clone(), &self.focii, &self.state);
 
-        println!("{} ANCHORS", self.state.anchors.len());
+        for anchor in self.state.anchors.iter() {
+            write!(out, "{}{}", 
+                cursor::Goto(anchor.x, anchor.y),
+                if anchor.input { "X" } else { "O "}
+            ).unwrap()
+        }
 
         out.flush().unwrap();
         out

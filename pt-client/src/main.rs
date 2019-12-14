@@ -244,6 +244,7 @@ fn main() -> std::io::Result<()> {
                         },
                         _ => {}
                     }
+                    // Make sure that routes view is not on top
                     // Restore routes view if it was the target...
                     if let Some(mut r) = routes { 
                         // ... and give it a new set of anchors

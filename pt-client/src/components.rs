@@ -11,3 +11,4 @@ pub mod piano;
 pub mod slider;
 pub mod region;
 pub mod border;
+pub mod bigtext;
