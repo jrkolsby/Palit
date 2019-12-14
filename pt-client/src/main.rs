@@ -35,12 +35,13 @@ fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<(u16, Box<Layer>)>)
     // Determine bottom layer
     if layers.len() == 0 { return stdout; }
     let mut bottom = layers.len()-1;
+    let target = bottom;
     for (id, layer) in (*layers).iter().rev() {
         if layer.alpha() { bottom -= 1 }
         else { break }
     };
     for i in bottom..(*layers).len() {
-        stdout = layers[i].1.render(stdout);
+        stdout = layers[i].1.render(stdout, i == target);
     }
     stdout
 }

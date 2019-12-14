@@ -101,7 +101,7 @@ impl Home {
 }
 
 impl Layer for Home {
-    fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
+    fn render(&self, mut out: RawTerminal<Stdout>, target: bool) -> RawTerminal<Stdout> {
 
 	// Logo
     //out = logo::render(out, self.x, self.y);

@@ -56,7 +56,7 @@ impl Help {
 }
 
 impl Layer for Help {
-    fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
+    fn render(&self, mut out: RawTerminal<Stdout>, target: bool) -> RawTerminal<Stdout> {
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
 
 	    out = popup::render(out, self.x, self.y, self.width, self.height, &self.state.title);

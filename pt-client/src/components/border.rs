@@ -23,7 +23,7 @@ pub fn render(mut out: RawTerminal<Stdout>, win: Window) -> RawTerminal<Stdout> 
                     (false, true, false, false) => "│",
                     (true, false, false, false) => "─",
                     (false, false, true, false) => "─",
-                    _ => ""
+                    _ => " "
                 }
             ).unwrap();
         }

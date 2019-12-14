@@ -4,7 +4,7 @@ use termion::raw::{RawTerminal};
 use termion::{color, cursor};
 
 use crate::common::Window;
-use crate::components::{border};
+use crate::components::border;
 
 pub fn render(mut out: RawTerminal<Stdout>, 
     origin_x: u16, 
@@ -13,21 +13,18 @@ pub fn render(mut out: RawTerminal<Stdout>,
     height: u16,
     title: &String
 ) -> RawTerminal<Stdout> {
+    write!(out, "{}{}", color::Bg(color::LightBlue), color::Fg(color::Black)).unwrap();
+
     for x in 0..width {
-		for y in 0..height {
-			let left = x == 0;
-			let top = y == 0;
-			let right = x == width-1;
-			let bottom = y == height-1;
-			write!(out, "{}{} ",
-                cursor::Goto(origin_x+x, origin_y+y),
-                color::Bg(color::LightYellow)).unwrap();
-			if right || bottom {
-				write!(out, "{}{}  ",
-					cursor::Goto(origin_x+x+1, origin_y+y+1),
-					color::Bg(color::LightBlue)).unwrap();
-			}
-		}
+        write!(out, "{}{}  ",
+            cursor::Goto(origin_x+x+1, origin_y+height),
+            color::Bg(color::LightBlue)).unwrap();
+    }
+
+    for y in 0..height {
+        write!(out, "{}{}  ",
+            cursor::Goto(origin_x+width, origin_y+y+1),
+            color::Bg(color::LightBlue)).unwrap();
     }
 
     write!(out, "{}", color::Bg(color::LightYellow)).unwrap();

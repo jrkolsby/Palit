@@ -161,7 +161,7 @@ impl Piano {
 }
 
 impl Layer for Piano {
-    fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
+    fn render(&self, mut out: RawTerminal<Stdout>, target: bool) -> RawTerminal<Stdout> {
 
         let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
 
