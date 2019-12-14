@@ -32,6 +32,9 @@ pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16, text: String) -> Raw
     ).collect();
     let mut current_x = x;
     for c in text.chars() {
+        if c == ' ' {
+            current_x += 3; continue;
+        }
         let (_x,_y,_w): (usize,usize,usize) = match c {
             '9' => (35,17,4),
             '8' => (31,17,4),

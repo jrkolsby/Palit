@@ -13,6 +13,7 @@ use crate::components::{logo, button, bigtext};
 const PALIT_ROOT: &str = "/usr/local/palit/";
 const NUM_FOCII: usize = 3;
 const NUM_PROJECTS: usize = 4;
+const SIZE: (u16, u16) = (33, 20);
 
 // one possible implementation of walking a directory only visiting files
 fn visit_dirs(dir: &Path, mut collection: Vec<String>) -> io::Result<Vec<String>> {
@@ -34,7 +35,6 @@ pub struct Home {
     y: u16,
     width: u16,
     height: u16,
-    logo_asset: String,
     state: HomeState,
 }
 
@@ -79,21 +79,6 @@ fn reduce(state: HomeState, action: Action) -> HomeState {
 impl Home {
     pub fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
 
-        // Load logo asset
-        let asset_file = File::open("src/assets/logo.txt").unwrap();
-        let mut buf_reader = BufReader::new(asset_file);
-        let mut asset_str = String::new();
-        buf_reader.read_to_string(&mut asset_str).unwrap();
-
-        // Calculate center position
-        let mut max_len: u16 = 0; 
-        for line in asset_str.lines() {
-            let len = line.len();
-            if len as u16 > max_len {
-                max_len = len as u16;
-            }
-        }
-
         let mut projects: Vec<String> = vec![];
         projects = visit_dirs(Path::new(PALIT_ROOT), projects).unwrap();
 
@@ -106,11 +91,10 @@ impl Home {
         };
 
         Home {
-            x: x + (width / 2) - (max_len / 2),
-            y: y,
+            x: x + (width / 2) - (SIZE.0 / 2),
+            y: y + (height / 2) - (SIZE.1 / 2),
             width: width,
             height: height,
-            logo_asset: asset_str,
             state: initial_state
         }
     }
@@ -121,10 +105,10 @@ impl Layer for Home {
 
 	// Logo
     //out = logo::render(out, self.x, self.y);
-    out = bigtext::render(out, self.x, self.y, "Palit".to_string());
+    out = bigtext::render(out, self.x, self.y, "Palit Studio".to_string());
 
 	// New Button
-	out = button::render(out, self.x + 10, self.y + 10, 17, "New Project");
+	out = button::render(out, self.x + 10, self.y + 6, 17, "New Project");
 
 	// Project Listing
 	let mut col: [u16; 2] = [4,4];
@@ -134,7 +118,7 @@ impl Layer for Home {
                 let j: u16 = (i % NUM_PROJECTS) as u16;
                 let row: usize = (j % 2) as usize;
                 write!(out, "{}", cursor::Goto(self.x+col[row] as u16, 
-                    self.y+15+(row as u16 * 2))).unwrap();
+                    self.y+10+(row as u16 * 2))).unwrap();
                 if self.state.focus == 0 { 
                     write!(out, "{}", color::Fg(color::Black)).unwrap();
                     match j {
