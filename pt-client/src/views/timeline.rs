@@ -9,8 +9,9 @@ use std::io::{Write, Stdout};
 use std::collections::HashMap;
 
 use crate::components::{tempo, button, ruler, region};
-use crate::common::{MultiFocus, render_focii, shift_focus, FocusType, Window, ID};
-use crate::common::{Action, Asset, Region, Track, Anchor};
+use crate::common::{ID, VOID_ID, FocusType};
+use crate::common::{MultiFocus, render_focii, shift_focus };
+use crate::common::{Action, Asset, Region, Track, Anchor, Window};
 use crate::common::{beat_offset, offset_beat, generate_waveforms};
 use crate::modules::timeline;
 use crate::views::{Layer};
@@ -57,7 +58,6 @@ pub struct Timeline {
     focii: Vec<Vec<MultiFocus<TimelineState>>>,
 }
 
-static VOID_ID: ID = (FocusType::Void, 0);
 static VOID_RENDER: fn( RawTerminal<Stdout>, 
         Window, ID, &TimelineState, bool) -> RawTerminal<Stdout> =
     |mut out, window, id, state, focus| out;
@@ -75,7 +75,7 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
             r: |mut out, window, id, state, focus| 
                 button::render(out, 2, 2, 20, "RECORD"),
             r_t: |a, id, _| match a { 
-                Action::SelectR => Action::Record(id.1), 
+                Action::SelectR => Action::RecordAt(id.1), 
                 _ => Action::Noop 
             },
 
@@ -122,34 +122,20 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
 
                 r: |mut out, win, id, state, focus|
                     button::render(out, win.x+TRACKS_X, win.y+TIMELINE_Y+2*id.1, 3, "R"),
-                r_t: |action, id, _| Action::Record(id.1),
+                r_t: |action, id, _| Action::RecordAt(id.1),
 
                 g: |mut out, win, id, state, focus|
                     button::render(out, win.x+TRACKS_X+4, win.y+TIMELINE_Y+(2*id.1), 3, "M"),
-                g_t: |action, id, _| Action::Mute(id.1),
+                g_t: |action, id, _| Action::MuteAt(id.1),
 
                 b: |mut out, win, id, state, focus|
                     button::render(out, win.x+TRACKS_X+8, win.y+TIMELINE_Y+(2*id.1), 3, "S"),
-                b_t: |action, id, _| Action::Solo(id.1),
+                b_t: |action, id, _| Action::SoloAt(id.1),
 
-                p: |mut out, win, id, state, focus| {
-                    if focus {
-                        write!(out, "{}<O", cursor::Goto(
-                            win.x, win.y+TIMELINE_Y+(2*id.1)
-                        )).unwrap();
-                    }
-                    out
-                },
-                p_t: |action, id, state| Action::InputTitle,
+                p: |mut out, win, id, state, focus| out,
+                p_t: |action, id, state| Action::Noop,
 
-                y: |mut out, win, id, state, focus| {
-                    if focus {
-                        write!(out, "{}<I", cursor::Goto(
-                            win.x, win.y+TIMELINE_Y+(2*id.1)+2
-                        )).unwrap();
-                    }
-                    out
-                },
+                y: |mut out, win, id, state, focus| out,
                 y_t: |action, id, state| Action::Noop,
 
                 active: None,
@@ -256,7 +242,10 @@ impl Layer for Timeline {
 
         let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
 
-        out = render_focii(out, win, self.state.focus.clone(), &self.focii, &self.state);
+        out = render_focii(
+            out, win, 
+            self.state.focus.clone(), 
+            &self.focii, &self.state, !target);
 
         // Print track numbers
         for (id, track) in self.state.tracks.iter() {
@@ -329,7 +318,7 @@ impl Layer for Timeline {
             },
             Action::Up | Action::Down => shift_focus(self.state.focus, &self.focii, _action.clone()),
             Action::Deselect => {
-                // Get the red ID of the current focus, generate a new focii
+                // Get the global (white) ID of the current focus, generate a new focii
                 // array based on the new tracks and regions, Then find the
                 // focus that shares the ID of our current focus, and return 
                 // that focus
@@ -353,18 +342,20 @@ impl Layer for Timeline {
                 for (id, track) in self.state.tracks.iter() {
                     // Track output
                     anchors.push(Anchor {
+                        name: format!("Out {}", *id),
                         id: *id, 
                         module_id: 0,
-                        x: TRACKS_X,
-                        y: 1 + TIMELINE_Y + 2 * id,
+                        x: TRACKS_X - 1,
+                        y: TIMELINE_Y + 1 + 2 * id,
                         input: false,
                     });
                     // Track input
                     anchors.push(Anchor {
+                        name: format!("In {}", *id),
                         id: *id, 
                         module_id: 0,
-                        x: TRACKS_X,
-                        y: 3 + TIMELINE_Y + 2 * id,
+                        x: TRACKS_X - 2,
+                        y: TIMELINE_Y + 3 + 2 * id,
                         input: true,
                     });
                 }

@@ -15,8 +15,8 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
     let void_id: ID = (FocusType::Void, 0);
     let void_render: fn(RawTerminal<Stdout>, Window, ID, &TimelineState, bool) -> RawTerminal<Stdout> =
         |mut out, window, id, state, focus| out;
-    let void_transform: fn(Action, ID, &mut TimelineState) -> Action = 
-        |action, id, state| Action::Noop;
+    let void_transform: fn(Action, ID, &TimelineState) -> Action = 
+        |action, id, state| action;
 
     MultiFocus::<TimelineState> {
         w_id: (FocusType::Region, region_id),

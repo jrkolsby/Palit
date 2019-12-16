@@ -6,14 +6,14 @@ use std::path::Path;
 use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 
-use crate::common::Action;
+use crate::common::{Action, Anchor};
 use crate::views::{Layer};
 use crate::components::{logo, button, bigtext};
 
 const PALIT_ROOT: &str = "/usr/local/palit/";
 const NUM_FOCII: usize = 3;
 const NUM_PROJECTS: usize = 4;
-const SIZE: (u16, u16) = (33, 20);
+const SIZE: (u16, u16) = (35, 15);
 
 // one possible implementation of walking a directory only visiting files
 fn visit_dirs(dir: &Path, mut collection: Vec<String>) -> io::Result<Vec<String>> {
@@ -181,6 +181,18 @@ impl Layer for Home {
             Action::Down => {
                 if self.state.focus == 0 { Action::Down } else { Action::Noop }
             },
+            Action::Route => {
+                Action::ShowAnchors(vec![
+                    Anchor {
+                        id: 0, 
+                        module_id: 0,
+                        name: "Radio".to_string(),
+                        x: 15,
+                        y: 11,
+                        input: false,
+                    }
+                ])
+            }
             _ => Action::Noop,
         }
     }

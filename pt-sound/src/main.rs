@@ -84,42 +84,48 @@ fn main() -> Result<(), Box<error::Error>> {
         eprintln!("ACTION {:?}", a);
         match a {
             Action::SetParam(n_id, _, _) => {
-                let id = operators.get(&n_id).unwrap();
-                patch[*id].dispatch(a)
+                if let Some(id) = operators.get(&n_id) {
+                    patch[*id].dispatch(a)
+                }
             },
             Action::NoteOnAt(n_id, _, _) | Action::NoteOffAt(n_id, _) => {
-                let id = operators.get(&n_id).unwrap();
-                patch[*id].dispatch(a);
+                if let Some(id) = operators.get(&n_id) {
+                    patch[*id].dispatch(a);
+                }
             },
             Action::NoteOn(_,_) | Action::NoteOff(_) | Action::Octave(_) => {
-                let id = operators.get(&104).unwrap();
-                patch[*id].dispatch(a)
+                if let Some(id) = operators.get(&104) {
+                    patch[*id].dispatch(a)
+                }
             },
             Action::Play(n_id) | Action::Stop(n_id) => {
-                let id = operators.get(&n_id).unwrap();
-                patch[*id].dispatch(a)
+                if let Some(id) = operators.get(&n_id) {
+                    patch[*id].dispatch(a)
+                }
             },
             Action::AddRoute(r_id) => {
                 let route = patch.add_node(Module::Passthru(vec![]));
                 routes.insert(r_id, route);
             },
             Action::PatchIn(n_id, in_id, r_id) => {
-                let route = routes.get(&r_id).unwrap();
-                let module = match &patch[*operators.get(&n_id).unwrap()] {
-                    Module::Operator(_, inputs, _) => {
-                        patch.add_connection(*route, inputs[in_id]);
-                    }
-                    _ => {}
-                };
+                if let Some(route) = routes.get(&r_id) {
+                    let module = match &patch[*operators.get(&n_id).unwrap()] {
+                        Module::Operator(_, inputs, _) => {
+                            patch.add_connection(*route, inputs[in_id]);
+                        }
+                        _ => {}
+                    };
+                }
             },
             Action::PatchOut(n_id, out_id, r_id) => {
-                let route = routes.get(&r_id).unwrap();
-                let module = match &patch[*operators.get(&n_id).unwrap()] {
-                    Module::Operator(_, _, outputs) => {
-                        patch.add_connection(outputs[out_id], *route);
-                    }
-                    _ => {}
-                };
+                if let Some(route) = routes.get(&r_id) {
+                    let module = match &patch[*operators.get(&n_id).unwrap()] {
+                        Module::Operator(_, _, outputs) => {
+                            patch.add_connection(outputs[out_id], *route);
+                        }
+                        _ => {}
+                    };
+                }
             },
             Action::MoveRegion(m_id, r_id, track, offset) => {
                 if let Some(n_id) = operators.get(&m_id) {

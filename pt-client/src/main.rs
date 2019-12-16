@@ -190,8 +190,8 @@ fn main() -> std::io::Result<()> {
                     Action::Noop
                 },
                 Action::Back => {
-                    if let Some(current) = layers.pop_front() {
-                        layers.push_back(current);
+                    if let Some(current) = layers.pop_back() {
+                        layers.push_front(current);
                     }
                     Action::Noop
                 },
@@ -302,6 +302,7 @@ fn main() -> std::io::Result<()> {
                             let anchors_fill = anchors.iter().map(|a| Anchor {
                                 id: a.id,
                                 module_id: target_id,
+                                name: a.name.clone(),
                                 x: a.x,
                                 y: a.y,
                                 input: a.input

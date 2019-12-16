@@ -37,6 +37,8 @@ pub enum Action {
     Deselect,
 
     Route,
+    Record,
+
     ShowAnchors(Vec<Anchor>),
     CountRoutes(u16),
     PatchAnchor(u16),
@@ -46,11 +48,12 @@ pub enum Action {
 
     NoteOn(u16, f32),
     NoteOff(u16),
-    SetParam(u16, f32),
+    SetParam(String, i16),
     MoveRegion(u16, u16, u32), // module id, region id, offset
-    Solo(u16),
-    Record(u16),
-    Mute(u16),
+    SoloAt(u16),
+    RecordAt(u16),
+    MuteAt(u16),
+    PlayAt(u16),
 
     // Default actions
     OpenProject(String),
