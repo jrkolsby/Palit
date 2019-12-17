@@ -232,7 +232,6 @@ impl Layer for Piano {
                                               &self.state, 
                                               action.clone());
         self.state.focus = focus;
-        eprintln!("{:?}{:?}", default, focus);
 
         // Set focus, if the multifocus defaults, take no further action
         if let Some(_default) = default {

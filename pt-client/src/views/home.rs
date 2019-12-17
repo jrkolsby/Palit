@@ -105,7 +105,7 @@ impl Layer for Home {
 
 	// Logo
     //out = logo::render(out, self.x, self.y);
-    out = bigtext::render(out, self.x, self.y, "Palit Studio".to_string());
+    out = bigtext::render(out, self.x, self.y, "Iridosiklitis".to_string());
 
 	// New Button
 	out = button::render(out, self.x + 10, self.y + 6, 17, "New Project");

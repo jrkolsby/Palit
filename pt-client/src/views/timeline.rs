@@ -341,13 +341,12 @@ impl Layer for Timeline {
                 let mut anchors = vec![];
                 for (id, track) in self.state.tracks.iter() {
                     // Track output
-                    eprintln!("ID{}", id);
                     anchors.push(Anchor {
                         name: format!("Out {}", *id),
                         id: (*id-1) * 2,
                         module_id: 0,
-                        x: TRACKS_X ,
-                        y: TIMELINE_Y + 1 + 2 * id,
+                        x: TRACKS_X + 3,
+                        y: TIMELINE_Y + 2 * id,
                         input: false,
                     });
                     // Track input
@@ -355,8 +354,8 @@ impl Layer for Timeline {
                         name: format!("In {}", *id),
                         id: (*id-1) * 2 + 1, 
                         module_id: 0,
-                        x: TRACKS_X + 1,
-                        y: TIMELINE_Y + 2 + 2 * id,
+                        x: TRACKS_X + 4,
+                        y: TIMELINE_Y + 1 + 2 * id,
                         input: true,
                     });
                 }

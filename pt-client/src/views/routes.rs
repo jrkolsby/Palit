@@ -82,7 +82,6 @@ fn generate_focii(
             write!(out, "{}{}", cursor::Goto(window.x + id.1, window.y + id.1 - 1), match id.1 {
                 1 => "MASTER".to_string(),
                 n => format!("ROUTE {}", n)
-
             });
             for y in 0..window.h {
                 write!(out, "{}│", cursor::Goto(window.x + id.1 - 1, window.y + y));
@@ -136,13 +135,6 @@ fn generate_focii(
         let render: fn( RawTerminal<Stdout>, Window, ID, &RoutesState, bool
             ) -> RawTerminal<Stdout> = |mut out, window, id, state, focus| {
             let anchor = &state.anchors.get(&id.1).unwrap();
-            if let Some(a_id) = state.selected_anchor {
-                if a_id == anchor.id {
-                    for x in window.x+(state.routes.len() as u16)..anchor.x {
-                        write!(out, "{}─", cursor::Goto(x, window.y+anchor.y));
-                    }
-                }
-            }
             write!(out, "{}{} {}", 
                 cursor::Goto(window.x+anchor.x, window.y+anchor.y), 
                 match anchor.input {
@@ -256,7 +248,20 @@ impl Layer for Routes {
         if let Some(a_id) = self.state.selected_anchor {
             let anchor = self.state.anchors.get(&a_id).unwrap();
             if let Some(r_id) = self.state.selected_route {
-                write!(out, "{}├", cursor::Goto(self.x+r_id-1, self.y+anchor.y));
+                for x in (win.x + r_id)..(win.x + anchor.x) {
+                    write!(out, "{}─", cursor::Goto(x, win.y+anchor.y));
+                }
+                write!(out, "{}├", cursor::Goto(win.x+r_id-1, win.y+anchor.y));
+            } else {
+                // Draw stem to anchor
+                let mut end = true;
+                for x in (win.x + anchor.x - 5)..(win.x + anchor.x) {
+                    write!(out, "{}{}", cursor::Goto(x, win.y+anchor.y), match end {
+                        true => "?",
+                        false => "─"
+                    });
+                    end = false;
+                }
             }
         }
 
