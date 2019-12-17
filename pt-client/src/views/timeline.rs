@@ -360,7 +360,6 @@ impl Layer for Timeline {
                         input: true,
                     });
                 }
-                eprintln!("{:?}", anchors);
                 (self.state.focus, Some(Action::ShowAnchors(anchors)))
             }
             _ => (self.state.focus, None)

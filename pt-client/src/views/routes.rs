@@ -1,4 +1,5 @@
 use std::io::{Write, Stdout};
+use std::collections::HashMap;
 use termion::{color, cursor};
 use termion::raw::{RawTerminal};
 use xmltree::Element;
@@ -17,9 +18,11 @@ struct Route {
 
 #[derive(Clone, Debug)]
 pub struct RoutesState {
-    routes: Vec<Route>,
-    anchors: Vec<Anchor>,
+    routes: HashMap<u16, Route>,
+    anchors: HashMap<u16, Anchor>,
     focus: (usize, usize),
+    selected_route: Option<u16>,
+    selected_anchor: Option<u16>,
 }
 
 pub struct Routes {
@@ -36,8 +39,8 @@ static VOID_RENDER: fn( RawTerminal<Stdout>,
     |mut out, window, id, state, focus| out;
 
 fn generate_focii(
-    routes: &Vec<Route>, 
-    anchors: &Vec<Anchor>
+    routes: &HashMap<u16, Route>, 
+    anchors: &HashMap<u16, Anchor>
 ) -> Vec<Vec<MultiFocus::<RoutesState>>> {
     let void_focus = MultiFocus::<RoutesState> {
         w_id: (FocusType::Void, 0),
@@ -59,26 +62,30 @@ fn generate_focii(
         b_t: |_, _, _| Action::Noop,
         active: None,
     };
-    let mut focii = vec![];
+    let mut focii = vec![vec![]];
 
-    let mut focii_acc = vec![];
     let mut counter = 0;
     let mut focus_acc = void_focus.clone();
 
-    for route in routes.iter() {
+    for (_, route) in routes.iter() {
         let id = (FocusType::Button, route.id);
-        let transform: fn(Action, ID, &RoutesState) -> Action = |_, id, _| {
-            Action::PatchRoute(id.1)
+        let transform: fn(Action, ID, &RoutesState) -> Action = |a, id, _| match a {
+            Action::SelectR |
+            Action::SelectG |
+            Action::SelectP |
+            Action::SelectY |
+            Action::SelectB => Action::PatchRoute(id.1),
+            _ => Action::Noop
         };
         let render: fn( RawTerminal<Stdout>, Window, ID, &RoutesState, bool) 
             -> RawTerminal<Stdout> = |mut out, window, id, state, focus| {
-            write!(out, "{}{}", cursor::Goto(window.x + id.1 + 1, window.y + id.1), match id.1 {
-                0 => "MASTER".to_string(),
-                n => format!("ROUTE {}", n+1)
+            write!(out, "{}{}", cursor::Goto(window.x + id.1, window.y + id.1 - 1), match id.1 {
+                1 => "MASTER".to_string(),
+                n => format!("ROUTE {}", n)
 
             });
             for y in 0..window.h {
-                write!(out, "{}│", cursor::Goto(window.x + id.1, window.y+y));
+                write!(out, "{}│", cursor::Goto(window.x + id.1 - 1, window.y + y));
             }
             out
         };
@@ -90,29 +97,53 @@ fn generate_focii(
             _ => { focus_acc.b_id = id; focus_acc.b = render; focus_acc.b_t = transform; 5 },
         };
         if counter == 0 { 
-            focii_acc.push(focus_acc); 
+            focii[0].push(focus_acc); 
             focus_acc = void_focus.clone();
         }
     }
-    if counter > 0 { focii_acc.push(focus_acc); }
+    if counter > 0 { focii[0].push(focus_acc); }
 
-    focii.push(focii_acc);
-    focii_acc = vec![];
     focus_acc = void_focus.clone();
     counter = 0;
 
-    for anchor in anchors.iter() {
+    for (_, anchor) in anchors.iter() {
         let id = (FocusType::Button, anchor.id);
-        let transform: fn(Action, ID, &RoutesState) -> Action = |_, id, state| {
-            Action::PatchAnchor(id.1)
+        let transform: fn(Action, ID, &RoutesState) -> Action = |a, id, state| match a {
+            // Change selected route
+            Action::Left => if let Some(id) = state.selected_route {
+                if state.routes.contains_key(&(id-1)) {
+                    Action::PatchRoute(id-1) 
+                } else { Action::Noop }
+            } else { Action::Noop },
+            Action::Right => if let Some(id) = state.selected_route {
+                if state.routes.contains_key(&(id+1)) {
+                    Action::PatchRoute(id+1) 
+                } else { Action::Noop }
+            } else { Action::Noop },
+            // Or set selected anchor
+            Action::SelectR |
+            Action::SelectG |
+            Action::SelectP |
+            Action::SelectY |
+            Action::SelectB => Action::PatchAnchor(id.1),
+            _ => Action::Noop
         };
         let render: fn( RawTerminal<Stdout>, Window, ID, &RoutesState, bool
             ) -> RawTerminal<Stdout> = |mut out, window, id, state, focus| {
-            let anchor = &state.anchors[id.1 as usize];
-            write!(out, "{}{} {}", cursor::Goto(anchor.x, anchor.y), match anchor.input {
-                true => if focus { "->" } else { "" },
-                false => if focus { "<-" } else { "" }, 
-            }, anchor.name.clone());
+            let anchor = &state.anchors.get(&id.1).unwrap();
+            if let Some(a_id) = state.selected_anchor {
+                if a_id == anchor.id {
+                    for x in window.x+(state.routes.len() as u16)..anchor.x {
+                        write!(out, "{}-", cursor::Goto(x, window.y+anchor.y));
+                    }
+                }
+            }
+            write!(out, "{}{} {}", 
+                cursor::Goto(window.x+anchor.x, window.y+anchor.y), 
+                match anchor.input {
+                    true => if focus { "->" } else { "" },
+                    false => if focus { "<-" } else { "" }, 
+                }, anchor.name.clone());
             out
         };
         counter = match counter {
@@ -123,12 +154,11 @@ fn generate_focii(
             _ => { focus_acc.b_id = id; focus_acc.b = render; focus_acc.b_t = transform; 0 },
         };
         if counter == 0 { 
-            focii_acc.push(focus_acc); 
+            focii[0].push(focus_acc); 
             focus_acc = void_focus.clone();
         }
     }
-    if counter > 0 { focii_acc.push(focus_acc); }
-    focii.push(focii_acc);
+    if counter > 0 { focii[0].push(focus_acc); }
     focii
 }
 
@@ -137,7 +167,7 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
         routes: match action {
             Action::AddRoute(a) => {
                 let mut new_routes = state.routes.clone();
-                new_routes.push(Route {
+                new_routes.insert(a, Route {
                     id: a,
                     patch: vec![]
                 });
@@ -145,11 +175,39 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
             },
             _ => state.routes.clone()
         },
+        focus: state.focus,
+        selected_anchor: match action {
+            Action::PatchAnchor(id) => {
+                if let Some(_id) = state.selected_anchor {
+                    if _id == id { None } 
+                    else { Some(id) }
+                } else {
+                    Some(id)
+                }
+            }
+            _ => state.selected_anchor.clone()
+        },
+        selected_route: match action {
+            Action::PatchRoute(id) => {
+                if let Some(_id) = state.selected_route {
+                    if _id == id { None } 
+                    else { Some(id) }
+                } else {
+                    Some(id)
+                }
+            }
+            _ => state.selected_route.clone()
+        },
         anchors: match action {
-            Action::ShowAnchors(a) => a,
+            Action::ShowAnchors(a) => {
+                let mut new_anchors = HashMap::new();
+                for anchor in a {
+                    new_anchors.insert(anchor.id.clone(), anchor);
+                }
+                new_anchors
+            },
             _ => state.anchors.clone()
         },
-        focus: state.focus,
     }
 }
 
@@ -159,11 +217,15 @@ impl Routes {
         let mut path: String = "/usr/local/palit/".to_string();
 
         // Initialize State
-        let initial_state: RoutesState = RoutesState {
-            routes: vec![Route { id: 0, patch: vec![] }],
-            anchors: vec![],
+        let mut initial_state: RoutesState = RoutesState {
+            routes: HashMap::new(),
+            anchors: HashMap::new(),
             focus: (0,0),
+            selected_anchor: None,
+            selected_route: None,
         };
+        
+        initial_state.routes.insert(1, Route { id: 1, patch: vec![] });
 
         Routes {
             x: x,
