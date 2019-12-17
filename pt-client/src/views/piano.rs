@@ -53,8 +53,7 @@ fn reduce(state: PianoState, action: Action) -> PianoState {
                     "6KHz" => new_eq[5] = val,
                     "12KHz" => new_eq[6] = val,
                     "14KHz" => new_eq[7] = val,
-                    "20KHz" => new_eq[7] = val,
-                    _ => {eprintln!("BOO"); new_eq[7] = val},
+                    _ => {},
                 };
                 new_eq
             }

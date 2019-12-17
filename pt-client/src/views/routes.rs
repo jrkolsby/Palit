@@ -39,8 +39,6 @@ fn generate_focii(
     routes: &Vec<Route>, 
     anchors: &Vec<Anchor>
 ) -> Vec<Vec<MultiFocus::<RoutesState>>> {
-    let mut focii = vec![];
-    let mut routes_focii = vec![];
     let void_focus = MultiFocus::<RoutesState> {
         w_id: (FocusType::Void, 0),
         w: VOID_RENDER,
@@ -61,33 +59,76 @@ fn generate_focii(
         b_t: |_, _, _| Action::Noop,
         active: None,
     };
-    let mut acc = void_focus.clone();
+    let mut focii = vec![];
+
+    let mut focii_acc = vec![];
     let mut counter = 0;
+    let mut focus_acc = void_focus.clone();
+
     for route in routes.iter() {
         let id = (FocusType::Button, route.id);
-        let render: fn(
-            RawTerminal<Stdout>, 
-            Window, ID, 
-            &RoutesState, 
-            bool) -> RawTerminal<Stdout> = 
-        |mut out, window, id, state, focus| {
+        let transform: fn(Action, ID, &RoutesState) -> Action = |_, id, _| {
+            Action::PatchRoute(id.1)
+        };
+        let render: fn( RawTerminal<Stdout>, Window, ID, &RoutesState, bool) 
+            -> RawTerminal<Stdout> = |mut out, window, id, state, focus| {
+            write!(out, "{}{}", cursor::Goto(window.x + id.1 + 1, window.y + id.1), match id.1 {
+                0 => "MASTER".to_string(),
+                n => format!("ROUTE {}", n+1)
+
+            });
             for y in 0..window.h {
-                write!(out, "{}|", cursor::Goto(window.x + id.1, window.y+y));
+                write!(out, "{}│", cursor::Goto(window.x + id.1, window.y+y));
             }
             out
         };
-        let transform: fn(Action, ID, &RoutesState) -> Action = |_, id, _| Action::PatchRoute(id.1);
-        match counter {
-            0 => { acc.r_id = id; acc.r = render; acc.r_t = transform; },
-            1 => { acc.g_id = id; acc.g = render; acc.g_t = transform; },
-            2 => { acc.p_id = id; acc.p = render; acc.p_t = transform; },
-            3 => { acc.y_id = id; acc.y = render; acc.y_t = transform; },
-            4 => { acc.b_id = id; acc.b = render; acc.b_t = transform; },
-            _ => { routes_focii.push(acc); acc = void_focus.clone(); }
+        counter = match counter {
+            0 => { focus_acc.r_id = id; focus_acc.r = render; focus_acc.r_t = transform; 1 },
+            1 => { focus_acc.g_id = id; focus_acc.g = render; focus_acc.g_t = transform; 2 },
+            2 => { focus_acc.p_id = id; focus_acc.p = render; focus_acc.p_t = transform; 3 },
+            3 => { focus_acc.y_id = id; focus_acc.y = render; focus_acc.y_t = transform; 4 },
+            _ => { focus_acc.b_id = id; focus_acc.b = render; focus_acc.b_t = transform; 5 },
+        };
+        if counter == 0 { 
+            focii_acc.push(focus_acc); 
+            focus_acc = void_focus.clone();
         }
-        counter += 1;
     }
-    focii.push(routes_focii);
+    if counter > 0 { focii_acc.push(focus_acc); }
+
+    focii.push(focii_acc);
+    focii_acc = vec![];
+    focus_acc = void_focus.clone();
+    counter = 0;
+
+    for anchor in anchors.iter() {
+        let id = (FocusType::Button, anchor.id);
+        let transform: fn(Action, ID, &RoutesState) -> Action = |_, id, state| {
+            Action::PatchAnchor(id.1)
+        };
+        let render: fn( RawTerminal<Stdout>, Window, ID, &RoutesState, bool
+            ) -> RawTerminal<Stdout> = |mut out, window, id, state, focus| {
+            let anchor = &state.anchors[id.1 as usize];
+            write!(out, "{}{} {}", cursor::Goto(anchor.x, anchor.y), match anchor.input {
+                true => if focus { "->" } else { "" },
+                false => if focus { "<-" } else { "" }, 
+            }, anchor.name.clone());
+            out
+        };
+        counter = match counter {
+            0 => { focus_acc.r_id = id; focus_acc.r = render; focus_acc.r_t = transform; 1 },
+            1 => { focus_acc.g_id = id; focus_acc.g = render; focus_acc.g_t = transform; 2 },
+            2 => { focus_acc.p_id = id; focus_acc.p = render; focus_acc.p_t = transform; 3 },
+            3 => { focus_acc.y_id = id; focus_acc.y = render; focus_acc.y_t = transform; 4 },
+            _ => { focus_acc.b_id = id; focus_acc.b = render; focus_acc.b_t = transform; 0 },
+        };
+        if counter == 0 { 
+            focii_acc.push(focus_acc); 
+            focus_acc = void_focus.clone();
+        }
+    }
+    if counter > 0 { focii_acc.push(focus_acc); }
+    focii.push(focii_acc);
     focii
 }
 
@@ -119,7 +160,7 @@ impl Routes {
 
         // Initialize State
         let initial_state: RoutesState = RoutesState {
-            routes: vec![],
+            routes: vec![Route { id: 0, patch: vec![] }],
             anchors: vec![],
             focus: (0,0),
         };
@@ -140,18 +181,10 @@ impl Layer for Routes {
 
         let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
 
-        out = bigtext::render(out, self.x, self.y, "Patch".to_string());
         out = render_focii(
             out, win, 
             self.state.focus.clone(), 
             &self.focii, &self.state, !target);
-
-        for anchor in self.state.anchors.iter() {
-            write!(out, "{}{}", 
-                cursor::Goto(anchor.x, anchor.y),
-                if anchor.input { "X" } else { "O"}
-            ).unwrap()
-        }
 
         out.flush().unwrap();
         out

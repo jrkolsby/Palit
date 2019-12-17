@@ -35,16 +35,17 @@ pub enum Action {
     Tick,
     Exit,
     Deselect,
-
-    Route,
     Record,
 
+    // Patching actions
+    Route,
     ShowAnchors(Vec<Anchor>),
     CountRoutes(u16),
     PatchAnchor(u16),
     PatchRoute(u16),
     AddRoute(u16),
     FadePatch(u16, f32),
+    Patch(u16, u16, u16, bool), 
 
     NoteOn(u16, f32),
     NoteOff(u16),

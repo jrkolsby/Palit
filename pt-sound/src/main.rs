@@ -29,9 +29,7 @@ use crate::core::{event_loop, Module, Frequency, Key};
 use crate::document::{Document, read_document};
 use crate::action::Action;
 
-const A5_HZ: Frequency = 440.0;
-const D5_HZ: Frequency = 587.33;
-const F5_HZ: Frequency = 698.46;
+const MASTER_ROUTE: u16 = 1;
 
 fn main() -> Result<(), Box<error::Error>> {
 
@@ -248,12 +246,11 @@ fn main() -> Result<(), Box<error::Error>> {
                         name @ _ => { eprintln!("Unimplemented module {:?}", name)}
                     }
                 }
-                eprintln!("Project Loaded");
-                eprintln!("{} Nodes", patch.node_count());
-                eprintln!("{} Edges", patch.connection_count());
                 let root = patch.add_node(Module::Master);
                 patch.set_master(Some(root));
-                patch.add_connection(*routes.get(&0).unwrap(), root);
+                patch.add_connection(*routes.get(&MASTER_ROUTE).unwrap(), root);
+                eprintln!("Loaded {} Nodes", patch.node_count());
+                eprintln!("Loaded {} Edges", patch.connection_count());
             },
             _ => { eprintln!("unimplemented action {:?}", a); }
         }

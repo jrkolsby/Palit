@@ -341,24 +341,26 @@ impl Layer for Timeline {
                 let mut anchors = vec![];
                 for (id, track) in self.state.tracks.iter() {
                     // Track output
+                    eprintln!("ID{}", id);
                     anchors.push(Anchor {
                         name: format!("Out {}", *id),
-                        id: *id, 
+                        id: (*id-1) * 2,
                         module_id: 0,
-                        x: TRACKS_X - 1,
-                        y: TIMELINE_Y + 1 + 2 * id,
+                        x: TRACKS_X ,
+                        y: TIMELINE_Y + 2 + 2 * id,
                         input: false,
                     });
                     // Track input
                     anchors.push(Anchor {
                         name: format!("In {}", *id),
-                        id: *id, 
+                        id: (*id-1) * 2 + 1, 
                         module_id: 0,
-                        x: TRACKS_X - 2,
+                        x: TRACKS_X + 1,
                         y: TIMELINE_Y + 3 + 2 * id,
                         input: true,
                     });
                 }
+                eprintln!("{:?}", anchors);
                 (self.state.focus, Some(Action::ShowAnchors(anchors)))
             }
             _ => (self.state.focus, None)
