@@ -87,6 +87,11 @@ fn generate_focii(
             for y in 0..window.h {
                 write!(out, "{}│", cursor::Goto(window.x + id.1 - 1, window.y + y));
             }
+            if let Some(_id) = state.selected_route {
+                if _id == id.1 {
+                    write!(out, "{}^", cursor::Goto(window.x + id.1 - 1, window.y + window.h));
+                }
+            }
             out
         };
         counter = match counter {
@@ -112,14 +117,14 @@ fn generate_focii(
             // Change selected route
             Action::Left => if let Some(id) = state.selected_route {
                 if state.routes.contains_key(&(id-1)) {
-                    Action::PatchRoute(id-1) 
-                } else { Action::Noop }
-            } else { Action::Noop },
+                    Action::PatchRoute(id-1)        // Move patch
+                } else { Action::PatchRoute(id) }   // Remove patch
+            } else { Action::PatchRoute(1) },       // Patch to master
             Action::Right => if let Some(id) = state.selected_route {
                 if state.routes.contains_key(&(id+1)) {
-                    Action::PatchRoute(id+1) 
-                } else { Action::Noop }
-            } else { Action::Noop },
+                    Action::PatchRoute(id+1)        // Move patch
+                } else { Action::PatchRoute(id) }   // Remove patch
+            } else { Action::PatchRoute(1) },       // Patch to master
             // Or set selected anchor
             Action::SelectR |
             Action::SelectG |
@@ -134,15 +139,15 @@ fn generate_focii(
             if let Some(a_id) = state.selected_anchor {
                 if a_id == anchor.id {
                     for x in window.x+(state.routes.len() as u16)..anchor.x {
-                        write!(out, "{}-", cursor::Goto(x, window.y+anchor.y));
+                        write!(out, "{}─", cursor::Goto(x, window.y+anchor.y));
                     }
                 }
             }
             write!(out, "{}{} {}", 
                 cursor::Goto(window.x+anchor.x, window.y+anchor.y), 
                 match anchor.input {
-                    true => if focus { "->" } else { "" },
-                    false => if focus { "<-" } else { "" }, 
+                    true => if focus { "─▶" } else { "" },
+                    false => if focus { "◀─" } else { "" }, 
                 }, anchor.name.clone());
             out
         };
@@ -248,6 +253,13 @@ impl Layer for Routes {
             self.state.focus.clone(), 
             &self.focii, &self.state, !target);
 
+        if let Some(a_id) = self.state.selected_anchor {
+            let anchor = self.state.anchors.get(&a_id).unwrap();
+            if let Some(r_id) = self.state.selected_route {
+                write!(out, "{}├", cursor::Goto(self.x+r_id-1, self.y+anchor.y));
+            }
+        }
+
         out.flush().unwrap();
         out
     }
@@ -266,7 +278,12 @@ impl Layer for Routes {
             self.state = reduce(self.state.clone(), _default.clone());
             match _default {
                 Action::Exit |
-                Action::Up | Action::Down => return _default,
+                Action::Up | Action::Down => {
+                    // About to change modules, reset selects
+                    self.state.selected_anchor = None;
+                    self.state.selected_route = None;
+                    return _default;
+                }
                 Action::ShowAnchors(_) |
                 Action::AddRoute(_) =>  {
                     self.focii = generate_focii(&self.state.routes, &self.state.anchors);
