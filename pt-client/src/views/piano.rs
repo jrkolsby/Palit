@@ -270,8 +270,4 @@ impl Layer for Piano {
     fn alpha(&self) -> bool {
         false
     }
-    fn shift(&mut self, x: u16, y: u16) {
-        self.x = x;
-        self.y = y;
-    }
 }

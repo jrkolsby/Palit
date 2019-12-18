@@ -307,5 +307,4 @@ impl Layer for Routes {
     fn alpha(&self) -> bool {
         true
     }
-    fn shift(&mut self, x: u16, y: u16) {}
 }

@@ -297,7 +297,7 @@ fn main() -> std::io::Result<()> {
                         }
 
                         if let Some(j) = routes_index {
-                            let (_, mut routes) = layers.remove(j).unwrap();
+                            let (_, mut route_view) = layers.remove(j).unwrap();
 
                             let anchors_fill = anchors.iter().map(|a| Anchor {
                                 id: a.id,
@@ -308,19 +308,15 @@ fn main() -> std::io::Result<()> {
                                 input: a.input
                             }).collect();
 
-                            match routes.dispatch(Action::ShowAnchors(anchors_fill)) {
+                            match route_view.dispatch(Action::ShowAnchors(anchors_fill)) {
                                 Action::CountRoutes(num) => {
-                                    add_layer(&mut layers, routes, r_id);
-                                    for (_, l) in layers.iter_mut() {
-                                        l.shift(num+1, 1);
-                                    }
+                                    add_layer(&mut layers, route_view, r_id);
                                 },
                                 _ => { panic!("Patch failed to report number of routes"); }
                             }
                         }
                     } else {
                         routes_id = Some(1000);
-
                         add_layer(&mut layers, Box::new(
                             Routes::new(1,1,size.0,size.1, None)
                         ), 1000);
