@@ -238,23 +238,18 @@ impl Layer for Piano {
             self.state = reduce(self.state.clone(), _default.clone());
             match _default {
                 Action::Route => {
-                    Action::ShowAnchors(vec![
+                    Action::ShowAnchors( vec![ 
                         Anchor {
                             id: 0, 
                             module_id: 0,
-                            name: "Out".to_string(),
-                            x: 15,
-                            y: 9,
-                            input: false,
+                            name: "Keys".to_string(),
+                            input: true,
                         }, Anchor {
                             id: 1, 
                             module_id: 0,
-                            name: "Keys".to_string(),
-                            x: 10,
-                            y: 8,
-                            input: true,
-                        }
-                    ])
+                            name: "Out".to_string(),
+                            input: false,
+                    }])
                 },
                 a @ Action::Up | a @ Action::Down => a,
                 _ => { Action::Noop }

@@ -6,9 +6,10 @@ use xmltree::Element;
 
 use crate::common::{MultiFocus, FocusType, ID, VOID_ID};
 use crate::common::{shift_focus, render_focii, focus_dispatch};
-use crate::common::{Action, Window, Anchor};
+use crate::common::{Action, Window, Anchor, Color};
+use crate::common::{write_fg, write_bg};
 use crate::views::{Layer};
-use crate::components::{button, bigtext};
+use crate::components::{button, popup};
 
 #[derive(Clone, Debug)]
 struct Route {
@@ -33,6 +34,8 @@ pub struct Routes {
     state: RoutesState,
     focii: Vec<Vec<MultiFocus<RoutesState>>>
 }
+
+static PADDING: (u16, u16) = (3,3);
 
 static VOID_RENDER: fn( RawTerminal<Stdout>, 
         Window, ID, &RoutesState, bool) -> RawTerminal<Stdout> =
@@ -62,55 +65,17 @@ fn generate_focii(
         b_t: |_, _, _| Action::Noop,
         active: None,
     };
-    let mut focii = vec![vec![]];
+    let mut focii = vec![];
 
     let mut counter = 0;
     let mut focus_acc = void_focus.clone();
 
-    for (_, route) in routes.iter() {
-        let id = (FocusType::Button, route.id);
-        let transform: fn(Action, ID, &RoutesState) -> Action = |a, id, _| match a {
-            Action::SelectR |
-            Action::SelectG |
-            Action::SelectP |
-            Action::SelectY |
-            Action::SelectB => Action::PatchRoute(id.1),
-            _ => Action::Noop
-        };
-        let render: fn( RawTerminal<Stdout>, Window, ID, &RoutesState, bool) 
-            -> RawTerminal<Stdout> = |mut out, window, id, state, focus| {
-            write!(out, "{}{}", cursor::Goto(window.x + id.1, window.y + id.1 - 1), match id.1 {
-                1 => "MASTER".to_string(),
-                n => format!("ROUTE {}", n)
-            });
-            for y in 0..window.h {
-                write!(out, "{}│", cursor::Goto(window.x + id.1 - 1, window.y + y));
-            }
-            if let Some(_id) = state.selected_route {
-                if _id == id.1 {
-                    write!(out, "{}^", cursor::Goto(window.x + id.1 - 1, window.y + window.h));
-                }
-            }
-            out
-        };
-        counter = match counter {
-            0 => { focus_acc.r_id = id; focus_acc.r = render; focus_acc.r_t = transform; 1 },
-            1 => { focus_acc.g_id = id; focus_acc.g = render; focus_acc.g_t = transform; 2 },
-            2 => { focus_acc.p_id = id; focus_acc.p = render; focus_acc.p_t = transform; 3 },
-            3 => { focus_acc.y_id = id; focus_acc.y = render; focus_acc.y_t = transform; 4 },
-            _ => { focus_acc.b_id = id; focus_acc.b = render; focus_acc.b_t = transform; 5 },
-        };
-        if counter == 0 { 
-            focii[0].push(focus_acc); 
-            focus_acc = void_focus.clone();
-        }
-    }
-    if counter > 0 { focii[0].push(focus_acc); }
+    let mut sorted_anchors: Vec<Anchor> = anchors.iter()
+        .map(|(_, a)| a.clone()).collect::<Vec<Anchor>>();
 
-    focus_acc = void_focus.clone();
-    counter = 0;
+    sorted_anchors.sort_by(|a, b| a.id.partial_cmp(&b.id).unwrap());
 
-    for (_, anchor) in anchors.iter() {
+    for anchor in sorted_anchors.iter() {
         let id = (FocusType::Button, anchor.id);
         let transform: fn(Action, ID, &RoutesState) -> Action = |a, id, state| match a {
             // Change selected route
@@ -135,12 +100,15 @@ fn generate_focii(
         let render: fn( RawTerminal<Stdout>, Window, ID, &RoutesState, bool
             ) -> RawTerminal<Stdout> = |mut out, window, id, state, focus| {
             let anchor = &state.anchors.get(&id.1).unwrap();
-            write!(out, "{}{} {}", 
-                cursor::Goto(window.x+anchor.x, window.y+anchor.y), 
-                match anchor.input {
+            if !focus { out = write_bg(out, Color::Beige); out = write_fg(out, Color::Black); }
+            write!(out, "{}{} {}", cursor::Goto(
+                    (PADDING.0 * 2) + window.x + if anchor.input {1} else {0}, 
+                    (PADDING.1 * 2) + window.y + anchor.id * 2
+            ), match anchor.input {
                     true => if focus { "─▶" } else { "" },
                     false => if focus { "◀─" } else { "" }, 
-                }, anchor.name.clone());
+                }, anchor.name.clone()
+            );
             out
         };
         counter = match counter {
@@ -151,11 +119,11 @@ fn generate_focii(
             _ => { focus_acc.b_id = id; focus_acc.b = render; focus_acc.b_t = transform; 0 },
         };
         if counter == 0 { 
-            focii[0].push(focus_acc); 
+            focii.push(vec![focus_acc]);
             focus_acc = void_focus.clone();
         }
     }
-    if counter > 0 { focii[0].push(focus_acc); }
+    if counter > 0 { focii.push(vec![focus_acc]); }
     focii
 }
 
@@ -240,23 +208,63 @@ impl Layer for Routes {
 
         let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
 
+        out = popup::render(out, win.x, win.y, win.w, win.h, &"Routes".to_string());
+
         out = render_focii(
             out, win, 
             self.state.focus.clone(), 
             &self.focii, &self.state, !target);
 
+        out = write_bg(out, Color::Beige); 
+        out = write_fg(out, Color::Black);
+
+        for (_, route) in self.state.routes.iter() {
+            write!(out, "{}{}", cursor::Goto(
+                PADDING.0 + win.x + route.id, 
+                PADDING.1 + win.y + route.id - 1
+            ), 
+                match route.id {
+                    1 => "MASTER".to_string(),
+                    n => format!("ROUTE {}", n)
+                });
+
+            for y in 0..win.h-(PADDING.1*2) {
+                write!(out, "{}│", cursor::Goto(
+                    PADDING.0 + win.x + route.id - 1, 
+                    PADDING.1 + win.y + y)
+                );
+            }
+            if let Some(_id) = self.state.selected_route {
+                if _id == route.id {
+                    write!(out, "{}^", cursor::Goto(
+                        PADDING.0 + win.x + route.id - 1, 
+                        win.y + (win.h - PADDING.1)
+                    ));
+                }
+            }
+        }
+
+        let anchor_x = win.x + self.state.routes.len() as u16 + (PADDING.0 * 2);
+
         if let Some(a_id) = self.state.selected_anchor {
+            let anchor_y = win.y + (a_id * 2) + (PADDING.1 * 2);
             let anchor = self.state.anchors.get(&a_id).unwrap();
             if let Some(r_id) = self.state.selected_route {
-                for x in (win.x + r_id)..(win.x + anchor.x) {
-                    write!(out, "{}─", cursor::Goto(x, win.y+anchor.y));
+                for x in (win.x + r_id)..anchor_x {
+                    write!(out, "{}─", cursor::Goto(
+                        PADDING.0 + x, anchor_y
+                    ));
                 }
-                write!(out, "{}├", cursor::Goto(win.x+r_id-1, win.y+anchor.y));
+                write!(out, "{}├", cursor::Goto(
+                    PADDING.0 + win.x + r_id - 1, anchor_y
+                ));
             } else {
                 // Draw stem to anchor
                 let mut end = true;
-                for x in (win.x + anchor.x - 5)..(win.x + anchor.x) {
-                    write!(out, "{}{}", cursor::Goto(x, win.y+anchor.y), match end {
+                for x in (win.x + anchor_x - 5)..anchor_x {
+                    write!(out, "{}{}", cursor::Goto(
+                        PADDING.0 + x, anchor_y
+                    ), match end {
                         true => "?",
                         false => "─"
                     });

@@ -30,6 +30,9 @@ pub use multifocus::VOID_ID;
 
 pub use layout::REGIONS_X;
 pub use layout::TIMELINE_Y;
+pub use layout::MARGIN_D0;
+pub use layout::MARGIN_D1;
+pub use layout::MARGIN_D2;
 
 #[derive(Clone, Debug)]
 pub enum Rate {
@@ -67,8 +70,6 @@ pub struct Window {
 pub struct Anchor {
     pub id: u16,
     pub module_id: u16,
-    pub x: u16,
-    pub y: u16,
-    pub input: bool,
     pub name: String,
+    pub input: bool,
 }

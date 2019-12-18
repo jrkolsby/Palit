@@ -21,7 +21,7 @@ mod modules;
 use views::{Layer, Home, Timeline, Help, Title, Piano, Routes};
 use modules::{read_document};
 
-use common::{Action, Anchor};
+use common::{Action, Anchor, MARGIN_D0, MARGIN_D1};
 
 fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<(u16, Box<Layer>)>) -> RawTerminal<Stdout> {
     /*
@@ -186,7 +186,12 @@ fn main() -> std::io::Result<()> {
                     break 'event;
                 },
                 Action::Help => { 
-                    add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15)), 0); 
+                    add_layer(&mut layers, Box::new(Help::new(
+                        MARGIN_D1.0,
+                        MARGIN_D1.1, 
+                        size.0 - (MARGIN_D1.0 * 2), 
+                        size.1 - (MARGIN_D1.1 * 2),
+                    )), 0); 
                     Action::Noop
                 },
                 Action::Back => {
@@ -279,7 +284,12 @@ fn main() -> std::io::Result<()> {
                             "patch" => { 
                                 routes_id = Some(*id);
                                 add_layer(&mut layers, Box::new(
-                                    Routes::new(1,1,size.0,size.1, Some((*el).to_owned()))
+                                    Routes::new(
+                                        MARGIN_D0.0,
+                                        MARGIN_D0.1,
+                                        size.0 - (MARGIN_D0.0 * 2),
+                                        size.1 - (MARGIN_D0.1 * 2), 
+                                    Some((*el).to_owned()))
                                 ), *id) 
                             },
                             name => { eprintln!("unimplemented module {:?}", name)}
@@ -303,12 +313,11 @@ fn main() -> std::io::Result<()> {
                                 id: a.id,
                                 module_id: target_id,
                                 name: a.name.clone(),
-                                x: a.x,
-                                y: a.y,
                                 input: a.input
                             }).collect();
 
-                            match route_view.dispatch(Action::ShowAnchors(anchors_fill)) {
+                            match route_view.dispatch(
+                                Action::ShowAnchors(anchors_fill)) {
                                 Action::CountRoutes(num) => {
                                     add_layer(&mut layers, route_view, r_id);
                                 },

@@ -187,9 +187,7 @@ impl Layer for Home {
                         id: 0, 
                         module_id: 0,
                         name: "Radio".to_string(),
-                        x: 15,
-                        y: 11,
-                        input: false,
+                        input: false
                     }
                 ])
             }
