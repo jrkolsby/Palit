@@ -102,11 +102,11 @@ fn generate_focii(
             let anchor = &state.anchors.get(&id.1).unwrap();
             if !focus { out = write_bg(out, Color::Beige); out = write_fg(out, Color::Black); }
             write!(out, "{}{} {}", cursor::Goto(
-                    (PADDING.0 * 2) + window.x + if anchor.input {1} else {0}, 
+                    (PADDING.0 * 2) + window.x + state.routes.len() as u16,
                     (PADDING.1 * 2) + window.y + anchor.id * 2
             ), match anchor.input {
-                    true => if focus { "─▶" } else { "" },
-                    false => if focus { "◀─" } else { "" }, 
+                    true =>  "─▶",
+                    false =>  "◀─",
                 }, anchor.name.clone()
             );
             out
@@ -138,6 +138,14 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
                 });
                 new_routes
             },
+            Action::PatchOut(m_id, a_id, r_id) |
+            Action::PatchIn(m_id, a_id, r_id) => {
+                let mut new_routes = state.routes.clone();
+                let route = new_routes.get_mut(&r_id).unwrap();
+                let anchor = state.anchors.get(&a_id).unwrap();
+                route.patch.push(anchor.clone());
+                new_routes
+            },
             _ => state.routes.clone()
         },
         focus: state.focus,
@@ -149,7 +157,9 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
                 } else {
                     Some(id)
                 }
-            }
+            },
+            Action::PatchIn(_,_,_) |
+            Action::PatchOut(_,_,_) => None,
             _ => state.selected_anchor.clone()
         },
         selected_route: match action {
@@ -160,7 +170,9 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
                 } else {
                     Some(id)
                 }
-            }
+            },
+            Action::PatchIn(_,_,_) |
+            Action::PatchOut(_,_,_) => None,
             _ => state.selected_route.clone()
         },
         anchors: match action {
@@ -191,6 +203,7 @@ impl Routes {
         };
         
         initial_state.routes.insert(1, Route { id: 1, patch: vec![] });
+        initial_state.routes.insert(2, Route { id: 2, patch: vec![] });
 
         Routes {
             x: x,
@@ -201,6 +214,22 @@ impl Routes {
             focii: vec![vec![]],
         }
     }
+}
+
+fn render_patch(mut out: RawTerminal<Stdout>, 
+    a: &Anchor, 
+    r_id: u16, 
+    anchor_pos: (u16, u16), 
+    win: Window) -> RawTerminal<Stdout> {
+    for x in (win.x + r_id)..anchor_pos.0 {
+        write!(out, "{}─", cursor::Goto(
+            PADDING.0 + x, anchor_pos.1
+        ));
+    }
+    write!(out, "{}├", cursor::Goto(
+        PADDING.0 + win.x + r_id - 1, anchor_pos.1
+    ));
+    out
 }
 
 impl Layer for Routes {
@@ -218,22 +247,26 @@ impl Layer for Routes {
         out = write_bg(out, Color::Beige); 
         out = write_fg(out, Color::Black);
 
+        let anchor_x = win.x + self.state.routes.len() as u16 + PADDING.0;
+
         for (_, route) in self.state.routes.iter() {
             write!(out, "{}{}", cursor::Goto(
                 PADDING.0 + win.x + route.id, 
                 PADDING.1 + win.y + route.id - 1
-            ), 
-                match route.id {
-                    1 => "MASTER".to_string(),
-                    n => format!("ROUTE {}", n)
-                });
+            ), match route.id {
+                1 => "MASTER".to_string(),
+                n => format!("ROUTE {}", n)
+            });
 
-            for y in 0..win.h-(PADDING.1*2) {
+            // Draw vertical line
+            for y in 0..(win.h - PADDING.1 * 2) {
                 write!(out, "{}│", cursor::Goto(
                     PADDING.0 + win.x + route.id - 1, 
                     PADDING.1 + win.y + y)
                 );
             }
+
+            // Draw route selector
             if let Some(_id) = self.state.selected_route {
                 if _id == route.id {
                     write!(out, "{}^", cursor::Goto(
@@ -242,22 +275,20 @@ impl Layer for Routes {
                     ));
                 }
             }
-        }
 
-        let anchor_x = win.x + self.state.routes.len() as u16 + (PADDING.0 * 2);
+            for anchor in route.patch.iter() {
+                let anchor_y = win.y + (anchor.id * 2) + (PADDING.1 * 2);
+                out = render_patch(out, &anchor, route.id, (anchor_x, anchor_y), win);
+
+
+            }
+        }
 
         if let Some(a_id) = self.state.selected_anchor {
             let anchor_y = win.y + (a_id * 2) + (PADDING.1 * 2);
             let anchor = self.state.anchors.get(&a_id).unwrap();
             if let Some(r_id) = self.state.selected_route {
-                for x in (win.x + r_id)..anchor_x {
-                    write!(out, "{}─", cursor::Goto(
-                        PADDING.0 + x, anchor_y
-                    ));
-                }
-                write!(out, "{}├", cursor::Goto(
-                    PADDING.0 + win.x + r_id - 1, anchor_y
-                ));
+                out = render_patch(out, &anchor, r_id, (anchor_x, anchor_y), win);
             } else {
                 // Draw stem to anchor
                 let mut end = true;
@@ -288,14 +319,38 @@ impl Layer for Routes {
 
         // Set focus, if the multifocus defaults, take no further action
         if let Some(_default) = default {
-            self.state = reduce(self.state.clone(), _default.clone());
-            match _default {
-                Action::Exit |
-                Action::Up | Action::Down => {
+            let filtered_action = match _default {
+                Action::Deselect => {
+                    if let Some(a_id) = self.state.selected_anchor {
+                        if let Some(r_id) = self.state.selected_route {
+                            let anchor = self.state.anchors.get(&a_id).unwrap();
+                            if anchor.input {
+                                Action::PatchIn(
+                                    anchor.module_id,
+                                    anchor.id,
+                                    r_id
+                                )
+                            } else {
+                                Action::PatchOut(
+                                    anchor.module_id,
+                                    anchor.id,
+                                    r_id
+                                )
+                            }
+                        } else { Action::Noop }
+                    } else { Action::Noop }
+                },
+                a => a
+            };
+            self.state = reduce(self.state.clone(), filtered_action.clone());
+            match filtered_action {
+                a @ Action::Exit |
+                a @ Action::Up | a @ Action::Down => {
                     // About to change modules, reset selects
                     self.state.selected_anchor = None;
                     self.state.selected_route = None;
-                    return _default;
+                    self.state.focus = (0,0);
+                    return a;
                 }
                 Action::ShowAnchors(_) |
                 Action::AddRoute(_) =>  {

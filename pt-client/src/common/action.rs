@@ -45,8 +45,8 @@ pub enum Action {
     PatchRoute(u16),
     AddRoute(u16),
     FadePatch(u16, f32),
-    PatchOut(u16, u16, u16, bool), 
-    PatchIn(u16, u16, u16, bool), 
+    PatchOut(u16, u16, u16),
+    PatchIn(u16, u16, u16),
 
     NoteOn(u16, f32),
     NoteOff(u16),
