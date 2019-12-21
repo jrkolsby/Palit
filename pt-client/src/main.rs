@@ -1,9 +1,9 @@
 extern crate libc;
 extern crate termion;
 
-use std::io::{BufReader, Write, Stdout, stdout, stdin};
+use std::io::{Write, Stdout, stdout};
 use std::io::prelude::*;
-use std::fs::{OpenOptions, read_to_string, File};
+use std::fs::{OpenOptions, File};
 use std::os::unix::fs::OpenOptionsExt;
 use std::ffi::CString;
 
@@ -21,7 +21,7 @@ mod modules;
 use views::{Layer, Home, Timeline, Help, Title, Piano, Routes};
 use modules::{read_document};
 
-use common::Action;
+use common::{Action, Anchor, MARGIN_D0, MARGIN_D1};
 
 fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<(u16, Box<Layer>)>) -> RawTerminal<Stdout> {
     /*
@@ -35,12 +35,13 @@ fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<(u16, Box<Layer>)>)
     // Determine bottom layer
     if layers.len() == 0 { return stdout; }
     let mut bottom = layers.len()-1;
+    let target = bottom;
     for (id, layer) in (*layers).iter().rev() {
         if layer.alpha() { bottom -= 1 }
         else { break }
     };
     for i in bottom..(*layers).len() {
-        stdout = layers[i].1.render(stdout);
+        stdout = layers[i].1.render(stdout, i == target);
     }
     stdout
 }
@@ -57,6 +58,8 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
         let argv: Vec<&str> = action_raw.split(":").collect();
 
         let action = match argv[0] {
+            "ROUTE" => Action::Route,
+
             "TICK" => Action::Tick,
 
             "?" => Action::Noop,
@@ -92,7 +95,7 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
 
         match action {
             Action::Noop => {},
-            _ => { events.push(action); }
+            a => { events.push(a); }
         };
     };
 
@@ -111,8 +114,8 @@ fn main() -> std::io::Result<()> {
 	    .open("/tmp/pt-client").unwrap();
 
     // Blocked by pt-sound reader
-    // If a process runs and nobody is around to hear it,
-    // should it really continue? 
+    // If a process writes to stdout and nobody 
+    // is around to read it, should it continue?
     println!("Waiting for pt-sound...");
 
     let mut ipc_sound = OpenOptions::new()
@@ -137,13 +140,9 @@ fn main() -> std::io::Result<()> {
 
     // Configure UI layers
     let mut layers: VecDeque<(u16, Box<Layer>)> = VecDeque::new();
+    let mut routes_id: Option<u16> = None;
 
     add_layer(&mut layers, Box::new(Home::new(1, 1, size.0, size.1)), 0);
-
-    /*
-    add_layer(&mut layers, Box::new(Piano::new(5, 10, size.0/2, size.1/2)));
-    add_layer(&mut layers, Box::new(Routes::new(1, 1, 4, size.1)));
-    */
 
     // Hide cursor and clear screen
     write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
@@ -152,10 +151,8 @@ fn main() -> std::io::Result<()> {
     stdout = render(stdout, &layers);
     stdout.flush().unwrap();
 
-    // Action queue
     let mut events: Vec<Action> = Vec::new();
 
-    // MAIN LOOP
     'event: loop {
 
         unsafe{
@@ -169,30 +166,43 @@ fn main() -> std::io::Result<()> {
         } else { continue; };
 
         while let Some(next) = events.pop() {
+
+            // Target the top layer
+            let num_views = layers.len();
+            let (target_index, target_id) = if num_views > 0 {
+                let index = num_views - 1;
+                let id = match layers.get(index).unwrap() {
+                    (id, _) => *id,
+                    _ => 0
+                };
+                (index, id)
+            } else {
+                (0, 0)
+            };
+
             // Execute toplevel actions, capture default from view
             let default: Action = match next {
-                Action::Help => { 
-                    add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15)), 0); 
-                    Action::Noop
-                },
                 Action::Exit => { 
                     break 'event;
                 },
+                Action::Help => { 
+                    add_layer(&mut layers, Box::new(Help::new(
+                        MARGIN_D1.0,
+                        MARGIN_D1.1, 
+                        size.0 - (MARGIN_D1.0 * 2), 
+                        size.1 - (MARGIN_D1.1 * 2),
+                    )), 0); 
+                    Action::Noop
+                },
                 Action::Back => {
-                    if let Some(current) = layers.pop_front() {
-                        layers.push_back(current);
+                    if let Some(current) = layers.pop_back() {
+                        layers.push_front(current);
                     }
                     Action::Noop
                 },
-                // Dispatch toplevel action to front layer
                 a => {
-                    let target_i = (layers.len() as i16)-1;
-                    if target_i >= 0 {
-                        let (id, target) = layers.get_mut(target_i as usize).unwrap();
-                        target.dispatch(a)
-                    } else {
-                        Action::Noop
-                    }
+                    let (_, target) = layers.get_mut(target_index).unwrap();
+                    target.dispatch(a)
                 }
             };
 
@@ -201,41 +211,126 @@ fn main() -> std::io::Result<()> {
                 Action::InputTitle => {
                     add_layer(&mut layers, Box::new(Title::new(23, 5, 36, 23)), 0);
                 },
+                Action::Play => {
+                    ipc_sound.write(
+                        format!("PLAY:{} ", target_id).as_bytes()).unwrap();
+                }
+                Action::Stop => {
+                    ipc_sound.write(
+                        format!("STOP:{} ", target_id).as_bytes()).unwrap();
+                }
+                Action::NoteOn(k, v) => {
+                    ipc_sound.write(
+                        format!("NOTE_ON_AT:{}:{}:{} ", target_id, k, v).as_bytes()).unwrap();
+                },
+                Action::NoteOff(k) => {
+                    ipc_sound.write(
+                        format!("NOTE_OFF_AT:{}:{} ", target_id, k).as_bytes()).unwrap();
+                },
+                a @ Action::Up | 
+                a @ Action::Down => {
+                    // If routes is the target view (top) remove it
+                    let mut routes: Option<(u16, Box<Layer>)> = None;
+                    if routes_id.is_some() && routes_id.unwrap() == target_id {
+                        if let Some(top) = layers.pop_back() {
+                            routes = Some(top);
+                        }
+                    };
+                    // Slide layers over
+                    match a {
+                        Action::Up => {
+                            if let Some(current) = layers.pop_front() {
+                                layers.push_back(current);
+                            }
+                        },
+                        Action::Down => {
+                            if let Some(current) = layers.pop_back() {
+                                layers.push_front(current);
+                            }
+                        },
+                        _ => {}
+                    }
+                    // Make sure that routes view is not on top
+                    // Restore routes view if it was the target...
+                    if let Some(mut r) = routes { 
+                        // ... and give it a new set of anchors
+                        let action = layers[target_index-1].1.dispatch(Action::Route);
+                        r.1.dispatch(action); 
+                        layers.push_back(r);
+                    }
+                }, 
                 /*
+                Action::Pepper => {
+                    add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15)), 0); 
+                },
                 Action::CreateProject(title) => {
                     ipc_sound.write(format!("NEW_PROJECT:{} ", title).as_bytes());
                     add_layer(&mut layers, Box::new(Timeline::new(1, 1, size.0, size.1, title)));
                 },
+                Action::Error(message) => {
+                    layers.push(Box::new(Error::new(message))) ;
+                }
                 */
                 Action::OpenProject(title) => {
-                    ipc_sound.write(format!("OPEN_PROJECT:{} ", title).as_bytes());
+                    ipc_sound.write(
+                        format!("OPEN_PROJECT:{} ", title).as_bytes()).unwrap();
                     let doc = read_document(title);
                     for (id, el) in doc.modules.iter() {
                         match &el.name[..] {
                             "timeline" => add_layer(&mut layers, 
                                 Box::new(Timeline::new(1, 1, size.0, size.1, (*el).to_owned())), *id),
-                            _ => {}
+                            "hammond" => add_layer(&mut layers,
+                                Box::new(Piano::new(1,1,size.0,size.1, (*el).to_owned())), *id),
+                            "patch" => { 
+                                routes_id = Some(*id);
+                                add_layer(&mut layers, Box::new(
+                                    Routes::new(
+                                        MARGIN_D0.0,
+                                        MARGIN_D0.1,
+                                        size.0 - (MARGIN_D0.0 * 2),
+                                        size.1 - (MARGIN_D0.1 * 2), 
+                                    Some((*el).to_owned()))
+                                ), *id) 
+                            },
+                            name => { eprintln!("unimplemented module {:?}", name)}
                         }
                     }
                 },
-                Action::Up | Action::Left => {
-                    if let Some(current) = layers.pop_front() {
-                        layers.push_back(current);
+                Action::ShowAnchors(anchors) => {
+                    if let Some(r_id) = routes_id {
+                        let mut routes_index: Option<usize> = None;
+
+                        for (i, (id, layer)) in layers.iter_mut().enumerate() {
+                            if *id == r_id {
+                                routes_index = Some(i);
+                            }
+                        }
+
+                        if let Some(j) = routes_index {
+                            let (_, mut route_view) = layers.remove(j).unwrap();
+
+                            let anchors_fill = anchors.iter().map(|a| Anchor {
+                                id: a.id,
+                                module_id: target_id,
+                                name: a.name.clone(),
+                                input: a.input
+                            }).collect();
+
+                            match route_view.dispatch(
+                                Action::ShowAnchors(anchors_fill)) {
+                                Action::CountRoutes(num) => {
+                                    add_layer(&mut layers, route_view, r_id);
+                                },
+                                _ => { panic!("Patch failed to report number of routes"); }
+                            }
+                        }
+                    } else {
+                        routes_id = Some(1000);
+                        add_layer(&mut layers, Box::new(
+                            Routes::new(1,1,size.0,size.1, None)
+                        ), 1000);
                     }
-                }, 
-                Action::Down | Action::Right => {
-                    if let Some(current) = layers.pop_back() {
-                        layers.push_front(current);
-                    }
-                }, 
-                Action::Pepper => {
-                    add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15)), 0); 
                 },
-                /*
-                Action::Error(message) => {
-                    layers.push(Box::new(Error::new(message))) ;
-                }
-                */
                 _ => {}
             };	
         }

@@ -1,11 +1,13 @@
+use std::borrow::BorrowMut;
+use xmltree::Element;
+
+use crate::document::{param_map};
 use crate::core::{Note, Key, Offset};
 use crate::action::Action;
-use std::borrow::BorrowMut;
 
 pub struct Store {
     timer: Offset,
     length: Offset,
-    rate: usize,
     notes: Vec<Note>,
     queue: Vec<Action>,
 }
@@ -13,8 +15,8 @@ pub struct Store {
 pub fn init() -> Store {
     Store {
         timer: 0,
-        rate: 4, // notes per bar
-        length: 24000, // samples per bar
+        length: 24000, // samples per bar/rate
+
         notes: vec![],
         queue: vec![],
     }
@@ -63,6 +65,16 @@ pub fn dispatch(store: &mut Store, action: Action) {
     }
 }
 
+pub fn read(doc: &mut Element) -> Option<Store> {
+    let (mut doc, params) = param_map(doc);
+    let mut store: Store = init();
+    store.length = match params.get("length") {
+        Some(a) => (*a * 1000) as Offset,
+        None => return None,
+    };
+    Some(store)
+}
+
 pub fn compute(store: &mut Store) {
     for note in store.notes.iter() {
         if store.timer == note.t_in {
@@ -89,9 +101,8 @@ pub fn dispatch_requested(store: &mut Store) -> (
         Option<Vec<Action>> // Actions for client
     ) {
     if store.queue.len() == 0 { (None, None, None) } else {
-        let carry1 = store.queue.clone();
-        let carry2 = store.queue.clone();
+        let carry = store.queue.clone();
         store.queue.clear();
-        (Some(carry1), None, Some(carry2)) 
+        (Some(carry), None, None) 
     }
 }

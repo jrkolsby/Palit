@@ -3,6 +3,7 @@ mod action;
 mod color;
 mod render;
 mod multifocus;
+mod layout;
 
 pub use pcm::file_to_pairs;
 pub use pcm::generate_waveforms;
@@ -22,8 +23,16 @@ pub use multifocus::Focus;
 pub use multifocus::MultiFocus;
 pub use multifocus::shift_focus;
 pub use multifocus::render_focii;
+pub use multifocus::focus_dispatch;
 pub use multifocus::FocusType;
 pub use multifocus::ID;
+pub use multifocus::VOID_ID;
+
+pub use layout::REGIONS_X;
+pub use layout::TIMELINE_Y;
+pub use layout::MARGIN_D0;
+pub use layout::MARGIN_D1;
+pub use layout::MARGIN_D2;
 
 #[derive(Clone, Debug)]
 pub enum Rate {
@@ -49,17 +58,18 @@ pub enum Direction {
     SE,
 }
 
-pub trait Module {
-    fn read_state(&self, object: xmltree::Element);
-    fn write_state(&self) -> xmltree::Element;
-}
-
-pub type DirectAction = (u16, Action);
-
 #[derive(Clone, Copy, Debug)]
 pub struct Window {
     pub x: u16,
     pub y: u16,
     pub w: u16,
     pub h: u16,
+}
+
+#[derive(Clone, Debug)]
+pub struct Anchor {
+    pub id: u16,
+    pub module_id: u16,
+    pub name: String,
+    pub input: bool,
 }

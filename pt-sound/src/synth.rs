@@ -1,9 +1,10 @@
 use std::{iter};
 
 use sample::{signal, Signal, Sample};
-
 use wavefile::{WaveFile, WaveFileIterator};
+use xmltree::Element;
 
+use crate::document::{param_map};
 use crate::core::{SF, SigGen, Output};
 use crate::action::Action;
 
@@ -20,6 +21,7 @@ pub struct Sig {
 }
 
 pub struct Store {
+    pub queue: Vec<Action>,
     pub sigs: Vec<Option<Sig>>,
     pub sample_rate: signal::Rate,
     pub stored_sample: Option<Output>,
@@ -28,6 +30,7 @@ pub struct Store {
 
 pub fn init() -> Store {
     Store {
+        queue: vec![],
         sigs: iter::repeat(None).take(256).collect(),
         sample_rate: signal::rate(f64::from(48000)),
         stored_sample: None,
@@ -37,6 +40,7 @@ pub fn init() -> Store {
 
 pub fn dispatch(store: &mut Store, action: Action) {
     match action {
+        Action::NoteOnAt(_, note, vol) |
         Action::NoteOn(note, vol) => {
             let hz = 440. * 2_f64.powf((note as f64 - 69.)/12.);
 
@@ -49,13 +53,23 @@ pub fn dispatch(store: &mut Store, action: Action) {
                 let s = Sig { sig: hz.sine(), note, targetvol: vol, curvol: 0., baridx };
                 store.sigs[idx] = Some(s);
             }
+            // Only carry NoteOn/Off actions, NOT NoteOnAt
+            match action {
+                Action::NoteOn(_, _) => store.queue.push(action),
+                _ => {}
+            };
         },
+        Action::NoteOffAt(_, note) |
         Action::NoteOff(note) => {
             for i in store.sigs.iter_mut() {
                 if let &mut Some(ref mut i) = i {
                     if i.note == note { i.targetvol = 0. }
                 }
             }
+            match action {
+                Action::NoteOff(_) => store.queue.push(action),
+                _ => {}
+            };
         },
         Action::SetParam(_, ctrl, value) => {
             let idx = match ctrl {
@@ -75,6 +89,23 @@ pub fn dispatch(store: &mut Store, action: Action) {
         }
         _ => {}
     }
+}
+
+pub fn read(doc: &mut Element) -> Option<Store> {
+    let (mut doc, params) = param_map(doc);
+    let mut store = init();
+    store.bar_values = [
+        *params.get("16").unwrap() as f64 / 1000.,
+        *params.get("5.3").unwrap() as f64 / 1000.,
+        *params.get("8").unwrap() as f64 / 1000.,
+        *params.get("4").unwrap() as f64 / 1000.,
+        *params.get("2.6").unwrap() as f64 / 1000.,
+        *params.get("2").unwrap() as f64 / 1000.,
+        *params.get("1.6").unwrap() as f64 / 1000.,
+        *params.get("1.3").unwrap() as f64 / 1000.,
+        *params.get("1").unwrap() as f64 / 1000.
+    ];
+    Some(store)
 }
 
 pub fn compute(store: &mut Store) -> Output {
@@ -107,4 +138,14 @@ pub fn compute(store: &mut Store) -> Output {
     let z = z.min(0.999).max(-0.999);
     store.stored_sample = Some(z);
     z
+}
+
+pub fn dispatch_requested(store: &mut Store) -> (
+        Option<Vec<Action>>, // Actions for outputs
+        Option<Vec<Action>>, // Actions for inputs
+        Option<Vec<Action>> // Actions for client
+    ) {
+        let carry = store.queue.clone();
+        store.queue.clear();
+        (None, None, Some(carry.clone()))
 }

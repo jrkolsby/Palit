@@ -5,6 +5,7 @@ use std::{iter, error};
 use std::ffi::CString;
 use std::fs::File;
 use std::io::prelude::*;
+use std::thread;
 
 #[cfg(target_os = "linux")]
 extern crate alsa;
@@ -162,18 +163,15 @@ pub fn event_loop<F: 'static>(
         mut ipc_in: File, 
         mut ipc_client: File, 
         mut patch: Graph<[Output; CHANNELS], Module>, 
-        operator: NodeIndex,
-        midi_keys: NodeIndex,
-        keys: NodeIndex,
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
-    where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) -> Action {
+    where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) {
 
     // The callback we'll use to pass to the Stream. It will request audio from our dsp_graph.
     let callback = move |pa::OutputStreamCallbackArgs { buffer, time, .. }| {
 
         let ipc_actions: Vec<Action> = ipc_action(&ipc_in);
 
-        match ipc_dispatch(ipc_actions, keys, operator, &mut patch, &mut dispatch_f) {
+        match ipc_dispatch(ipc_actions, &mut patch, &mut dispatch_f) {
             Action::Exit => { return pa::Complete; },
             _ => {}
         }
@@ -216,6 +214,7 @@ pub enum Module {
     // and every second or so will send all corresponding NoteOff actions.
     // Useful for debugging on OSX where keyup events aren't accessed.
     DebugKeys(Vec<Action>, Vec<Action>, u16),
+    Operator(Vec<Action>, Vec<(NodeIndex)>, Vec<NodeIndex>),
     Synth(synth::Store),
     Tape(tape::Store),
     Chord(chord::Store),
@@ -226,6 +225,7 @@ impl Module {
     pub fn dispatch(&mut self, a: Action) {
         match *self {
             Module::Master => {}
+            Module::Operator(ref mut queue, _, _) |
             Module::Passthru(ref mut queue) => { queue.push(a.clone()) }
             Module::DebugKeys(ref mut onqueue, _, _) => { onqueue.push(a.clone()); }
             Module::Synth(ref mut store) => synth::dispatch(store, a.clone()),
@@ -249,6 +249,7 @@ impl Module {
         ) {
 
         match *self {
+            Module::Operator(ref mut queue, _, _) |
             Module::Passthru(ref mut queue) => {
                 let carry = queue.clone();
                 queue.clear();
@@ -283,6 +284,7 @@ impl Module {
             Module::Tape(ref mut store) => tape::dispatch_requested(store),
             Module::Chord(ref mut store) => chord::dispatch_requested(store),
             Module::Arpeggio(ref mut store) => arpeggio::dispatch_requested(store),
+            Module::Synth(ref mut store) => synth::dispatch_requested(store),
             Module::Master => (None, None, None), // TODO: give master levels to client
             _ => (None, None, None)
         }
@@ -384,32 +386,13 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
 
 fn ipc_dispatch<F: 'static>(
         ipc_actions: Vec<Action>, 
-        keys: NodeIndex, 
-        operator: NodeIndex, 
         patch: &mut Graph<[Output; CHANNELS], Module>,
         root_dispatch: &mut F) -> Action 
 
-    where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) -> Action {
+    where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) {
 
     for action in ipc_actions.iter() {
         match action {
-            // Pass graph mutations to root_dispatch
-            // Give action directly to indexed node
-            Action::SetParam(nid, _, _) => {
-                // TODO: Make sure that node index exists!
-                // ... be careful when nodes are removed that the
-                // ... indicies are shifted accordingly, or...
-                // ... don't ever remove nodes just disconnect them
-                let id = NodeIndex::new(*nid);
-                patch[id].dispatch(action.clone());
-            },
-            // Give notes to the outputs of keyboard
-            Action::NoteOn(_,_) | Action::NoteOff(_) => {
-                patch[keys].dispatch(action.clone());
-            },
-            Action::Play | Action::Stop | Action::Octave(_) => {
-                patch[operator].dispatch(action.clone());
-            },
             Action::Exit => { return Action::Exit; },
             // Pass any other action to root
             _ => { root_dispatch(patch, action.clone()); }
@@ -430,13 +413,20 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
 
         let action = match argv[0] {
 
-            "PLAY" => Action::Play,
-            "STOP" => Action::Stop,
+            "PLAY" => Action::Play(argv[1].parse::<u16>().unwrap()),
+            "STOP" => Action::Stop(argv[1].parse::<u16>().unwrap()),
 
             "NOTE_ON" => Action::NoteOn(argv[1].parse::<u8>().unwrap(), 
                                         argv[2].parse::<f64>().unwrap()),
 
             "NOTE_OFF" => Action::NoteOff(argv[1].parse::<u8>().unwrap()),
+
+            "NOTE_ON_AT" => Action::NoteOnAt(argv[1].parse::<u16>().unwrap(),
+                                             argv[2].parse::<u8>().unwrap(),
+                                             argv[3].parse::<f64>().unwrap()),
+
+            "NOTE_OFF_AT" => Action::NoteOffAt(argv[1].parse::<u16>().unwrap(),
+                                               argv[2].parse::<u8>().unwrap()),
 
             "EXIT" => Action::Exit,
 
@@ -461,12 +451,9 @@ pub fn event_loop<F: 'static>(
         mut ipc_in: File, 
         mut ipc_client: File, 
         mut patch: Graph<[Output; CHANNELS], Module>, 
-        operator: NodeIndex,
-        midi_keys: NodeIndex,
-        keys: NodeIndex,
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
 
-    where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) -> Action {
+    where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) {
     
     // Get audio devices
     let (audio_dev, rate) = open_audio_dev()?;
@@ -491,7 +478,7 @@ pub fn event_loop<F: 'static>(
 
         let ipc_actions: Vec<Action> = ipc_action(&ipc_in);
 
-        match ipc_dispatch(ipc_actions, keys, operator, &mut patch, &dispatch_f) {
+        match ipc_dispatch(ipc_actions, &mut patch, &dispatch_f) {
             Action::Exit => { return Ok(()) },
             _ => {}
         }

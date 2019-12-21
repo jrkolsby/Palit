@@ -3,17 +3,17 @@ use std::fs;
 
 use xmltree::Element;
 
-use crate::core::{Param, Offset};
+use crate::core::{Param, Offset, Key};
 
 pub struct Document {
     pub title: String,
     pub sample_rate: u32,
-    pub modules: HashMap<u16, Element>,
+    pub modules: Vec<(u16, Element)>,
 }
 
 const PALIT_ROOT: &str = "/usr/local/palit/";
 
-pub fn param_map(mut doc: Element) -> (Element, HashMap<String, Param>) {
+pub fn param_map(doc: &mut Element) -> (&mut Element, HashMap<String, Param>) {
     let mut params: HashMap<String, Param> = HashMap::new();
     while let Some(param) = doc.take_child("param") {
         let key = param.attributes.get("name").unwrap();
@@ -23,7 +23,7 @@ pub fn param_map(mut doc: Element) -> (Element, HashMap<String, Param>) {
     return (doc, params);
 }
 
-pub fn mark_map(mut doc: Element) -> (Element, HashMap<String, Offset>) {
+pub fn mark_map(doc: &mut Element) -> (&mut Element, HashMap<String, Offset>) {
     let mut marks: HashMap<String, Offset> = HashMap::new();
     while let Some(param) = doc.take_child("mark") {
         let key = param.attributes.get("name").unwrap();
@@ -33,16 +33,42 @@ pub fn mark_map(mut doc: Element) -> (Element, HashMap<String, Offset>) {
     return (doc, marks);
 }
 
+pub fn note_list(doc: &mut Element) -> (&mut Element, Vec<Key>) {
+    let mut notes: Vec<Key> = vec![];
+    while let Some(param) = doc.take_child("note") {
+        let note = param.attributes.get("key").unwrap();
+        notes.push(note.parse::<Key>().unwrap());
+    }
+    return (doc, notes);
+}
+
+pub fn param_add<T>(el: &mut Element, value: T, name: String) 
+    where T: std::string::ToString {
+    let mut param = Element::new("param");
+    param.attributes.insert("value".to_string(), value.to_string());
+    param.attributes.insert("name".to_string(), name);
+    el.children.push(param)
+}
+
+pub fn mark_add<T>(el: &mut Element, value: T, name: String) 
+    where T: std::string::ToString {
+    let mut mark = Element::new("mark");
+    mark.attributes.insert("value".to_string(), value.to_string());
+    mark.attributes.insert("name".to_string(), name);
+    el.children.push(mark)
+}
+
 pub fn read_document(filename: String) -> Document {
 
     let doc_path: String = format!("{}{}", PALIT_ROOT, filename);
     let doc_str: String = fs::read_to_string(doc_path).unwrap();
     let mut doc: Element = Element::parse(doc_str.as_bytes()).unwrap();
+    let mut patch: Option<(u16, Element)> = None;
 
     let mut result = Document {
         title: "Untitled".to_string(),
         sample_rate: 48000,
-        modules: HashMap::new(),
+        modules: Vec::new(),
     };
 
     if let Some(title) = doc.take_child("title") {
@@ -58,13 +84,23 @@ pub fn read_document(filename: String) -> Document {
     if let Some(modules) = doc.take_child("modules") {
         for module in modules.children.iter() {
             if let Some(i) = module.attributes.get("id") {
-                result.modules.insert(i.parse::<u16>().unwrap(), module.to_owned());
+                // Make sure that patch is the last module in the group
+                if module.name == "patch" {
+                    patch = Some((i.parse::<u16>().unwrap(), module.to_owned()));
+                    continue;
+                }
+                result.modules.push((i.parse::<u16>().unwrap(), module.to_owned()));
             } else {
-                panic!("Module '{} 'missing ID", module.name);
+                panic!("Module {} missing ID", module.name);
             }
         }
     } else {
         panic!("No modules defined!");
+    }
+
+    match patch {
+        Some(p) => result.modules.push(p),
+        None => panic!("No patch defined!")
     }
 
     result

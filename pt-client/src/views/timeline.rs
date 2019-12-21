@@ -1,28 +1,24 @@
 extern crate wavefile;
 
-use wavefile::WaveFile;
-
 use xmltree::Element;
 
-use termion::{color, cursor, terminal_size};
+use termion::cursor;
 use termion::raw::{RawTerminal};
 
 use std::io::{Write, Stdout};
 use std::collections::HashMap;
 
-use crate::components::{waveform, tempo, button, ruler};
-use crate::common::{MultiFocus, render_focii, shift_focus, FocusType, Window, ID};
-use crate::common::{Module, Action, Color, Asset, Region, Track};
+use crate::components::{tempo, button, ruler, region};
+use crate::common::{ID, VOID_ID, FocusType};
+use crate::common::{MultiFocus, render_focii, shift_focus };
+use crate::common::{Action, Asset, Region, Track, Anchor, Window};
 use crate::common::{beat_offset, offset_beat, generate_waveforms};
 use crate::modules::timeline;
 use crate::views::{Layer};
 
-//#[derive(Debug)] TODO: Implement {:?} fmt for Track and Tempo
+use crate::common::{REGIONS_X, TIMELINE_Y};
 
-static MARGIN: (u16, u16) = (3, 3);
 static TRACKS_X: u16 = 3;
-static REGIONS_X: u16 = 16;
-static TIMELINE_Y: u16 = 5;
 static SCROLL_R: u16 = 40;
 static SCROLL_L: u16 = 10;
 static ASSET_PREFIX: &str = "storage/";
@@ -62,29 +58,24 @@ pub struct Timeline {
     focii: Vec<Vec<MultiFocus<TimelineState>>>,
 }
 
+static VOID_RENDER: fn( RawTerminal<Stdout>, 
+        Window, ID, &TimelineState, bool) -> RawTerminal<Stdout> =
+    |mut out, window, id, state, focus| out;
+static VOID_TRANSFORM: fn(Action, ID, &mut TimelineState) -> Action = 
+    |action, id, state| Action::Noop;
+
 fn generate_focii(tracks: &HashMap<u16, Track>, 
                   regions: &HashMap<u16, Region>) -> Vec<Vec<MultiFocus<TimelineState>>> {
-    // Create empty select
-    let void_id: ID = (FocusType::Void, 0);
-    let void_render: fn(RawTerminal<Stdout>, Window, ID, &TimelineState, bool) -> RawTerminal<Stdout> =
-        |mut out, window, id, state, focus| out;
-    let void_transform: fn(Action, ID, &mut TimelineState) -> Action = 
-        |action, id, state| Action::Noop;
-
-    /* TIMELINE LAYOUT
-    Rec, In, loop In, loop Out, Out
-    */
-
     let mut focii: Vec<Vec<MultiFocus<TimelineState>>> = vec![vec![
         MultiFocus::<TimelineState> {
             w: |mut out, window, id, state, focus| out,
-            w_id: void_id.clone(),
+            w_id: VOID_ID.clone(),
 
             r_id: (FocusType::Button, 0),
             r: |mut out, window, id, state, focus| 
                 button::render(out, 2, 2, 20, "RECORD"),
             r_t: |a, id, _| match a { 
-                Action::SelectR => Action::Record(id.1), 
+                Action::SelectR => Action::RecordAt(id.1), 
                 _ => Action::Noop 
             },
 
@@ -120,26 +111,26 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
     for (t_id, track) in track_vec.iter() {
         focii.push(vec![
             MultiFocus::<TimelineState> {
-                w: void_render,
+                w: VOID_RENDER,
                 w_id: (FocusType::Button, **t_id),
 
-                r_id: void_id.clone(),
-                g_id: void_id.clone(),
-                y_id: void_id.clone(),
-                p_id: void_id.clone(),
-                b_id: void_id.clone(),
+                r_id: VOID_ID.clone(),
+                g_id: VOID_ID.clone(),
+                y_id: VOID_ID.clone(),
+                p_id: VOID_ID.clone(),
+                b_id: VOID_ID.clone(),
 
                 r: |mut out, win, id, state, focus|
                     button::render(out, win.x+TRACKS_X, win.y+TIMELINE_Y+2*id.1, 3, "R"),
-                r_t: |action, id, _| Action::Record(id.1),
+                r_t: |action, id, _| Action::RecordAt(id.1),
 
                 g: |mut out, win, id, state, focus|
                     button::render(out, win.x+TRACKS_X+4, win.y+TIMELINE_Y+(2*id.1), 3, "M"),
-                g_t: |action, id, _| Action::Mute(id.1),
+                g_t: |action, id, _| Action::MuteAt(id.1),
 
                 b: |mut out, win, id, state, focus|
                     button::render(out, win.x+TRACKS_X+8, win.y+TIMELINE_Y+(2*id.1), 3, "S"),
-                b_t: |action, id, _| Action::Solo(id.1),
+                b_t: |action, id, _| Action::SoloAt(id.1),
 
                 p: |mut out, win, id, state, focus| out,
                 p_t: |action, id, state| Action::Noop,
@@ -156,152 +147,9 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
     region_vec.sort_by(|(_, a), (_, b)| a.offset.cmp(&b.offset));
 
     for (region_id, region) in region_vec.iter() {
-
-        focii[region.track as usize].push(MultiFocus::<TimelineState> {
-            w_id: (FocusType::Region, **region_id),
-            w: |mut out, window, id, state, focus| {
-                let region = state.regions.get(&id.1).unwrap();
-                let waveform = &state.assets.get(&region.asset_id).unwrap().waveform;
-
-                let region_offset = beat_offset(region.offset,
-                    state.sample_rate, state.tempo, state.zoom);
-
-                let asset_start_offset = beat_offset(region.asset_in,
-                    state.sample_rate, state.tempo, state.zoom);
-
-                let asset_length_offset = beat_offset(region.asset_out - region.asset_in,
-                    state.sample_rate, state.tempo, state.zoom);
-
-                // Region appears to left of timeline
-                if asset_length_offset + region_offset < state.scroll_x {
-                    return out;
-                } 
-                // Region appears to right of timeline
-                else if region_offset > state.scroll_x + window.w {
-                    return out;
-                } 
-
-                // Region split by left edge of timeline
-                let wave_in_i: usize = if region_offset < state.scroll_x {
-                    (state.scroll_x - region_offset) as usize
-                // Left edge of region appears unclipped
-                } else {
-                    asset_start_offset as usize
-                };
-
-                // Region split by right edge of timeline
-                let wave_out_i: usize = if state.scroll_x + window.w < region_offset + asset_length_offset {
-                    (asset_start_offset + asset_length_offset) as usize - 
-                    (region_offset + asset_length_offset - (state.scroll_x + window.w)) as usize
-                } else {
-                    (asset_start_offset + asset_length_offset) as usize
-                };
-
-                let wave_slice = &waveform[wave_in_i..wave_out_i];
-
-                let timeline_offset = if region_offset >= state.scroll_x {
-                    region_offset - state.scroll_x
-                } else { 0 };
-
-                let region_x = window.x + REGIONS_X + timeline_offset;
-                let region_y = window.y + 1 + TIMELINE_Y + 2 * region.track;
-
-                waveform::render(out, wave_slice, region_x, region_y)
-            }, 
-            r: |mut out, window, id, state, focus| {
-                if focus {
-                    let region = state.regions.get(&id.1).unwrap();
-
-                    let region_offset = beat_offset(region.offset,
-                        state.sample_rate, state.tempo, state.zoom);
-
-                    let timeline_offset = if region_offset >= state.scroll_x {
-                        region_offset - state.scroll_x
-                    } else { 0 };
-
-                    let region_x = window.x + 7 + REGIONS_X + timeline_offset;
-                    let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
-
-                    write!(out, "{} TRIM ",
-                        cursor::Goto(region_x, region_y));
-                }
-                out
-            },
-            r_t: void_transform,
-            r_id: void_id.clone(),
-            g: |mut out, window, id, state, focus| {
-                if focus {
-                    let region = state.regions.get(&id.1).unwrap();
-
-                    let region_offset = beat_offset(region.offset,
-                        state.sample_rate, state.tempo, state.zoom);
-
-                    let timeline_offset = if region_offset >= state.scroll_x {
-                        region_offset - state.scroll_x
-                    } else { 0 };
-
-                    let region_x = window.x + REGIONS_X + timeline_offset;
-                    let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
-
-                    write!(out, "{} MOVE ",
-                        cursor::Goto(region_x, region_y));
-                }
-
-                out
-            },
-            g_t: |action, id, mut state| match action {
-                Action::Right => { 
-                    let r = state.regions.get(&id.1).unwrap();
-                    let d_offset = offset_beat(1, state.sample_rate, state.tempo, state.zoom);
-                    Action::MoveRegion(id.1, r.track, r.offset+d_offset) 
-                },
-                Action::Left => { 
-                    let r = state.regions.get(&id.1).unwrap();
-                    let d_offset = offset_beat(1, state.sample_rate, state.tempo, state.zoom);
-                    Action::MoveRegion(id.1, r.track, r.offset-d_offset) 
-                },
-                Action::Up => { 
-                    let r = state.regions.get(&id.1).unwrap();
-                    Action::MoveRegion(id.1, r.track-1, r.offset) 
-                },
-                Action::Down => { 
-                    let r = state.regions.get(&id.1).unwrap();
-                    Action::MoveRegion(id.1, r.track+1, r.offset) 
-                },
-                _ => Action::Noop,
-            },
-            g_id: void_id.clone(),
-            y: |mut out, window, id, state, focus| {
-                if focus {
-                    let region = state.regions.get(&id.1).unwrap();
-
-                    let region_offset = beat_offset(region.offset,
-                        state.sample_rate, state.tempo, state.zoom);
-
-                    let timeline_offset = if region_offset >= state.scroll_x {
-                        region_offset - state.scroll_x
-                    } else { 0 };
-
-                    let region_x = window.x + 14 + REGIONS_X + timeline_offset;
-                    let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
-
-                    write!(out, "{} SPLIT ",
-                        cursor::Goto(region_x, region_y));
-                }
-
-                out
-            }, 
-            y_t: void_transform,
-            y_id: void_id.clone(),
-            p: void_render, 
-            p_t: void_transform,
-            p_id: void_id.clone(),
-            b: void_render, 
-            b_t: void_transform,
-            b_id: void_id.clone(),
-
-            active: None,
-        })
+        focii[region.track as usize].push(
+            region::new(**region_id)
+        )
     }
 
     return focii
@@ -349,9 +197,8 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
 
             match action {
                 Action::Left => 
-                    if (playhead_offset > 0 && 
-                        state.scroll_x > 0 && 
-                        playhead_offset < state.scroll_x + SCROLL_L) {
+                    if playhead_offset > 0 && state.scroll_x > 0 && 
+                        playhead_offset < state.scroll_x + SCROLL_L {
                         state.scroll_x-1
                     } else { 
                         state.scroll_x.clone() 
@@ -391,11 +238,14 @@ impl Timeline {
 }
 
 impl Layer for Timeline {
-    fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
+    fn render(&self, mut out: RawTerminal<Stdout>, target: bool) -> RawTerminal<Stdout> {
 
         let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
 
-        out = render_focii(out, win, self.state.focus.clone(), &self.focii, &self.state);
+        out = render_focii(
+            out, win, 
+            self.state.focus.clone(), 
+            &self.focii, &self.state, !target);
 
         // Print track numbers
         for (id, track) in self.state.tracks.iter() {
@@ -425,6 +275,7 @@ impl Layer for Timeline {
         out.flush().unwrap();
         out
     }
+
     fn dispatch(&mut self, action: Action) -> Action {
 
         // Let the focus transform the action 
@@ -435,7 +286,6 @@ impl Layer for Timeline {
         
         // Intercept arrow actions to change focus or to return
         let (focus, default) = match _action {
-            Action::Up | Action::Down => shift_focus(self.state.focus, &self.focii, _action.clone()),
             // Only shift focus horizontally if playhead has exceeded current region
             Action::Left => match multi_focus.w_id.0 {
                 FocusType::Region => {
@@ -466,8 +316,9 @@ impl Layer for Timeline {
                 },
                 _ => shift_focus(self.state.focus, &self.focii, Action::Right),
             },
+            Action::Up | Action::Down => shift_focus(self.state.focus, &self.focii, _action.clone()),
             Action::Deselect => {
-                // Get the red ID of the current focus, generate a new focii
+                // Get the global (white) ID of the current focus, generate a new focii
                 // array based on the new tracks and regions, Then find the
                 // focus that shares the ID of our current focus, and return 
                 // that focus
@@ -486,6 +337,26 @@ impl Layer for Timeline {
 
                 (new_focus, None)
             },
+            Action::Route => {
+                let mut anchors = vec![];
+                for (id, track) in self.state.tracks.iter() {
+                    // Track output
+                    anchors.push(Anchor {
+                        name: format!("Out {}", *id),
+                        id: (*id-1) * 2,
+                        module_id: 0,
+                        input: false,
+                    });
+                    // Track input
+                    anchors.push(Anchor {
+                        name: format!("In {}", *id),
+                        id: (*id-1) * 2 + 1, 
+                        module_id: 0,
+                        input: true,
+                    });
+                }
+                (self.state.focus, Some(Action::ShowAnchors(anchors)))
+            }
             _ => (self.state.focus, None)
         };
 

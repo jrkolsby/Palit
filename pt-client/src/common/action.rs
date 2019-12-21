@@ -1,3 +1,5 @@
+use crate::common::Anchor;
+
 #[derive(Debug, Clone)]
 pub enum Action {
     // KEYBOARD ACTIONS
@@ -13,7 +15,6 @@ pub enum Action {
     MidiEvent,
     RotaryEvent,
     Effect,
-    Route,
     Instrument,
     Undo,
     Redo,
@@ -34,16 +35,27 @@ pub enum Action {
     Tick,
     Exit,
     Deselect,
+    Record,
+
+    // Patching actions
+    Route,
+    ShowAnchors(Vec<Anchor>), 
+    CountRoutes(u16),
+    PatchAnchor(u16),
+    PatchRoute(u16),
+    AddRoute(u16),
+    FadePatch(u16, f32),
+    PatchOut(u16, u16, u16),
+    PatchIn(u16, u16, u16),
 
     NoteOn(u16, f32),
     NoteOff(u16),
-    SetParam(u16, f32),
-    PatchIn(u16, u16), // route id, input id
-    PatchOut(u16, u16), // route id, output id
+    SetParam(String, i16),
     MoveRegion(u16, u16, u32), // module id, region id, offset
-    Solo(u16),
-    Record(u16),
-    Mute(u16),
+    SoloAt(u16),
+    RecordAt(u16),
+    MuteAt(u16),
+    PlayAt(u16),
 
     // Default actions
     OpenProject(String),
@@ -51,5 +63,7 @@ pub enum Action {
     Pepper,
     InputTitle,
     Noop,
+
+    Error(String),
 }
 

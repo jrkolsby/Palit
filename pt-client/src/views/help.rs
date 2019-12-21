@@ -27,9 +27,9 @@ fn reduce(state: HelpState, action: Action) -> HelpState {
         title: state.title.clone(),
         active: match action {
             Action::NoteOn(_, _) => {
-                let mut newActive = state.active.clone();
-                newActive.push(action);
-                newActive
+                let mut new_active = state.active.clone();
+                new_active.push(action);
+                new_active
             }
             _ => state.active.clone()
         },
@@ -56,7 +56,7 @@ impl Help {
 }
 
 impl Layer for Help {
-    fn render(&self, mut out: RawTerminal<Stdout>) -> RawTerminal<Stdout> {
+    fn render(&self, mut out: RawTerminal<Stdout>, target: bool) -> RawTerminal<Stdout> {
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
 
 	    out = popup::render(out, self.x, self.y, self.width, self.height, &self.state.title);

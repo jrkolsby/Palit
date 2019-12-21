@@ -28,6 +28,8 @@ pub enum FocusType {
 
 pub type ID = (FocusType, u16);
 
+pub static VOID_ID: ID = (FocusType::Void, 0);
+
 #[derive(Clone, Debug)]
 pub enum Focus {
     Red,
@@ -37,6 +39,7 @@ pub enum Focus {
     Blue,
 }
 
+#[derive(Clone)]
 pub struct MultiFocus<State> {
 
     // Render functions
@@ -48,11 +51,11 @@ pub struct MultiFocus<State> {
     pub b: fn(RawTerminal<Stdout>, Window, ID, &State, bool) -> RawTerminal<Stdout>,
 
     // Transform functions
-    pub r_t: fn(Action, ID, &mut State) -> Action,
-    pub g_t: fn(Action, ID, &mut State) -> Action,
-    pub y_t: fn(Action, ID, &mut State) -> Action,
-    pub p_t: fn(Action, ID, &mut State) -> Action,
-    pub b_t: fn(Action, ID, &mut State) -> Action,
+    pub r_t: fn(Action, ID, &State) -> Action,
+    pub g_t: fn(Action, ID, &State) -> Action,
+    pub y_t: fn(Action, ID, &State) -> Action,
+    pub p_t: fn(Action, ID, &State) -> Action,
+    pub b_t: fn(Action, ID, &State) -> Action,
 
     // IDs
     pub w_id: ID,
@@ -65,10 +68,19 @@ pub struct MultiFocus<State> {
     pub active: Option<Focus>,
 }
 
-pub fn render_focii<T>(mut out: RawTerminal<Stdout>, window: Window, 
-        focus: (usize, usize), focii: &Vec<Vec<MultiFocus<T>>>, state: &T) 
-        -> RawTerminal<Stdout> {
+pub fn render_focii<T>(
+    mut out: RawTerminal<Stdout>, 
+    window: Window, 
+    focus: (usize, usize), 
+    focii: &Vec<Vec<MultiFocus<T>>>, 
+    state: &T,
+    disable: bool,
+) -> RawTerminal<Stdout> {
     let mut fullscreen = false;
+
+    if &focii.len() <= &focus.1 || &focii[focus.1].len() <= &focus.0 {
+        return out;
+    }
 
     let current_focus = &focii[focus.1][focus.0];
     if let Some(active) = &current_focus.active {
@@ -84,7 +96,7 @@ pub fn render_focii<T>(mut out: RawTerminal<Stdout>, window: Window,
         };
         let space = (0..size.0).map(|_| " ").collect::<String>();
         for j in 1..size.1 {
-            write!(out, "{}{}", cursor::Goto(1, j), space);
+            write!(out, "{}{}", cursor::Goto(1, j), space).unwrap();
         }
         out = write_fg(out, Color::Black);
     } else {
@@ -103,7 +115,7 @@ pub fn render_focii<T>(mut out: RawTerminal<Stdout>, window: Window,
     }
 
     // Render selected focus last (on top)
-    out = current_focus.render(out, window, &state, true);
+    out = current_focus.render(out, window, &state, !disable);
 
     // Default style
     if !fullscreen {
@@ -114,8 +126,35 @@ pub fn render_focii<T>(mut out: RawTerminal<Stdout>, window: Window,
     out
 }
 
-pub fn shift_focus<T>(focus: (usize, usize), focii: &Vec<Vec<MultiFocus<T>>>, a: Action) -> 
-        ((usize, usize), Option<Action>) {
+pub fn focus_dispatch<T>(
+    focus: (usize, usize), 
+    focii: &mut Vec<Vec<MultiFocus<T>>>, 
+    state: &T, 
+    a: Action
+) -> ((usize, usize), Option<Action>) {
+
+        // Make sure focus exists
+        if focus.1 >= focii.len() || focus.0 >= focii[focus.1].len() {
+            return (focus, Some(a))
+        }
+        // Let the focus transform the action 
+        let multi_focus = &mut focii[focus.1][focus.0];
+        let _action = multi_focus.transform(a.clone(), state);
+
+        match _action {
+            Action::Up |
+            Action::Down |
+            Action::Left |
+            Action::Right => shift_focus(focus, focii, _action),
+            _ => (focus, Some(_action))
+        }
+}
+
+pub fn shift_focus<T>(
+    focus: (usize, usize), 
+    focii: &Vec<Vec<MultiFocus<T>>>, 
+    a: Action) ->
+((usize, usize), Option<Action>) {
     let focus_row = &focii[focus.1];
     let focus_i = &focus_row[focus.0];
     let mut default: Option<Action> = None;
@@ -278,7 +317,7 @@ impl<T> MultiFocus<T> {
 
         out
     }
-    pub fn transform(&mut self, action: Action, state: &mut T) -> Action {
+    pub fn transform(&mut self, action: Action, state: &T) -> Action {
         // Fallback to white ID if any of our ids weren't specified
         let (r_id, g_id, y_id, p_id, b_id) = (
             if self.r_id.0 == FocusType::Void { self.w_id.clone() } else { self.r_id.clone() },

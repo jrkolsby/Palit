@@ -22,7 +22,7 @@ pub type ID = (View, usize);
 */
 
 pub trait Layer {
-    fn render(&self, out: RawTerminal<Stdout>) -> RawTerminal<Stdout>;
+    fn render(&self, out: RawTerminal<Stdout>, target: bool) -> RawTerminal<Stdout>;
     fn dispatch(&mut self, a: Action) -> Action;
     fn undo(&mut self);
     fn redo(&mut self);

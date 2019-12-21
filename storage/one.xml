@@ -22,12 +22,12 @@
                 <output id="4" />
             </route>
         </patch>
-        <device id="2" output="200" />
-        <device id="3" output="201" />
-        <device id="4" input="200" />
-        <device id="5" input="201" />
-        <keyboard id="6" output="203" octave="4" key="0" />
-        <keyboard id="7" output="204" octave="4" key="0" />
+        <device id="100" output="200" />
+        <device id="101" output="201" />
+        <device id="102" input="200" />
+        <device id="103" input="201" />
+        <keyboard id="104" output="203" octave="4" key="0" />
+        <keyboard id="105" output="204" octave="4" key="0" />
 
         <timeline id="8">
             <!-- Note that ids only within a module are distinct -->
@@ -44,22 +44,22 @@
             <asset id="1" size="336000" src="/usr/local/palit/assets/Loop.wav" />
             <asset id="2" size="1728000" src="/usr/local/palit/assets/Keyboard.wav" />
             <track id="1" output="2" input="2">
-		<region id="1" asset="0" in="0" out="1488000" offset="0" />
-		<region id="2" asset="2" in="0" out="148800" offset="1808000" />
+                <region id="1" asset="0" in="0" out="1488000" offset="0" />
+                <region id="2" asset="2" in="0" out="148800" offset="1808000" />
             </track>
             <track id="2" output="3" input="3">
-		<region id="4" asset="1" in="0" out="336000" offset="0" />
-		<region id="3" asset="2" in="0" out="148800" offset="1808000" />
-		<region id="8" asset="0" in="0" out="1488000" offset="80000" />
+                <region id="4" asset="1" in="0" out="336000" offset="0" />
+                <region id="3" asset="2" in="0" out="148800" offset="1808000" />
+                <region id="8" asset="0" in="0" out="1488000" offset="80000" />
             </track>
             <track id="3" output="4" input="4">
-		<region id="7" asset="2" in="0" out="1728000" offset="0" />
-		<region id="5" asset="2" in="0" out="708800" offset="1808000" />
+                <region id="7" asset="2" in="0" out="1728000" offset="0" />
+                <region id="5" asset="2" in="0" out="708800" offset="1808000" />
             </track>
         </timeline>
 
         <hammond id="9" input="6" output="6">
-            <param name="16'" value="1000" />
+            <param name="16" value="1000" />
             <param name="5.3" value="1000" />
             <param name="8" value="1000" />
             <param name="4" value="1000" />
@@ -73,13 +73,13 @@
         </hammond>
 
         <arpeggio id="10">
-            <param value="0" name="pattern" />
-            <mark name="playhead" offset="0" />
-            <track input="5" output="5">
-                <note key="69" vel="0.4" offset="0" />
-                <note key="72" vel="0.4" offset="400" />
-                <note key="72" vel="0.4" offset="800" />
-            </track>
+            <param value="24" name="length" />
         </arpeggio>
+
+        <chord id="11">
+            <note key="0" />
+            <note key="4" />
+            <note key="7" />
+        </chord>
     </modules>
 </project>
