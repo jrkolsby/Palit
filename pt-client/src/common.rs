@@ -1,5 +1,6 @@
 use termion::raw::{RawTerminal};
-use std::io::{Stdout, BufWriter};
+use std::io::{BufWriter};
+use std::fs::{File};
 
 mod pcm;
 mod action;
@@ -36,7 +37,7 @@ pub use layout::MARGIN_D0;
 pub use layout::MARGIN_D1;
 pub use layout::MARGIN_D2;
 
-pub type Screen = RawTerminal<BufWriter<Stdout>>;
+pub type Screen = RawTerminal<BufWriter<File>>;
 
 #[derive(Clone, Debug)]
 pub enum Rate {

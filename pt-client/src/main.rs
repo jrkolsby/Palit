@@ -6,6 +6,7 @@ use std::io::prelude::*;
 use std::fs::{OpenOptions, File};
 use std::os::unix::fs::OpenOptionsExt;
 use std::ffi::CString;
+use std::os::unix::io::FromRawFd;
 
 use std::collections::VecDeque;
 
@@ -121,14 +122,14 @@ fn main() -> std::io::Result<()> {
         .write(true)
         .open("/tmp/pt-sound").unwrap();
 
-    // Configure buffered output in raw mode
-    let mut outs: [Screen; 2] = [
-        BufWriter::with_capacity(8_000_000, stdout()).into_raw_mode().unwrap(),
-        BufWriter::with_capacity(8_000_000, stdout()).into_raw_mode().unwrap(),
-    ];
+    // Allocate two 8MB buffers in raw mode
+    let mut raw_out = unsafe { File::from_raw_fd(1).into_raw_mode().unwrap() };
+    let mut outs: [Screen; 2] = unsafe {[
+        BufWriter::with_capacity(8_000_000, File::from_raw_fd(1)).into_raw_mode().unwrap(),
+        BufWriter::with_capacity(8_000_000, File::from_raw_fd(1)).into_raw_mode().unwrap(),
+    ]};
     let mut current_out = 0;
     let mut out = &mut outs[current_out];
-    let mut raw_out = stdout().into_raw_mode().unwrap();
 
     // Configure input polling array
     let in_src = CString::new("/tmp/pt-client").unwrap();
@@ -149,11 +150,9 @@ fn main() -> std::io::Result<()> {
 
     add_layer(&mut layers, Box::new(Home::new(1, 1, size.0, size.1)), 0);
 
-    // Hide cursor and clear screen
-    write!(raw_out, "{}{}", clear::All, cursor::Hide).unwrap();
-
     // Initial Render
     render(&mut out, &layers);
+    write!(raw_out, "{}{}", clear::All, cursor::Hide).unwrap();
     out.flush().unwrap();
 
     let mut events: Vec<Action> = Vec::new();
@@ -343,10 +342,8 @@ fn main() -> std::io::Result<()> {
         // Renders layers (SLOW)
         render(&mut out, &layers);
 
-        // Clears screen
+        // Clear and flush buffer (FAST)
         write!(raw_out, "{}{}", color::Bg(color::Reset), clear::All).unwrap();
-
-        // Flush buffer
         out.flush().unwrap();
 
         // Swap buffers
@@ -355,10 +352,13 @@ fn main() -> std::io::Result<()> {
     }
 
     // CLEAN UP
-    write!(raw_out, "{}{}{}", 
+    write!(out, "{}{}{}{}{}", 
         clear::All, 
+        color::Bg(color::Reset),
+        color::Fg(color::Reset),
         cursor::Goto(1,1), 
         cursor::Show).unwrap();
+    out.flush().unwrap();
 
     Ok(())
 }
