@@ -1,7 +1,9 @@
+use termion::raw::{RawTerminal};
+use std::io::{Stdout, BufWriter};
+
 mod pcm;
 mod action;
 mod color;
-mod render;
 mod multifocus;
 mod layout;
 
@@ -33,6 +35,8 @@ pub use layout::TIMELINE_Y;
 pub use layout::MARGIN_D0;
 pub use layout::MARGIN_D1;
 pub use layout::MARGIN_D2;
+
+pub type Screen = RawTerminal<BufWriter<Stdout>>;
 
 #[derive(Clone, Debug)]
 pub enum Rate {

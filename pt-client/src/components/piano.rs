@@ -1,9 +1,6 @@
-use termion::raw::{RawTerminal};
 use termion::{color, cursor};
-
 use std::io::{Write, Stdout};
-
-use crate::common::Action;
+use crate::common::{Action, Screen};
 
 const ASSET: &str = r#"
   ┌─────────────────────────────────────────────────────┬──┐
@@ -26,8 +23,7 @@ const ASSET: &str = r#"
   └─────────────────────────────────────────────────────┘   
 "#;
 
-pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16, 
-        notes: &Vec<Action>) -> RawTerminal<Stdout> {
+pub fn render(out: &mut Screen, x: u16, y: u16, notes: &Vec<Action>) {
     for (i, line) in ASSET.lines().enumerate() {
         write!(out, "{}{}{}{}",
             cursor::Goto(x, (i as u16)+y+1),
@@ -65,5 +61,4 @@ pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16,
             color::Bg(color::Red),
             fg).unwrap();
     }
-    out
 }

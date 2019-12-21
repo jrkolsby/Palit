@@ -1,6 +1,5 @@
-use termion::raw::{RawTerminal};
+use crate::common::Screen;
 use termion::{color, cursor};
-
 use std::io::{Write, Stdout};
 
 pub fn pair_to_char(pair: (u8, u8)) -> char {
@@ -21,11 +20,10 @@ pub fn pair_to_char(pair: (u8, u8)) -> char {
                     [a][e]
 }
 
-pub fn render(mut out: RawTerminal<Stdout>, pairs: &[(u8, u8)], x: u16, y: u16) -> RawTerminal<Stdout> {
+pub fn render(out: &mut Screen, pairs: &[(u8, u8)], x: u16, y: u16) {
     for (i, pair) in pairs.iter().enumerate() {
         write!(out, "{}{:}",
             cursor::Goto(x+(i as u16),y),
             pair_to_char(*pair)).unwrap();
     }
-    out
 }

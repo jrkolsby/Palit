@@ -1,7 +1,6 @@
-use termion::raw::{RawTerminal};
 use termion::{color, cursor};
-
 use std::io::{Write, Stdout};
+use crate::common::Screen;
 
 const FONT: &str = r#"
 ▗▛▙    █▀▜▖█  ▗▛▜▖   █▀▙  ▐▌█▀▀▘   █▀▀▘▗▛▖▗▛▀▘▗▖▖
@@ -26,7 +25,7 @@ const FONT: &str = r#"
  ▀▘ ▀▀▀▀▀▀▘▝▀▀   ▀ ▝▀▀ ▝▀▀  ▀  ▝▀▀ ▝▀▘  ▀▘ 
 "#;
 
-pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16, text: String) -> RawTerminal<Stdout> {
+pub fn render(out: &mut Screen, x: u16, y: u16, text: String) {
     let font: Vec<Vec<char>> = FONT.lines().map(|l| 
         l.chars().collect()
     ).collect();
@@ -107,5 +106,4 @@ pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16, text: String) -> Raw
         }
         current_x += _w as u16;
     };
-    out
 }

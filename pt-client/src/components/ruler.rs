@@ -1,11 +1,11 @@
-use termion::raw::{RawTerminal};
 use termion::{cursor};
 use std::io::{Write, Stdout};
+use crate::common::Screen;
 
 const WIDTH: u16 = 10;
 const HEIGHT: u16 = 3;
 
-pub fn render(mut out: RawTerminal<Stdout>, 
+pub fn render(out: &mut Screen, 
     origin_x: u16, 
     origin_y: u16, 
     width: u16,
@@ -13,8 +13,7 @@ pub fn render(mut out: RawTerminal<Stdout>,
     time_beat: usize,
     zoom: usize,
     scroll: u16, 
-    playhead: u16,
-) -> RawTerminal<Stdout>{
+    playhead: u16) {
     if scroll == 0 {
         write!(out, "{}{{{{", cursor::Goto(origin_x-2, origin_y)).unwrap()
     }
@@ -34,5 +33,4 @@ pub fn render(mut out: RawTerminal<Stdout>,
             beat += 1;
         }
     }
-    out
 }

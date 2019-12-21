@@ -1,8 +1,7 @@
-use termion::raw::{RawTerminal};
 use termion::{cursor};
 use std::io::prelude::*;
-
 use std::io::{Write, Stdout};
+use crate::common::Screen;
 
 pub fn angle_to_char(angle: f32, mirror: bool) -> char {
 
@@ -14,8 +13,8 @@ pub fn angle_to_char(angle: f32, mirror: bool) -> char {
                     [a][e]
 }
 
-pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16, 
-        pairs: &Vec<(i32, i32)>) -> RawTerminal<Stdout> {
+pub fn render(out: &mut Screen, x: u16, y: u16, 
+        pairs: &Vec<(i32, i32)>) {
     let quadrant: usize = match angle {
         0.0..0.25 => 0
         0.25..0.5 => 1
@@ -29,5 +28,4 @@ pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16,
             cursor::Goto(x,y),
             angle_to_char(*pair)).unwrap();
     }
-    out
 }

@@ -4,9 +4,8 @@ use std::fs::{self, File};
 use std::path::Path;
 
 use termion::{color, cursor};
-use termion::raw::{RawTerminal};
 
-use crate::common::{Action, Anchor};
+use crate::common::{Screen, Action, Anchor};
 use crate::views::{Layer};
 use crate::components::{logo, button, bigtext};
 
@@ -101,14 +100,10 @@ impl Home {
 }
 
 impl Layer for Home {
-    fn render(&self, mut out: RawTerminal<Stdout>, target: bool) -> RawTerminal<Stdout> {
+    fn render(&self, out: &mut Screen, target: bool) {
 
-	// Logo
-    //out = logo::render(out, self.x, self.y);
-    out = bigtext::render(out, self.x, self.y, "Iridosiklitis".to_string());
-
-	// New Button
-	out = button::render(out, self.x + 10, self.y + 6, 17, "New Project");
+    bigtext::render(out, self.x, self.y, "Iridosiklitis".to_string());
+	button::render(out, self.x + 10, self.y + 6, 17, "New Project");
 
 	// Project Listing
 	let mut col: [u16; 2] = [4,4];
@@ -141,10 +136,6 @@ impl Layer for Home {
         }
 
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
-
-        out.flush().unwrap();
-
-        out
     }
 
     fn dispatch(&mut self, action: Action) -> Action {

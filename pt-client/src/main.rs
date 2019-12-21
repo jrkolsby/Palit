@@ -1,7 +1,7 @@
 extern crate libc;
 extern crate termion;
 
-use std::io::{Write, Stdout, stdout};
+use std::io::{Write, Stdout, stdout, BufWriter};
 use std::io::prelude::*;
 use std::fs::{OpenOptions, File};
 use std::os::unix::fs::OpenOptionsExt;
@@ -21,9 +21,9 @@ mod modules;
 use views::{Layer, Home, Timeline, Help, Title, Piano, Routes};
 use modules::{read_document};
 
-use common::{Action, Anchor, MARGIN_D0, MARGIN_D1};
+use common::{Screen, Action, Anchor, MARGIN_D0, MARGIN_D1};
 
-fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<(u16, Box<Layer>)>) -> RawTerminal<Stdout> {
+fn render(stdout: &mut Screen, layers: &VecDeque<(u16, Box<Layer>)>) {
     /*
         LAYERS:
         4:   ---    <- End render here
@@ -33,7 +33,7 @@ fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<(u16, Box<Layer>)>)
         0: -------  <- Home
     */
     // Determine bottom layer
-    if layers.len() == 0 { return stdout; }
+    if layers.len() == 0 { return; }
     let mut bottom = layers.len()-1;
     let target = bottom;
     for (id, layer) in (*layers).iter().rev() {
@@ -41,9 +41,8 @@ fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<(u16, Box<Layer>)>)
         else { break }
     };
     for i in bottom..(*layers).len() {
-        stdout = layers[i].1.render(stdout, i == target);
+        layers[i].1.render(stdout, i == target);
     }
-    stdout
 }
 
 fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
@@ -122,8 +121,14 @@ fn main() -> std::io::Result<()> {
         .write(true)
         .open("/tmp/pt-sound").unwrap();
 
-    // Configure raw_mode stdout
-    let mut stdout = stdout().into_raw_mode().unwrap();
+    // Configure buffered output in raw mode
+    let mut outs: [Screen; 2] = [
+        BufWriter::with_capacity(8_000_000, stdout()).into_raw_mode().unwrap(),
+        BufWriter::with_capacity(8_000_000, stdout()).into_raw_mode().unwrap(),
+    ];
+    let mut current_out = 0;
+    let mut out = &mut outs[current_out];
+    let mut raw_out = stdout().into_raw_mode().unwrap();
 
     // Configure input polling array
     let in_src = CString::new("/tmp/pt-client").unwrap();
@@ -145,11 +150,11 @@ fn main() -> std::io::Result<()> {
     add_layer(&mut layers, Box::new(Home::new(1, 1, size.0, size.1)), 0);
 
     // Hide cursor and clear screen
-    write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
+    write!(raw_out, "{}{}", clear::All, cursor::Hide).unwrap();
 
     // Initial Render
-    stdout = render(stdout, &layers);
-    stdout.flush().unwrap();
+    render(&mut out, &layers);
+    out.flush().unwrap();
 
     let mut events: Vec<Action> = Vec::new();
 
@@ -335,16 +340,22 @@ fn main() -> std::io::Result<()> {
             };	
         }
 
-        // Clears screen
-        write!(stdout, "{}{}", color::Bg(color::Reset), clear::All).unwrap();
-        stdout.flush().unwrap();
+        // Renders layers (SLOW)
+        render(&mut out, &layers);
 
-        // Renders layers
-        stdout = render(stdout, &layers);
+        // Clears screen
+        write!(raw_out, "{}{}", color::Bg(color::Reset), clear::All).unwrap();
+
+        // Flush buffer
+        out.flush().unwrap();
+
+        // Swap buffers
+        current_out = if current_out == 0 {1} else {0};
+        out = &mut outs[current_out];
     }
 
     // CLEAN UP
-    write!(stdout, "{}{}{}", 
+    write!(raw_out, "{}{}{}", 
         clear::All, 
         cursor::Goto(1,1), 
         cursor::Show).unwrap();

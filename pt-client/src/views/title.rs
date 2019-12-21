@@ -1,9 +1,8 @@
 use std::io::{Write, Stdout};
 
 use termion::{color, cursor};
-use termion::raw::{RawTerminal};
 
-use crate::common::Action;
+use crate::common::{Screen, Action};
 use crate::views::Layer;
 use crate::components::{popup, casette, button};
 
@@ -66,12 +65,12 @@ impl Title {
 }
 
 impl Layer for Title {
-    fn render(&self, mut out: RawTerminal<Stdout>, target: bool) -> RawTerminal<Stdout> {
+    fn render(&self, out: &mut Screen, target: bool) {
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
 
-	    out = popup::render(out, self.x, self.y, self.width, self.height, &self.state.title);
+	    popup::render(out, self.x, self.y, self.width, self.height, &self.state.title);
 
-        out = casette::render(out, self.x+2, self.y);
+        casette::render(out, self.x+2, self.y);
 
         write!(out, "{}\"{}{}\"", cursor::Goto(self.x+7, self.y+5), self.state.title_val, self.state.letter as char).unwrap();
         write!(out, "{} ▲ Letter ▼  ◀ Space ▶", cursor::Goto(self.x+7, self.y+16)).unwrap();
@@ -79,13 +78,9 @@ impl Layer for Title {
         write!(out, "{}{}{}  clear  ", cursor::Goto(self.x+24, self.y+18), color::Bg(color::Yellow), color::Fg(color::Black)).unwrap();
         write!(out, "{}{}{}  .xml  ", cursor::Goto(self.x+24, self.y+20), color::Bg(color::Green), color::Fg(color::Black)).unwrap();
 
-        out = button::render(out, self.x+2, self.y+18, 20, "Create");
+        button::render(out, self.x+2, self.y+18, 20, "Create");
 
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
-
-        out.flush().unwrap();
-
-        out
     }
 
     fn dispatch(&mut self, action: Action) -> Action {

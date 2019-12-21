@@ -1,9 +1,6 @@
 use std::io::{Write, Stdout};
-
 use termion::{cursor};
-use termion::raw::{RawTerminal};
-
-use crate::common::{MultiFocus, FocusType, Action, ID, Window};
+use crate::common::{Screen, MultiFocus, FocusType, Action, ID, Window};
 use crate::common::{beat_offset, offset_beat};
 use crate::components::{waveform};
 use crate::views::TimelineState;
@@ -13,10 +10,10 @@ use crate::common::{REGIONS_X, TIMELINE_Y};
 pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
     let void_id: ID = (FocusType::Void, 0);
-    let void_render: fn(RawTerminal<Stdout>, Window, ID, &TimelineState, bool) -> RawTerminal<Stdout> =
-        |mut out, window, id, state, focus| out;
+    let void_render: fn(&mut Screen, Window, ID, &TimelineState, bool) =
+        |_, _, _, _, _| {};
     let void_transform: fn(Action, ID, &TimelineState) -> Action = 
-        |action, id, state| action;
+        |a, _, _| a;
 
     MultiFocus::<TimelineState> {
         w_id: (FocusType::Region, region_id),
@@ -35,11 +32,11 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
             // Region appears to left of timeline
             if asset_length_offset + region_offset < state.scroll_x {
-                return out;
+                return;
             } 
             // Region appears to right of timeline
             else if region_offset > state.scroll_x + window.w {
-                return out;
+                return;
             } 
 
             // Region split by left edge of timeline
@@ -86,7 +83,6 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                 write!(out, "{} TRIM ",
                     cursor::Goto(region_x, region_y)).unwrap();
             }
-            out
         },
         r_t: void_transform,
         r_id: void_id.clone(),
@@ -107,8 +103,6 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                 write!(out, "{} MOVE ",
                     cursor::Goto(region_x, region_y)).unwrap();
             }
-
-            out
         },
         g_t: |action, id, state| match action {
             Action::Right => { 
@@ -149,7 +143,6 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                 write!(out, "{} SPLIT ",
                     cursor::Goto(region_x, region_y)).unwrap();
             }
-            out
         }, 
 
         y_t: void_transform,
