@@ -102,7 +102,8 @@ pub fn render(out: &mut Screen, x: u16, y: u16, text: String) {
         for dy in _y.._y+4 {
             write!(out, "{}{}", 
                 cursor::Goto(current_x, 1+y+(dy-_y) as u16), 
-                font[dy][_x..(_x + _w)].iter().cloned().collect::<String>());
+                font[dy][_x..(_x + _w)].iter().cloned().collect::<String>()
+            ).unwrap();
         }
         current_x += _w as u16;
     };

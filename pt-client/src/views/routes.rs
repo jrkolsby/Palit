@@ -100,13 +100,12 @@ fn generate_focii(
                 let anchor = &state.anchors.get(&id.1).unwrap();
                 if !focus { write_bg(out, Color::Beige); write_fg(out, Color::Black); }
                 write!(out, "{}{} {}", cursor::Goto(
-                        (PADDING.0 * 2) + window.x + state.routes.len() as u16,
-                        (PADDING.1 * 2) + window.y + anchor.id * 2
+                    (PADDING.0 * 2) + window.x + state.routes.len() as u16,
+                    (PADDING.1 * 2) + window.y + anchor.id * 2
                 ), match anchor.input {
-                        true =>  "─▶",
-                        false =>  "◀─",
-                    }, anchor.name.clone()
-                );
+                    true =>  "─▶",
+                    false =>  "◀─",
+                }, anchor.name.clone()).unwrap();
         };
         counter = match counter {
             0 => { focus_acc.r_id = id; focus_acc.r = render; focus_acc.r_t = transform; 1 },
@@ -121,6 +120,38 @@ fn generate_focii(
         }
     }
     if counter > 0 { focii.push(vec![focus_acc]); }
+
+    let mut footer_options = void_focus.clone();
+
+    footer_options.r = |out, win, id, state, focus| {
+        write!(out, "{}Add Route", cursor::Goto(
+            (PADDING.0 * 2) + win.x + state.routes.len() as u16,
+            win.y + win.h - PADDING.1)
+        ).unwrap();
+    };
+    footer_options.r_t = |a, id, state| {
+        match a { Action::SelectR => {
+            let mut new_id = state.routes.iter().fold(0, |max, (_,r)| 
+                if r.id > max {r.id} else {max}) + 1;
+            Action::AddRoute(new_id)
+        }, _ => Action::Noop}
+    };
+    footer_options.y = |out, win, id, state, focus| {
+        write!(out, "{}Delete Route", cursor::Goto(
+            (PADDING.0 * 2) + 11 + win.x + state.routes.len() as u16,
+            win.y + win.h - PADDING.1)
+        ).unwrap();
+    };
+    footer_options.y_t = |a, id, state| {
+        match a { Action::SelectY => {
+            let mut del_id = state.routes.iter().fold(0, |max, (_,r)|
+                if r.id > max {r.id} else {max});
+            Action::DelRoute(del_id)
+        }, _ => Action::Noop}
+    };
+
+    focii.push(vec![footer_options]);
+
     focii
 }
 
@@ -141,6 +172,11 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
                 let route = new_routes.get_mut(&r_id).unwrap();
                 let anchor = state.anchors.get(&a_id).unwrap();
                 route.patch.push(anchor.clone());
+                new_routes
+            },
+            Action::DelRoute(r_id) => {
+                let mut new_routes = state.routes.clone();
+                new_routes.remove(&r_id);
                 new_routes
             },
             _ => state.routes.clone()
@@ -221,11 +257,11 @@ fn render_patch(out: &mut Screen,
     for x in (win.x + r_id)..anchor_pos.0 {
         write!(out, "{}─", cursor::Goto(
             PADDING.0 + x, anchor_pos.1
-        ));
+        )).unwrap();
     }
     write!(out, "{}├", cursor::Goto(
         PADDING.0 + win.x + r_id - 1, anchor_pos.1
-    ));
+    )).unwrap();
 }
 
 impl Layer for Routes {
@@ -245,38 +281,35 @@ impl Layer for Routes {
 
         let anchor_x = win.x + self.state.routes.len() as u16 + PADDING.0;
 
-        for (_, route) in self.state.routes.iter() {
+        let mut sorted_routes: Vec<Route> = self.state.routes.iter()
+            .map(|(_, a)| a.clone()).collect::<Vec<Route>>();
+
+        sorted_routes.sort_by(|a, b| a.id.partial_cmp(&b.id).unwrap());
+
+        for route in sorted_routes {
             write!(out, "{}{}", cursor::Goto(
-                PADDING.0 + win.x + route.id, 
-                PADDING.1 + win.y + route.id - 1
+                PADDING.0 + win.x + route.id - 1,  
+                PADDING.1 + win.y - 1,
             ), match route.id {
                 1 => "MASTER".to_string(),
-                n => format!("ROUTE {}", n)
-            });
+                n => format!("{}", n)
+            }).unwrap();
 
             // Draw vertical line
-            for y in 0..(win.h - PADDING.1 * 2) {
+            for y in 0..(win.h - PADDING.1 * 3) {
                 write!(out, "{}│", cursor::Goto(
                     PADDING.0 + win.x + route.id - 1, 
                     PADDING.1 + win.y + y)
-                );
-            }
-
-            // Draw route selector
-            if let Some(_id) = self.state.selected_route {
-                if _id == route.id {
-                    write!(out, "{}^", cursor::Goto(
-                        PADDING.0 + win.x + route.id - 1, 
-                        win.y + (win.h - PADDING.1)
-                    ));
-                }
+                ).unwrap();
             }
 
             for anchor in route.patch.iter() {
                 let anchor_y = win.y + (anchor.id * 2) + (PADDING.1 * 2);
-                render_patch(out, &anchor, route.id, (anchor_x, anchor_y), win);
-
-
+                if let Some(a) = self.state.anchors.get(&anchor.id) {
+                    if a.module_id == anchor.module_id {
+                        render_patch(out, &anchor, route.id, (anchor_x, anchor_y), win);
+                    }
+                }
             }
         }
 
@@ -285,18 +318,6 @@ impl Layer for Routes {
             let anchor = self.state.anchors.get(&a_id).unwrap();
             if let Some(r_id) = self.state.selected_route {
                 render_patch(out, &anchor, r_id, (anchor_x, anchor_y), win);
-            } else {
-                // Draw stem to anchor
-                let mut end = true;
-                for x in (win.x + anchor_x - 5)..anchor_x {
-                    write!(out, "{}{}", cursor::Goto(
-                        PADDING.0 + x, anchor_y
-                    ), match end {
-                        true => "?",
-                        false => "─"
-                    });
-                    end = false;
-                }
             }
         }
     }
@@ -345,10 +366,9 @@ impl Layer for Routes {
                     self.state.focus = (0,0);
                     return a;
                 }
-                Action::ShowAnchors(_) |
-                Action::AddRoute(_) =>  {
+                Action::ShowAnchors(_) => {
                     self.focii = generate_focii(&self.state.routes, &self.state.anchors);
-                    Action::CountRoutes(self.state.routes.len() as u16)
+                    Action::Noop
                 },
                 _ => { Action::Noop }
             }

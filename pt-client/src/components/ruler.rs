@@ -2,9 +2,6 @@ use termion::{cursor};
 use std::io::{Write, Stdout};
 use crate::common::Screen;
 
-const WIDTH: u16 = 10;
-const HEIGHT: u16 = 3;
-
 pub fn render(out: &mut Screen, 
     origin_x: u16, 
     origin_y: u16, 

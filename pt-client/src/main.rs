@@ -51,7 +51,10 @@ fn render(stdout: &mut Screen, layers: &VecDeque<(u16, Box<Layer>)>) {
 fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
     let mut buf: String = String::new();
 
-    ipc_in.read_to_string(&mut buf);
+    // FIXME: Err but still writes to buf?
+    match ipc_in.read_to_string(&mut buf) {
+        _ => {}
+    };
     let mut ipc_iter = buf.split(" ");
 
     let mut events: Vec<Action> = Vec::new();
@@ -252,13 +255,31 @@ fn main() -> std::io::Result<()> {
                         },
                         _ => {}
                     }
-                    // Make sure that routes view is not on top
-                    // Restore routes view if it was the target...
                     if let Some(mut r) = routes { 
+                        let (t_id, t) = layers.get_mut(target_index-1).unwrap();
+                        // Restore routes view if it was the target
                         // ... and give it a new set of anchors
-                        let action = layers[target_index-1].1.dispatch(Action::Route);
-                        r.1.dispatch(action); 
-                        layers.push_back(r);
+                        match t.dispatch(Action::Route) {
+                            Action::ShowAnchors(a) => {
+                                let anchors_fill = a.iter().map(|a| Anchor {
+                                    id: a.id,
+                                    module_id: *t_id,
+                                    name: a.name.clone(),
+                                    input: a.input
+                                }).collect();
+                                r.1.dispatch(Action::ShowAnchors(anchors_fill)); 
+                                layers.push_back(r);
+                            },
+                            _ => {}
+                        }
+                    } else {
+                        let (t_id, t) = layers.get_mut(target_index).unwrap();
+                        // Make sure that routes view is not on top
+                        if routes_id.is_some() && routes_id.unwrap() == *t_id {
+                            if let Some(current) = layers.pop_back() {
+                                layers.push_front(current);
+                            }
+                        }
                     }
                 }, 
                 /*
@@ -282,8 +303,20 @@ fn main() -> std::io::Result<()> {
                             "timeline" => add_layer(&mut layers, 
                                 Box::new(Timeline::new(1, 1, size.0, size.1, (*el).to_owned())), *id),
                             "hammond" => add_layer(&mut layers,
-                                Box::new(Piano::new(1,1,size.0,size.1, (*el).to_owned())), *id),
+                                Box::new(Piano::new(5,5,size.0,size.1, (*el).to_owned())), *id),
                             "patch" => { 
+                                if let Some(r_id) = routes_id {
+                                    let mut routes_index: Option<usize> = None;
+                                    for (i, (_id, layer)) in layers.iter_mut().enumerate() {
+                                        if *_id == r_id {
+                                            routes_index = Some(i);
+                                            break;
+                                        }
+                                    }
+                                    if let Some(j) = routes_index {
+                                        layers.remove(j);
+                                    }
+                                }
                                 routes_id = Some(*id);
                                 add_layer(&mut layers, Box::new(
                                     Routes::new(
@@ -292,51 +325,60 @@ fn main() -> std::io::Result<()> {
                                         size.0 - (MARGIN_D0.0 * 2),
                                         size.1 - (MARGIN_D0.1 * 2), 
                                     Some((*el).to_owned()))
-                                ), *id) 
+                                ), *id);
                             },
                             name => { eprintln!("unimplemented module {:?}", name)}
                         }
                     }
                 },
                 Action::ShowAnchors(anchors) => {
-                    if let Some(r_id) = routes_id {
-                        let mut routes_index: Option<usize> = None;
-
-                        for (i, (id, layer)) in layers.iter_mut().enumerate() {
-                            if *id == r_id {
-                                routes_index = Some(i);
-                            }
-                        }
-
-                        if let Some(j) = routes_index {
-                            let (_, mut route_view) = layers.remove(j).unwrap();
-
-                            let anchors_fill = anchors.iter().map(|a| Anchor {
-                                id: a.id,
-                                module_id: target_id,
-                                name: a.name.clone(),
-                                input: a.input
-                            }).collect();
-
-                            match route_view.dispatch(
-                                Action::ShowAnchors(anchors_fill)) {
-                                Action::CountRoutes(num) => {
-                                    add_layer(&mut layers, route_view, r_id);
-                                },
-                                _ => { panic!("Patch failed to report number of routes"); }
-                            }
-                        }
-                    } else {
-                        routes_id = Some(1000);
+                    if routes_id.is_none() {
+                        let new_id = layers.iter().fold(0, |max, layer| 
+                            if layer.0 > max {layer.0} else {max}) + 1;
+                        routes_id = Some(new_id);
                         add_layer(&mut layers, Box::new(
-                            Routes::new(1,1,size.0,size.1, None)
-                        ), 1000);
+                            Routes::new(
+                                MARGIN_D0.0,
+                                MARGIN_D0.1,
+                                size.0 - (MARGIN_D0.0 * 2),
+                                size.1 - (MARGIN_D0.1 * 2), 
+                                None
+                            )
+                        ), new_id);
+                    }
+                    let r_id = routes_id.unwrap();
+
+                    let mut routes_index: Option<usize> = None;
+
+                    for (i, (id, layer)) in layers.iter_mut().enumerate() {
+                        if *id == r_id {
+                            routes_index = Some(i);
+                        }
+                    }
+
+                    if let Some(j) = routes_index {
+                        let (_, mut route_view) = layers.remove(j).unwrap();
+
+                        let (mod_id, _) = layers.get(layers.len()-1).unwrap();
+                        eprintln!("MOD ID {}", mod_id);
+
+                        let anchors_fill = anchors.iter().map(|a| Anchor {
+                            id: a.id,
+                            module_id: *mod_id,
+                            name: a.name.clone(),
+                            input: a.input
+                        }).collect();
+
+                        // Restore route view
+                        route_view.dispatch(Action::ShowAnchors(anchors_fill));
+                        add_layer(&mut layers, route_view, r_id);
                     }
                 },
                 _ => {}
             };	
         }
 
+        thread::sleep(time::Duration::from_millis(10));
 
         // Render layers 
         write!(out, "{}{}", color::Bg(color::Reset), clear::All).unwrap();
