@@ -1,17 +1,13 @@
-use termion::raw::{RawTerminal};
 use termion::{cursor};
-
 use std::io::{Write, Stdout};
+use crate::common::{Direction, Screen};
 
-use crate::common::{Direction};
-
-pub fn render(mut out: RawTerminal<Stdout>, 
+pub fn render(out: &mut Screen, 
     x: u16, 
     y: u16, 
     title: String, 
     mut len: i16, 
-    dir: Direction) -> RawTerminal<Stdout> 
-{    
+    dir: Direction) {    
     write!(out, "{}{}", cursor::Goto(x, y+1), title).unwrap();
     let _x: i16 = x as i16;
     let _y: i16 = y as i16;
@@ -122,5 +118,4 @@ pub fn render(mut out: RawTerminal<Stdout>,
     write!(out, "{}{} ",
         cursor::Goto((_x+dx) as u16, (_y+dy) as u16),
         over_glyph).unwrap();
-    out
 }

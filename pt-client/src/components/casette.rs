@@ -1,7 +1,6 @@
-use termion::raw::{RawTerminal};
 use termion::{color, cursor};
-
 use std::io::{Write, Stdout};
+use crate::common::Screen;
 
 const CASETTE: &str = r#"
   _____________________________ 
@@ -19,12 +18,11 @@ const CASETTE: &str = r#"
      `--------------------'     
 "#;
 
-pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16) -> RawTerminal<Stdout> {
+pub fn render(out: &mut Screen, x: u16, y: u16) {
     for (i, line) in CASETTE.lines().enumerate() {
         write!(out, "{}{}{}",
             cursor::Goto(x, (i as u16)+y+1),
             color::Fg(color::Black),
             line).unwrap();
     };
-    out
 }

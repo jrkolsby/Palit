@@ -1,9 +1,6 @@
-use termion::raw::{RawTerminal};
 use termion::{color, cursor};
-
 use std::io::{Write, Stdout};
-
-use crate::common::Action;
+use crate::common::{Action, Screen};
 
 const KEYBOARD: &str = r#"
 [][][][][][_________][][][][]
@@ -13,7 +10,7 @@ const KEYBOARD: &str = r#"
 [_][][][][][][][][][][][][][]
 "#;
 
-pub fn render(mut out: RawTerminal<Stdout>, current_actions: &Vec<Action>, x: u16, y: u16) -> RawTerminal<Stdout> {
+pub fn render(out: &mut Screen, current_actions: &Vec<Action>, x: u16, y: u16) {
     for (i, line) in KEYBOARD.lines().enumerate() {
         write!(out, "{}{}{}",
             cursor::Goto(x, (i as u16)+y+1),
@@ -49,5 +46,4 @@ pub fn render(mut out: RawTerminal<Stdout>, current_actions: &Vec<Action>, x: u1
             color::Bg(color::Red),
             fg).unwrap();
     }
-    out
 }

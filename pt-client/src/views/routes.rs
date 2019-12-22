@@ -1,12 +1,11 @@
 use std::io::{Write, Stdout};
 use std::collections::HashMap;
 use termion::{color, cursor};
-use termion::raw::{RawTerminal};
 use xmltree::Element;
 
 use crate::common::{MultiFocus, FocusType, ID, VOID_ID};
 use crate::common::{shift_focus, render_focii, focus_dispatch};
-use crate::common::{Action, Window, Anchor, Color};
+use crate::common::{Screen, Action, Window, Anchor, Color};
 use crate::common::{write_fg, write_bg};
 use crate::views::{Layer};
 use crate::components::{button, popup};
@@ -37,9 +36,8 @@ pub struct Routes {
 
 static PADDING: (u16, u16) = (3,3);
 
-static VOID_RENDER: fn( RawTerminal<Stdout>, 
-        Window, ID, &RoutesState, bool) -> RawTerminal<Stdout> =
-    |mut out, window, id, state, focus| out;
+static VOID_RENDER: fn( &mut Screen, Window, ID, &RoutesState, bool) =
+    |_, _, _, _, _| {};
 
 fn generate_focii(
     routes: &HashMap<u16, Route>, 
@@ -49,7 +47,7 @@ fn generate_focii(
         w_id: (FocusType::Void, 0),
         w: VOID_RENDER,
         r_id: (FocusType::Void, 0),
-        r: |out, _, _, _, _| out,
+        r: VOID_RENDER,
         r_t: |_, _, _| Action::Noop,
         g_id: (FocusType::Void, 0), 
         g: VOID_RENDER,
@@ -97,19 +95,18 @@ fn generate_focii(
             Action::SelectB => Action::PatchAnchor(id.1),
             _ => Action::Noop
         };
-        let render: fn( RawTerminal<Stdout>, Window, ID, &RoutesState, bool
-            ) -> RawTerminal<Stdout> = |mut out, window, id, state, focus| {
-            let anchor = &state.anchors.get(&id.1).unwrap();
-            if !focus { out = write_bg(out, Color::Beige); out = write_fg(out, Color::Black); }
-            write!(out, "{}{} {}", cursor::Goto(
-                    (PADDING.0 * 2) + window.x + state.routes.len() as u16,
-                    (PADDING.1 * 2) + window.y + anchor.id * 2
-            ), match anchor.input {
-                    true =>  "─▶",
-                    false =>  "◀─",
-                }, anchor.name.clone()
-            );
-            out
+        let render: fn(&mut Screen, Window, ID, &RoutesState, bool) = 
+            |mut out, window, id, state, focus| {
+                let anchor = &state.anchors.get(&id.1).unwrap();
+                if !focus { write_bg(out, Color::Beige); write_fg(out, Color::Black); }
+                write!(out, "{}{} {}", cursor::Goto(
+                        (PADDING.0 * 2) + window.x + state.routes.len() as u16,
+                        (PADDING.1 * 2) + window.y + anchor.id * 2
+                ), match anchor.input {
+                        true =>  "─▶",
+                        false =>  "◀─",
+                    }, anchor.name.clone()
+                );
         };
         counter = match counter {
             0 => { focus_acc.r_id = id; focus_acc.r = render; focus_acc.r_t = transform; 1 },
@@ -216,11 +213,11 @@ impl Routes {
     }
 }
 
-fn render_patch(mut out: RawTerminal<Stdout>, 
+fn render_patch(out: &mut Screen, 
     a: &Anchor, 
     r_id: u16, 
     anchor_pos: (u16, u16), 
-    win: Window) -> RawTerminal<Stdout> {
+    win: Window) {
     for x in (win.x + r_id)..anchor_pos.0 {
         write!(out, "{}─", cursor::Goto(
             PADDING.0 + x, anchor_pos.1
@@ -229,23 +226,22 @@ fn render_patch(mut out: RawTerminal<Stdout>,
     write!(out, "{}├", cursor::Goto(
         PADDING.0 + win.x + r_id - 1, anchor_pos.1
     ));
-    out
 }
 
 impl Layer for Routes {
-    fn render(&self, mut out: RawTerminal<Stdout>, target: bool) -> RawTerminal<Stdout> {
+    fn render(&self, out: &mut Screen, target: bool) {
 
         let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
 
-        out = popup::render(out, win.x, win.y, win.w, win.h, &"Routes".to_string());
+        popup::render(out, win.x, win.y, win.w, win.h, &"Routes".to_string());
 
-        out = render_focii(
+        render_focii(
             out, win, 
             self.state.focus.clone(), 
             &self.focii, &self.state, !target);
 
-        out = write_bg(out, Color::Beige); 
-        out = write_fg(out, Color::Black);
+        write_bg(out, Color::Beige); 
+        write_fg(out, Color::Black);
 
         let anchor_x = win.x + self.state.routes.len() as u16 + PADDING.0;
 
@@ -278,7 +274,7 @@ impl Layer for Routes {
 
             for anchor in route.patch.iter() {
                 let anchor_y = win.y + (anchor.id * 2) + (PADDING.1 * 2);
-                out = render_patch(out, &anchor, route.id, (anchor_x, anchor_y), win);
+                render_patch(out, &anchor, route.id, (anchor_x, anchor_y), win);
 
 
             }
@@ -288,7 +284,7 @@ impl Layer for Routes {
             let anchor_y = win.y + (a_id * 2) + (PADDING.1 * 2);
             let anchor = self.state.anchors.get(&a_id).unwrap();
             if let Some(r_id) = self.state.selected_route {
-                out = render_patch(out, &anchor, r_id, (anchor_x, anchor_y), win);
+                render_patch(out, &anchor, r_id, (anchor_x, anchor_y), win);
             } else {
                 // Draw stem to anchor
                 let mut end = true;
@@ -303,9 +299,6 @@ impl Layer for Routes {
                 }
             }
         }
-
-        out.flush().unwrap();
-        out
     }
 
     fn dispatch(&mut self, action: Action) -> Action {

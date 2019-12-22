@@ -3,7 +3,6 @@ extern crate wavefile;
 use xmltree::Element;
 
 use termion::cursor;
-use termion::raw::{RawTerminal};
 
 use std::io::{Write, Stdout};
 use std::collections::HashMap;
@@ -11,7 +10,7 @@ use std::collections::HashMap;
 use crate::components::{tempo, button, ruler, region};
 use crate::common::{ID, VOID_ID, FocusType};
 use crate::common::{MultiFocus, render_focii, shift_focus };
-use crate::common::{Action, Asset, Region, Track, Anchor, Window};
+use crate::common::{Screen, Action, Asset, Region, Track, Anchor, Window};
 use crate::common::{beat_offset, offset_beat, generate_waveforms};
 use crate::modules::timeline;
 use crate::views::{Layer};
@@ -58,21 +57,20 @@ pub struct Timeline {
     focii: Vec<Vec<MultiFocus<TimelineState>>>,
 }
 
-static VOID_RENDER: fn( RawTerminal<Stdout>, 
-        Window, ID, &TimelineState, bool) -> RawTerminal<Stdout> =
-    |mut out, window, id, state, focus| out;
-static VOID_TRANSFORM: fn(Action, ID, &mut TimelineState) -> Action = 
-    |action, id, state| Action::Noop;
+static VOID_RENDER: fn( &mut Screen, Window, ID, &TimelineState, bool) =
+    |_, _, _, _, _| {};
+static VOID_TRANSFORM: fn(Action, ID, &TimelineState) -> Action = 
+    |_, _, _| Action::Noop;
 
 fn generate_focii(tracks: &HashMap<u16, Track>, 
                   regions: &HashMap<u16, Region>) -> Vec<Vec<MultiFocus<TimelineState>>> {
     let mut focii: Vec<Vec<MultiFocus<TimelineState>>> = vec![vec![
         MultiFocus::<TimelineState> {
-            w: |mut out, window, id, state, focus| out,
+            w: VOID_RENDER,
             w_id: VOID_ID.clone(),
 
             r_id: (FocusType::Button, 0),
-            r: |mut out, window, id, state, focus| 
+            r: |out, window, id, state, focus| 
                 button::render(out, 2, 2, 20, "RECORD"),
             r_t: |a, id, _| match a { 
                 Action::SelectR => Action::RecordAt(id.1), 
@@ -80,26 +78,26 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
             },
 
             g_id: (FocusType::Button, 1),
-            g: |mut out, window, id, state, focus|
+            g: |out, window, id, state, focus|
                 button::render(out, 24, 2, 19, "IMPORT"),
-            g_t: |action, id, state| action,
+            g_t: VOID_TRANSFORM,
             
             y_id: (FocusType::Param, 0),
-            y: |mut out, window, id, state, focus|
+            y: |out, window, id, state, focus|
                 tempo::render(out, window.x+window.w-3, window.y,
                     state.time_beat,
                     state.time_note,
                     state.tempo,
                     state.tick),
-            y_t: |action, id, state| action,
+            y_t: VOID_TRANSFORM,
 
-            p_id: (FocusType::Region, 0),
-            p: |mut out, window, id, state, focus| out,
-            p_t: |action, id, state| action,
+            p_id: VOID_ID.clone(),
+            p: VOID_RENDER,
+            p_t: VOID_TRANSFORM,
 
-            b_id: (FocusType::Param, 2),
-            b: |mut out, window, id, state, focus| out,
-            b_t: |action, id, state| action,
+            b_id: VOID_ID.clone(),
+            b: VOID_RENDER,
+            b_t: VOID_TRANSFORM,
 
             active: None,
         }
@@ -132,11 +130,11 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                     button::render(out, win.x+TRACKS_X+8, win.y+TIMELINE_Y+(2*id.1), 3, "S"),
                 b_t: |action, id, _| Action::SoloAt(id.1),
 
-                p: |mut out, win, id, state, focus| out,
-                p_t: |action, id, state| Action::Noop,
+                p: VOID_RENDER,
+                p_t: VOID_TRANSFORM,
 
-                y: |mut out, win, id, state, focus| out,
-                y_t: |action, id, state| Action::Noop,
+                y: VOID_RENDER,
+                y_t: VOID_TRANSFORM,
 
                 active: None,
             }
@@ -238,11 +236,11 @@ impl Timeline {
 }
 
 impl Layer for Timeline {
-    fn render(&self, mut out: RawTerminal<Stdout>, target: bool) -> RawTerminal<Stdout> {
+    fn render(&self, out: &mut Screen, target: bool) {
 
         let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
 
-        out = render_focii(
+        render_focii(
             out, win, 
             self.state.focus.clone(), 
             &self.focii, &self.state, !target);
@@ -264,16 +262,13 @@ impl Layer for Timeline {
             self.state.zoom);
 
         // print tempo
-        out = ruler::render(out, REGIONS_X, 6, 
+        ruler::render(out, REGIONS_X, 6, 
             self.width-4,
             self.height,
             self.state.time_beat,
             self.state.zoom,
             self.state.scroll_x,
             playhead_offset);
-
-        out.flush().unwrap();
-        out
     }
 
     fn dispatch(&mut self, action: Action) -> Action {

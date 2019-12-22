@@ -1,9 +1,8 @@
 use std::io::{Write, Stdout};
-use termion::raw::{RawTerminal};
 use xmltree::Element;
 
 use crate::common::{MultiFocus, shift_focus, render_focii, focus_dispatch};
-use crate::common::{Action, Direction, FocusType, Window, Anchor};
+use crate::common::{Screen, Action, Direction, FocusType, Window, Anchor};
 use crate::views::{Layer};
 use crate::components::{piano, slider, button};
 
@@ -136,12 +135,12 @@ impl Piano {
                         _ => Action::Noop
                     },
                     b_id: (FocusType::Button, 0),
-                    w: |mut out, window, id, state, focus| out,
+                    w: |mut out, window, id, state, focus| {},
                     w_id: (FocusType::Void, 0),
                     active: None,
                 },
                 MultiFocus::<PianoState> {
-                    w: |mut out, window, id, state, focus| out,
+                    w: |mut out, window, id, state, focus| {},
                     w_id: (FocusType::Void, 0),
                     r: |mut out, window, id, state, focus| {
                         button::render(out, window.x+32, window.y+16, 10, "Play")
@@ -206,22 +205,18 @@ impl Piano {
 }
 
 impl Layer for Piano {
-    fn render(&self, mut out: RawTerminal<Stdout>, target: bool) -> RawTerminal<Stdout> {
+    fn render(&self, out: &mut Screen, target: bool) {
 
         let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
 
-        out = piano::render(out, 
+        piano::render(out, 
             self.x, 
             self.y, 
             &self.state.notes);
 
-        out = render_focii(
-            out, win, 
+        render_focii(out, win, 
             self.state.focus.clone(), 
             &self.focii, &self.state, !target);
-
-        out.flush().unwrap();
-        out
     }
 
     fn dispatch(&mut self, action: Action) -> Action {

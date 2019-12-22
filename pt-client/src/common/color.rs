@@ -1,6 +1,6 @@
 use termion::{color, cursor};
 use std::io::{Write, Stdout};
-use termion::raw::{RawTerminal};
+use crate::common::{Screen};
 
 #[derive(Clone, Copy, Debug)]
 pub enum Color {
@@ -15,7 +15,7 @@ pub enum Color {
     Transparent,
 }
 
-pub fn write_bg(mut out: RawTerminal<Stdout>, c: Color) -> RawTerminal<Stdout> {
+pub fn write_bg(out: &mut Screen, c: Color) {
     match c {
         Color::Red => write!(out, "{}", color::Bg(color::Red)).unwrap(),
         Color::Pink => write!(out, "{}", color::Bg(color::Magenta)).unwrap(),
@@ -28,10 +28,9 @@ pub fn write_bg(mut out: RawTerminal<Stdout>, c: Color) -> RawTerminal<Stdout> {
         Color::Transparent => write!(out, "{}", color::Bg(color::Reset)).unwrap(),
         _ => ()
     };
-    out
 }
 
-pub fn write_fg(mut out: RawTerminal<Stdout>, c: Color) -> RawTerminal<Stdout> {
+pub fn write_fg(out: &mut Screen, c: Color) {
     match c {
         Color::Red => write!(out, "{}", color::Fg(color::Red)).unwrap(),
         Color::Pink => write!(out, "{}", color::Fg(color::Magenta)).unwrap(),
@@ -43,5 +42,4 @@ pub fn write_fg(mut out: RawTerminal<Stdout>, c: Color) -> RawTerminal<Stdout> {
         Color::Beige => write!(out, "{}", color::Fg(color::LightYellow)).unwrap(),
         _ => ()
     };
-    out
 }

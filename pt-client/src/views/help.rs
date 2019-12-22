@@ -1,9 +1,8 @@
 use std::io::{Write, Stdout};
 
 use termion::{color};
-use termion::raw::{RawTerminal};
 
-use crate::common::Action;
+use crate::common::{Screen, Action};
 use crate::views::{Layer};
 use crate::components::{popup, keyboard};
 
@@ -56,17 +55,13 @@ impl Help {
 }
 
 impl Layer for Help {
-    fn render(&self, mut out: RawTerminal<Stdout>, target: bool) -> RawTerminal<Stdout> {
+    fn render(&self, out: &mut Screen, target: bool) {
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
 
-	    out = popup::render(out, self.x, self.y, self.width, self.height, &self.state.title);
-        out = keyboard::render(out, &self.state.active, self.x+5, self.y+5);
+	    popup::render(out, self.x, self.y, self.width, self.height, &self.state.title);
+        keyboard::render(out, &self.state.active, self.x+5, self.y+5);
 
         write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
-
-        out.flush().unwrap();
-
-        out
     }
 
     fn dispatch(&mut self, action: Action) -> Action {

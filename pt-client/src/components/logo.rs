@@ -1,7 +1,6 @@
-use termion::raw::{RawTerminal};
 use termion::{color, cursor};
-
 use std::io::{Write, Stdout};
+use crate::common::Screen;
 
 const LOGO: &str = r#"
 d8888b.  .d8b.  db      d888888b d888888b
@@ -12,12 +11,11 @@ d8888b.  .d8b.  db      d888888b d888888b
 YP      YP   YP Y88888P Y888888P    YP   
 "#;
 
-pub fn render(mut out: RawTerminal<Stdout>, x: u16, y: u16) -> RawTerminal<Stdout> {
+pub fn render(out: &mut Screen, x: u16, y: u16) {
     for (i, line) in LOGO.lines().enumerate() {
         write!(out, "{}{}{}",
             cursor::Goto(x, (i as u16)+y+1),
             color::Fg(color::LightWhite),
             line).unwrap();
     };
-    out
 }

@@ -1,11 +1,8 @@
-use termion::raw::{RawTerminal};
 use termion::{color, cursor};
-
 use std::io::{Write, Stdout};
+use crate::common::{Window, Screen};
 
-use crate::common::Window;
-
-pub fn render(mut out: RawTerminal<Stdout>, win: Window) -> RawTerminal<Stdout> {
+pub fn render(out: &mut Screen, win: Window) {
     for x in 0..win.w {
         for y in 0..win.h {
             let left = x == 0;
@@ -28,5 +25,4 @@ pub fn render(mut out: RawTerminal<Stdout>, win: Window) -> RawTerminal<Stdout> 
             ).unwrap();
         }
     }
-    out
 }

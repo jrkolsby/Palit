@@ -1,8 +1,7 @@
 use std::io::{Write, Stdout};
 use termion::{color, cursor, terminal_size};
-use termion::raw::{RawTerminal};
 
-use crate::common::{Action, Color, write_bg, write_fg, Window};
+use crate::common::{Screen, Action, Color, write_bg, write_fg, Window};
 
 /*
     A multifocus render will render five components prefixed with
@@ -43,12 +42,12 @@ pub enum Focus {
 pub struct MultiFocus<State> {
 
     // Render functions
-    pub w: fn(RawTerminal<Stdout>, Window, ID, &State, bool) -> RawTerminal<Stdout>,
-    pub r: fn(RawTerminal<Stdout>, Window, ID, &State, bool) -> RawTerminal<Stdout>,
-    pub g: fn(RawTerminal<Stdout>, Window, ID, &State, bool) -> RawTerminal<Stdout>,
-    pub y: fn(RawTerminal<Stdout>, Window, ID, &State, bool) -> RawTerminal<Stdout>,
-    pub p: fn(RawTerminal<Stdout>, Window, ID, &State, bool) -> RawTerminal<Stdout>,
-    pub b: fn(RawTerminal<Stdout>, Window, ID, &State, bool) -> RawTerminal<Stdout>,
+    pub w: fn(&mut Screen, Window, ID, &State, bool),
+    pub r: fn(&mut Screen, Window, ID, &State, bool),
+    pub g: fn(&mut Screen, Window, ID, &State, bool),
+    pub y: fn(&mut Screen, Window, ID, &State, bool),
+    pub p: fn(&mut Screen, Window, ID, &State, bool),
+    pub b: fn(&mut Screen, Window, ID, &State, bool),
 
     // Transform functions
     pub r_t: fn(Action, ID, &State) -> Action,
@@ -69,17 +68,16 @@ pub struct MultiFocus<State> {
 }
 
 pub fn render_focii<T>(
-    mut out: RawTerminal<Stdout>, 
+    out: &mut Screen, 
     window: Window, 
     focus: (usize, usize), 
     focii: &Vec<Vec<MultiFocus<T>>>, 
     state: &T,
-    disable: bool,
-) -> RawTerminal<Stdout> {
+    disable: bool) {
     let mut fullscreen = false;
 
     if &focii.len() <= &focus.1 || &focii[focus.1].len() <= &focus.0 {
-        return out;
+        return;
     }
 
     let current_focus = &focii[focus.1][focus.0];
@@ -87,7 +85,7 @@ pub fn render_focii<T>(
         // If something is active, fill the screen with that color
         let size: (u16, u16) = terminal_size().unwrap(); 
         fullscreen = true;
-        out = match active {
+        match active {
             Focus::Red => { write_bg(out, Color::Red) },
             Focus::Green => { write_bg(out, Color::Green) },
             Focus::Yellow => { write_bg(out, Color::Yellow) },
@@ -98,10 +96,10 @@ pub fn render_focii<T>(
         for j in 1..size.1 {
             write!(out, "{}{}", cursor::Goto(1, j), space).unwrap();
         }
-        out = write_fg(out, Color::Black);
+        write_fg(out, Color::Black);
     } else {
-        out = write_fg(out, Color::White);
-        out = write_bg(out, Color::Black);
+        write_fg(out, Color::White);
+        write_bg(out, Color::Black);
     }
 
     for (j, col) in focii.iter().enumerate() {
@@ -110,20 +108,18 @@ pub fn render_focii<T>(
             if focus == (i,j) {
                 continue;
             }
-            out = _focus.render(out, window, &state, false);
+            _focus.render(out, window, &state, false);
         }
     }
 
     // Render selected focus last (on top)
-    out = current_focus.render(out, window, &state, !disable);
+    current_focus.render(out, window, &state, !disable);
 
     // Default style
     if !fullscreen {
-        out = write_fg(out, Color::White); 
-        out = write_bg(out, Color::Black); 
+        write_fg(out, Color::White); 
+        write_bg(out, Color::Black); 
     }
-
-    out
 }
 
 pub fn focus_dispatch<T>(
@@ -194,8 +190,8 @@ pub fn shift_focus<T>(
 }
 
 impl<T> MultiFocus<T> {
-    pub fn render(&self, mut out: RawTerminal<Stdout>, window: Window,
-            state: &T, focused: bool) -> RawTerminal<Stdout> {
+    pub fn render(&self, out: &mut Screen, window: Window,
+            state: &T, focused: bool) {
 
         let mut fullscreen: bool = false;
         let mut full_red: bool = false;
@@ -225,98 +221,97 @@ impl<T> MultiFocus<T> {
         );
 
         if focused && !fullscreen {
-            out = write_fg(out, Color::Black);
-            out = write_bg(out, Color::White);
-            out = (self.w)(out, window, self.w_id.clone(), state, focused);
+            write_fg(out, Color::Black);
+            write_bg(out, Color::White);
+            (self.w)(out, window, self.w_id.clone(), state, focused);
         } else if fullscreen {
-            out = write_fg(out, Color::White); 
-            out = write_bg(out, Color::Black); 
-            out = (self.w)(out, window, self.w_id.clone(), state, focused);
-            out = write_fg(out, Color::Black); 
-            if full_red { out = write_bg(out, Color::Red) };
-            if full_green { out = write_bg(out, Color::Green) };
-            if full_yellow { out = write_bg(out, Color::Yellow) };
-            if full_pink { out = write_bg(out, Color::Pink) };
-            if full_blue { out = write_bg(out, Color::Blue) };
+            write_fg(out, Color::White); 
+            write_bg(out, Color::Black); 
+            (self.w)(out, window, self.w_id.clone(), state, focused);
+            write_fg(out, Color::Black); 
+            if full_red { write_bg(out, Color::Red) };
+            if full_green { write_bg(out, Color::Green) };
+            if full_yellow { write_bg(out, Color::Yellow) };
+            if full_pink { write_bg(out, Color::Pink) };
+            if full_blue { write_bg(out, Color::Blue) };
         } else {
-            out = (self.w)(out, window, self.w_id.clone(), state, focused);
+            (self.w)(out, window, self.w_id.clone(), state, focused);
         }
 
         // Focused but not selected
         if focused && !fullscreen { 
-            out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Red); 
-            out = (self.r)(out, window, r_id, state, focused);
+            write_fg(out, Color::Black); 
+            write_bg(out, Color::Red); 
+            (self.r)(out, window, r_id, state, focused);
         // Focused and selected
         } else if full_red {
-            out = write_fg(out, Color::White); 
-            out = write_bg(out, Color::Black); 
-            out = (self.r)(out, window, r_id, state, focused);
-            out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Red); 
+            write_fg(out, Color::White); 
+            write_bg(out, Color::Black); 
+            (self.r)(out, window, r_id, state, focused);
+            write_fg(out, Color::Black); 
+            write_bg(out, Color::Red); 
         // Neither focused nor selected
         } else {
-            out = (self.r)(out, window, r_id, state, focused);
+            (self.r)(out, window, r_id, state, focused);
         }
 
         if focused && !fullscreen { 
-            out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Green); 
-            out = (self.g)(out, window, g_id, state, focused);
+            write_fg(out, Color::Black); 
+            write_bg(out, Color::Green); 
+            (self.g)(out, window, g_id, state, focused);
         } else if full_green {
-            out = write_fg(out, Color::White); 
-            out = write_bg(out, Color::Black); 
-            out = (self.g)(out, window, g_id, state, focused);
-            out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Green); 
+            write_fg(out, Color::White); 
+            write_bg(out, Color::Black); 
+            (self.g)(out, window, g_id, state, focused);
+            write_fg(out, Color::Black); 
+            write_bg(out, Color::Green); 
         } else {
-            out = (self.g)(out, window, g_id, state, focused);
+            (self.g)(out, window, g_id, state, focused);
         }
 
         if focused && !fullscreen { 
-            out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Yellow); 
-            out = (self.y)(out, window, y_id, state, focused);
+            write_fg(out, Color::Black); 
+            write_bg(out, Color::Yellow); 
+            (self.y)(out, window, y_id, state, focused);
         } else if full_yellow {
-            out = write_fg(out, Color::White); 
-            out = write_bg(out, Color::Black); 
-            out = (self.y)(out, window, y_id, state, focused);
-            out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Yellow); 
+            write_fg(out, Color::White); 
+            write_bg(out, Color::Black); 
+            (self.y)(out, window, y_id, state, focused);
+            write_fg(out, Color::Black); 
+            write_bg(out, Color::Yellow); 
         } else {
-            out = (self.y)(out, window, y_id, state, focused);
+            (self.y)(out, window, y_id, state, focused);
         }
 
         if focused && !fullscreen { 
-            out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Pink); 
-            out = (self.p)(out, window, p_id, state, focused);
+            write_fg(out, Color::Black); 
+            write_bg(out, Color::Pink); 
+            (self.p)(out, window, p_id, state, focused);
         } else if full_pink {
-            out = write_fg(out, Color::White); 
-            out = write_bg(out, Color::Black); 
-            out = (self.p)(out, window, p_id, state, focused);
-            out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Pink); 
+            write_fg(out, Color::White); 
+            write_bg(out, Color::Black); 
+            (self.p)(out, window, p_id, state, focused);
+            write_fg(out, Color::Black); 
+            write_bg(out, Color::Pink); 
         } else {
-            out = (self.p)(out, window, p_id, state, focused);
+            (self.p)(out, window, p_id, state, focused);
         }
 
         if focused && !fullscreen { 
-            out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Blue); 
-            out = (self.b)(out, window, b_id, state, focused);
+            write_fg(out, Color::Black); 
+            write_bg(out, Color::Blue); 
+            (self.b)(out, window, b_id, state, focused);
         } else if full_blue {
-            out = write_fg(out, Color::White); 
-            out = write_bg(out, Color::Black); 
-            out = (self.b)(out, window, b_id, state, focused);
-            out = write_fg(out, Color::Black); 
-            out = write_bg(out, Color::Blue); 
+            write_fg(out, Color::White); 
+            write_bg(out, Color::Black); 
+            (self.b)(out, window, b_id, state, focused);
+            write_fg(out, Color::Black); 
+            write_bg(out, Color::Blue); 
         } else {
-            out = (self.b)(out, window, b_id, state, focused);
+            (self.b)(out, window, b_id, state, focused);
         }
-
-        out
     }
+
     pub fn transform(&mut self, action: Action, state: &T) -> Action {
         // Fallback to white ID if any of our ids weren't specified
         let (r_id, g_id, y_id, p_id, b_id) = (

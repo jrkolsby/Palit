@@ -1,11 +1,14 @@
 extern crate libc;
 extern crate termion;
 
-use std::io::{Write, Stdout, stdout};
+use std::io::{Write, Stdout, stdout, BufWriter};
 use std::io::prelude::*;
 use std::fs::{OpenOptions, File};
 use std::os::unix::fs::OpenOptionsExt;
 use std::ffi::CString;
+use std::os::unix::io::FromRawFd;
+use std::ops::DerefMut;
+use std::{thread, time};
 
 use std::collections::VecDeque;
 
@@ -21,9 +24,9 @@ mod modules;
 use views::{Layer, Home, Timeline, Help, Title, Piano, Routes};
 use modules::{read_document};
 
-use common::{Action, Anchor, MARGIN_D0, MARGIN_D1};
+use common::{Screen, Action, Anchor, MARGIN_D0, MARGIN_D1};
 
-fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<(u16, Box<Layer>)>) -> RawTerminal<Stdout> {
+fn render(stdout: &mut Screen, layers: &VecDeque<(u16, Box<Layer>)>) {
     /*
         LAYERS:
         4:   ---    <- End render here
@@ -33,7 +36,7 @@ fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<(u16, Box<Layer>)>)
         0: -------  <- Home
     */
     // Determine bottom layer
-    if layers.len() == 0 { return stdout; }
+    if layers.len() == 0 { return; }
     let mut bottom = layers.len()-1;
     let target = bottom;
     for (id, layer) in (*layers).iter().rev() {
@@ -41,9 +44,8 @@ fn render(mut stdout: RawTerminal<Stdout>, layers: &VecDeque<(u16, Box<Layer>)>)
         else { break }
     };
     for i in bottom..(*layers).len() {
-        stdout = layers[i].1.render(stdout, i == target);
+        layers[i].1.render(stdout, i == target);
     }
-    stdout
 }
 
 fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
@@ -122,8 +124,10 @@ fn main() -> std::io::Result<()> {
         .write(true)
         .open("/tmp/pt-sound").unwrap();
 
-    // Configure raw_mode stdout
-    let mut stdout = stdout().into_raw_mode().unwrap();
+    // Allocate 8MB buffer in raw mode
+    let mut out = unsafe {
+        BufWriter::with_capacity(20_000, File::from_raw_fd(1)).into_raw_mode().unwrap()
+    };
 
     // Configure input polling array
     let in_src = CString::new("/tmp/pt-client").unwrap();
@@ -144,12 +148,10 @@ fn main() -> std::io::Result<()> {
 
     add_layer(&mut layers, Box::new(Home::new(1, 1, size.0, size.1)), 0);
 
-    // Hide cursor and clear screen
-    write!(stdout, "{}{}", clear::All, cursor::Hide).unwrap();
-
     // Initial Render
-    stdout = render(stdout, &layers);
-    stdout.flush().unwrap();
+    write!(out, "{}{}", clear::All, cursor::Hide).unwrap();
+    render(&mut out, &layers);
+    out.deref_mut().flush().unwrap();
 
     let mut events: Vec<Action> = Vec::new();
 
@@ -335,19 +337,25 @@ fn main() -> std::io::Result<()> {
             };	
         }
 
-        // Clears screen
-        write!(stdout, "{}{}", color::Bg(color::Reset), clear::All).unwrap();
-        stdout.flush().unwrap();
 
-        // Renders layers
-        stdout = render(stdout, &layers);
+        // Render layers 
+        write!(out, "{}{}", color::Bg(color::Reset), clear::All).unwrap();
+        render(&mut out, &layers);
+
+        // Flush buffer
+        // HACK ALERT! Without this sleep we experience flashing on render
+        thread::sleep(time::Duration::from_millis(10));
+        out.deref_mut().flush().unwrap();
     }
 
     // CLEAN UP
-    write!(stdout, "{}{}{}", 
+    write!(out, "{}{}{}{}{}", 
         clear::All, 
+        color::Bg(color::Reset),
+        color::Fg(color::Reset),
         cursor::Goto(1,1), 
         cursor::Show).unwrap();
+    out.deref_mut().flush().unwrap();
 
     Ok(())
 }
