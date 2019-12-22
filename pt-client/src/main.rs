@@ -7,6 +7,8 @@ use std::fs::{OpenOptions, File};
 use std::os::unix::fs::OpenOptionsExt;
 use std::ffi::CString;
 use std::os::unix::io::FromRawFd;
+use std::ops::DerefMut;
+use std::{thread, time};
 
 use std::collections::VecDeque;
 
@@ -122,14 +124,10 @@ fn main() -> std::io::Result<()> {
         .write(true)
         .open("/tmp/pt-sound").unwrap();
 
-    // Allocate two 8MB buffers in raw mode
-    let mut raw_out = unsafe { File::from_raw_fd(1).into_raw_mode().unwrap() };
-    let mut outs: [Screen; 2] = unsafe {[
-        BufWriter::with_capacity(8_000_000, File::from_raw_fd(1)).into_raw_mode().unwrap(),
-        BufWriter::with_capacity(8_000_000, File::from_raw_fd(1)).into_raw_mode().unwrap(),
-    ]};
-    let mut current_out = 0;
-    let mut out = &mut outs[current_out];
+    // Allocate 8MB buffer in raw mode
+    let mut out = unsafe {
+        BufWriter::with_capacity(20_000, File::from_raw_fd(1)).into_raw_mode().unwrap()
+    };
 
     // Configure input polling array
     let in_src = CString::new("/tmp/pt-client").unwrap();
@@ -151,9 +149,9 @@ fn main() -> std::io::Result<()> {
     add_layer(&mut layers, Box::new(Home::new(1, 1, size.0, size.1)), 0);
 
     // Initial Render
+    write!(out, "{}{}", clear::All, cursor::Hide).unwrap();
     render(&mut out, &layers);
-    write!(raw_out, "{}{}", clear::All, cursor::Hide).unwrap();
-    out.flush().unwrap();
+    out.deref_mut().flush().unwrap();
 
     let mut events: Vec<Action> = Vec::new();
 
@@ -339,16 +337,15 @@ fn main() -> std::io::Result<()> {
             };	
         }
 
-        // Renders layers (SLOW)
+
+        // Render layers 
+        write!(out, "{}{}", color::Bg(color::Reset), clear::All).unwrap();
         render(&mut out, &layers);
 
-        // Clear and flush buffer (FAST)
-        write!(raw_out, "{}{}", color::Bg(color::Reset), clear::All).unwrap();
-        out.flush().unwrap();
-
-        // Swap buffers
-        current_out = if current_out == 0 {1} else {0};
-        out = &mut outs[current_out];
+        // Flush buffer
+        // HACK ALERT! Without this sleep we experience flashing on render
+        thread::sleep(time::Duration::from_millis(10));
+        out.deref_mut().flush().unwrap();
     }
 
     // CLEAN UP
@@ -358,7 +355,7 @@ fn main() -> std::io::Result<()> {
         color::Fg(color::Reset),
         cursor::Goto(1,1), 
         cursor::Show).unwrap();
-    out.flush().unwrap();
+    out.deref_mut().flush().unwrap();
 
     Ok(())
 }
