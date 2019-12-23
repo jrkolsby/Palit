@@ -125,8 +125,8 @@ impl Layer for Home {
                     }
                 } else {
                     write!(out, "{}{}", 
-                    color::Fg(color::White), 
-                    color::Bg(color::Reset)
+                        color::Fg(color::White), 
+                        color::Bg(color::Reset)
                     ).unwrap();
                 }
 
@@ -167,7 +167,7 @@ impl Layer for Home {
                 } else { Action::Noop }
             },
             Action::Up => { 
-                if self.state.focus == 2 { Action::Up } else { Action::Noop }
+                if self.state.focus == 0 { Action::Up } else { Action::Noop }
             },
             Action::Down => {
                 if self.state.focus == 0 { Action::Down } else { Action::Noop }

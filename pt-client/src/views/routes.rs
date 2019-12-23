@@ -100,11 +100,11 @@ fn generate_focii(
                 let anchor = &state.anchors.get(&id.1).unwrap();
                 if !focus { write_bg(out, Color::Beige); write_fg(out, Color::Black); }
                 write!(out, "{}{} {}", cursor::Goto(
-                    (PADDING.0 * 2) + window.x + state.routes.len() as u16,
-                    (PADDING.1 * 2) + window.y + anchor.id * 2
+                    (PADDING.0 * 2) + window.x + 2 * state.routes.len() as u16,
+                    (PADDING.1) + window.y + anchor.id * 2
                 ), match anchor.input {
                     true =>  "─▶",
-                    false =>  "◀─",
+                    false =>  "◀◀",
                 }, anchor.name.clone()).unwrap();
         };
         counter = match counter {
@@ -125,7 +125,7 @@ fn generate_focii(
 
     footer_options.r = |out, win, id, state, focus| {
         write!(out, "{}Add Route", cursor::Goto(
-            (PADDING.0 * 2) + win.x + state.routes.len() as u16,
+            PADDING.0 + win.x,
             win.y + win.h - PADDING.1)
         ).unwrap();
     };
@@ -138,7 +138,7 @@ fn generate_focii(
     };
     footer_options.y = |out, win, id, state, focus| {
         write!(out, "{}Delete Route", cursor::Goto(
-            (PADDING.0 * 2) + 11 + win.x + state.routes.len() as u16,
+            PADDING.0 + 11 + win.x,
             win.y + win.h - PADDING.1)
         ).unwrap();
     };
@@ -172,6 +172,20 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
                 let route = new_routes.get_mut(&r_id).unwrap();
                 let anchor = state.anchors.get(&a_id).unwrap();
                 route.patch.push(anchor.clone());
+                new_routes
+            },
+            Action::PatchAnchor(a_id) |
+            Action::DelPatch(_, a_id) => {
+                let mut new_routes = state.routes.clone();
+                let module_id = state.anchors.get(&a_id).unwrap().module_id;
+                'search: for (_, route) in new_routes.iter_mut() {
+                    for (i, anchor) in route.patch.iter().enumerate() {
+                        if anchor.id == a_id && anchor.module_id == module_id {
+                            route.patch.remove(i);
+                            break 'search;
+                        }
+                    }
+                }
                 new_routes
             },
             Action::DelRoute(r_id) => {
@@ -224,8 +238,6 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
 impl Routes {
     pub fn new(x: u16, y: u16, width: u16, height: u16, doc: Option<Element>) -> Self {
 
-        let mut path: String = "/usr/local/palit/".to_string();
-
         // Initialize State
         let mut initial_state: RoutesState = RoutesState {
             routes: HashMap::new(),
@@ -254,13 +266,15 @@ fn render_patch(out: &mut Screen,
     r_id: u16, 
     anchor_pos: (u16, u16), 
     win: Window) {
-    for x in (win.x + r_id)..anchor_pos.0 {
+    for x in (win.x + 2 * r_id)..anchor_pos.0 {
         write!(out, "{}─", cursor::Goto(
-            PADDING.0 + x, anchor_pos.1
+            PADDING.0 + x, 
+            anchor_pos.1
         )).unwrap();
     }
     write!(out, "{}├", cursor::Goto(
-        PADDING.0 + win.x + r_id - 1, anchor_pos.1
+        PADDING.0 + win.x + 2 * r_id - 1, 
+        anchor_pos.1
     )).unwrap();
 }
 
@@ -269,7 +283,7 @@ impl Layer for Routes {
 
         let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
 
-        popup::render(out, win.x, win.y, win.w, win.h, &"Routes".to_string());
+        popup::render(out, win.x, win.y, win.w, win.h, &"Patch".to_string());
 
         render_focii(
             out, win, 
@@ -279,7 +293,7 @@ impl Layer for Routes {
         write_bg(out, Color::Beige); 
         write_fg(out, Color::Black);
 
-        let anchor_x = win.x + self.state.routes.len() as u16 + PADDING.0;
+        let anchor_x = win.x + 2 * self.state.routes.len() as u16 + PADDING.0;
 
         let mut sorted_routes: Vec<Route> = self.state.routes.iter()
             .map(|(_, a)| a.clone()).collect::<Vec<Route>>();
@@ -288,23 +302,23 @@ impl Layer for Routes {
 
         for route in sorted_routes {
             write!(out, "{}{}", cursor::Goto(
-                PADDING.0 + win.x + route.id - 1,  
+                PADDING.0 + win.x + route.id * 2 - 1,  
                 PADDING.1 + win.y - 1,
             ), match route.id {
-                1 => "MASTER".to_string(),
+                1 => "M".to_string(),
                 n => format!("{}", n)
             }).unwrap();
 
             // Draw vertical line
-            for y in 0..(win.h - PADDING.1 * 3) {
+            for y in 0..(win.h - PADDING.1 * 2 - 1) {
                 write!(out, "{}│", cursor::Goto(
-                    PADDING.0 + win.x + route.id - 1, 
+                    PADDING.0 + win.x + route.id * 2 - 1, 
                     PADDING.1 + win.y + y)
                 ).unwrap();
             }
 
             for anchor in route.patch.iter() {
-                let anchor_y = win.y + (anchor.id * 2) + (PADDING.1 * 2);
+                let anchor_y = PADDING.1 + win.y + (anchor.id * 2);
                 if let Some(a) = self.state.anchors.get(&anchor.id) {
                     if a.module_id == anchor.module_id {
                         render_patch(out, &anchor, route.id, (anchor_x, anchor_y), win);
@@ -314,7 +328,7 @@ impl Layer for Routes {
         }
 
         if let Some(a_id) = self.state.selected_anchor {
-            let anchor_y = win.y + (a_id * 2) + (PADDING.1 * 2);
+            let anchor_y = PADDING.1 + win.y + (a_id * 2);
             let anchor = self.state.anchors.get(&a_id).unwrap();
             if let Some(r_id) = self.state.selected_route {
                 render_patch(out, &anchor, r_id, (anchor_x, anchor_y), win);
@@ -336,8 +350,8 @@ impl Layer for Routes {
             let filtered_action = match _default {
                 Action::Deselect => {
                     if let Some(a_id) = self.state.selected_anchor {
+                        let anchor = self.state.anchors.get(&a_id).unwrap();
                         if let Some(r_id) = self.state.selected_route {
-                            let anchor = self.state.anchors.get(&a_id).unwrap();
                             if anchor.input {
                                 Action::PatchIn(
                                     anchor.module_id,
@@ -351,7 +365,12 @@ impl Layer for Routes {
                                     r_id
                                 )
                             }
-                        } else { Action::Noop }
+                        } else { 
+                            Action::DelPatch(
+                                anchor.module_id,
+                                anchor.id
+                            )
+                        }
                     } else { Action::Noop }
                 },
                 a => a

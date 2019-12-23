@@ -26,6 +26,10 @@ use modules::{read_document};
 
 use common::{Screen, Action, Anchor, MARGIN_D0, MARGIN_D1};
 
+const DEFAULT_ROUTE_ID: u16 = 29200;
+const DEFAULT_HOME_ID: u16 = 29201;
+const DEFAULT_HELP_ID: u16 = 29202;
+
 fn render(stdout: &mut Screen, layers: &VecDeque<(u16, Box<Layer>)>) {
     /*
         LAYERS:
@@ -149,7 +153,9 @@ fn main() -> std::io::Result<()> {
     let mut layers: VecDeque<(u16, Box<Layer>)> = VecDeque::new();
     let mut routes_id: Option<u16> = None;
 
-    add_layer(&mut layers, Box::new(Home::new(1, 1, size.0, size.1)), 0);
+    add_layer(&mut layers, Box::new(
+        Home::new(1, 1, size.0, size.1)
+    ), DEFAULT_HOME_ID);
 
     // Initial Render
     write!(out, "{}{}", clear::All, cursor::Hide).unwrap();
@@ -196,7 +202,7 @@ fn main() -> std::io::Result<()> {
                         MARGIN_D1.1, 
                         size.0 - (MARGIN_D1.0 * 2), 
                         size.1 - (MARGIN_D1.1 * 2),
-                    )), 0); 
+                    )), DEFAULT_HELP_ID); 
                     Action::Noop
                 },
                 Action::Back => {
@@ -234,13 +240,44 @@ fn main() -> std::io::Result<()> {
                 },
                 a @ Action::Up | 
                 a @ Action::Down => {
-                    // If routes is the target view (top) remove it
-                    let mut routes: Option<(u16, Box<Layer>)> = None;
-                    if routes_id.is_some() && routes_id.unwrap() == target_id {
-                        if let Some(top) = layers.pop_back() {
-                            routes = Some(top);
+                    // Make sure to pin {home|route|...|route?}
+                    // Remove home and routes
+                    let mut routes_i: Option<usize> = None;
+                    let mut home_i: Option<usize> = None;
+                    let mut pin_routes: bool = false;
+
+                    for (i, (id, _)) in layers.iter_mut().enumerate() {
+                        if routes_id.is_some() && routes_id.unwrap() == *id {
+                            routes_i = Some(i);
+                            if routes_id.unwrap() == target_id {
+                                pin_routes = true;
+                            }
+                        }
+                        if *id == DEFAULT_HOME_ID {
+                            home_i = Some(i)
+                        }
+                    }
+
+                    // Remove home and routes
+                    let (routes_view, home_view) = {
+                        let h_i = home_i.unwrap();
+                        if routes_i.is_some() {
+                            let r_i = routes_i.unwrap();
+
+                            if r_i > h_i {
+                                let r = layers.remove(r_i);
+                                let h = layers.remove(h_i);
+                                (r,h)
+                            } else {
+                                let h = layers.remove(h_i);
+                                let r = layers.remove(r_i);
+                                (r,h)
+                            }
+                        } else {
+                            (None, layers.remove(h_i))
                         }
                     };
+
                     // Slide layers over
                     match a {
                         Action::Up => {
@@ -255,45 +292,30 @@ fn main() -> std::io::Result<()> {
                         },
                         _ => {}
                     }
-                    if let Some(mut r) = routes { 
-                        let (t_id, t) = layers.get_mut(target_index-1).unwrap();
-                        // Restore routes view if it was the target
-                        // ... and give it a new set of anchors
-                        match t.dispatch(Action::Route) {
-                            Action::ShowAnchors(a) => {
-                                let anchors_fill = a.iter().map(|a| Anchor {
-                                    id: a.id,
-                                    module_id: *t_id,
-                                    name: a.name.clone(),
-                                    input: a.input
-                                }).collect();
-                                r.1.dispatch(Action::ShowAnchors(anchors_fill)); 
-                                layers.push_back(r);
-                            },
-                            _ => {}
-                        }
-                    } else {
-                        let (t_id, t) = layers.get_mut(target_index).unwrap();
-                        // Make sure that routes view is not on top
-                        if routes_id.is_some() && routes_id.unwrap() == *t_id {
-                            if let Some(current) = layers.pop_back() {
-                                layers.push_front(current);
+                    if let Some(view) = home_view {
+                        layers.push_front(view);
+                    }
+                    if let Some(mut routes) = routes_view {
+                        if pin_routes {
+                            let (t_id, target) = layers.get_mut(layers.len() - 1).unwrap();
+                            match target.dispatch(Action::Route) {
+                                Action::ShowAnchors(a) => {
+                                    let anchors_fill = a.iter().map(|a| Anchor {
+                                        id: a.id,
+                                        module_id: *t_id,
+                                        name: a.name.clone(),
+                                        input: a.input
+                                    }).collect();
+                                    routes.1.dispatch(Action::ShowAnchors(anchors_fill)); 
+                                    layers.push_back(routes)
+                                },
+                                _ => {}
                             }
+                        } else {
+                            layers.push_front(routes);
                         }
                     }
                 }, 
-                /*
-                Action::Pepper => {
-                    add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15)), 0); 
-                },
-                Action::CreateProject(title) => {
-                    ipc_sound.write(format!("NEW_PROJECT:{} ", title).as_bytes());
-                    add_layer(&mut layers, Box::new(Timeline::new(1, 1, size.0, size.1, title)));
-                },
-                Action::Error(message) => {
-                    layers.push(Box::new(Error::new(message))) ;
-                }
-                */
                 Action::OpenProject(title) => {
                     ipc_sound.write(
                         format!("OPEN_PROJECT:{} ", title).as_bytes()).unwrap();
@@ -333,9 +355,7 @@ fn main() -> std::io::Result<()> {
                 },
                 Action::ShowAnchors(anchors) => {
                     if routes_id.is_none() {
-                        let new_id = layers.iter().fold(0, |max, layer| 
-                            if layer.0 > max {layer.0} else {max}) + 1;
-                        routes_id = Some(new_id);
+                        routes_id = Some(DEFAULT_ROUTE_ID);
                         add_layer(&mut layers, Box::new(
                             Routes::new(
                                 MARGIN_D0.0,
@@ -344,7 +364,7 @@ fn main() -> std::io::Result<()> {
                                 size.1 - (MARGIN_D0.1 * 2), 
                                 None
                             )
-                        ), new_id);
+                        ), DEFAULT_ROUTE_ID);
                     }
                     let r_id = routes_id.unwrap();
 
@@ -360,7 +380,6 @@ fn main() -> std::io::Result<()> {
                         let (_, mut route_view) = layers.remove(j).unwrap();
 
                         let (mod_id, _) = layers.get(layers.len()-1).unwrap();
-                        eprintln!("MOD ID {}", mod_id);
 
                         let anchors_fill = anchors.iter().map(|a| Anchor {
                             id: a.id,
@@ -374,6 +393,18 @@ fn main() -> std::io::Result<()> {
                         add_layer(&mut layers, route_view, r_id);
                     }
                 },
+                /*
+                Action::Pepper => {
+                    add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15)), 0); 
+                },
+                Action::CreateProject(title) => {
+                    ipc_sound.write(format!("NEW_PROJECT:{} ", title).as_bytes());
+                    add_layer(&mut layers, Box::new(Timeline::new(1, 1, size.0, size.1, title)));
+                },
+                Action::Error(message) => {
+                    layers.push(Box::new(Error::new(message))) ;
+                }
+                */
                 _ => {}
             };	
         }
@@ -388,6 +419,7 @@ fn main() -> std::io::Result<()> {
         // HACK ALERT! Without this sleep we experience flashing on render
         thread::sleep(time::Duration::from_millis(10));
         out.deref_mut().flush().unwrap();
+        out.flush().unwrap();
     }
 
     // CLEAN UP

@@ -330,7 +330,6 @@ impl<T> MultiFocus<T> {
             Action::Deselect => { self.active = None },
             _ => {},
         };
-        eprintln!("{:?}", self.active);
         match self.active {
             Some(Focus::Red) => (self.r_t)(action, r_id, state),
             Some(Focus::Green) => (self.g_t)(action, g_id, state),
