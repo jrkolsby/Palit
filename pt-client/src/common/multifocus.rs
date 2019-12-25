@@ -93,7 +93,7 @@ pub fn render_focii<T>(
             Focus::Blue => { write_bg(out, Color::Blue) },
         };
         let space = (0..size.0).map(|_| " ").collect::<String>();
-        for j in 1..size.1 {
+        for j in 1..size.1+1 {
             write!(out, "{}{}", cursor::Goto(1, j), space).unwrap();
         }
         write_fg(out, Color::Black);

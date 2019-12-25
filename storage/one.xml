@@ -8,26 +8,32 @@
         <master id="0" input="0" volume="100" /> <!-- This always exists -->
         <patch id="1">
             <param id="9" value="100" name="master" />
-            <route>
-                <!-- This tag is special because its id references another element's attribute -->
-                <input id="5" />
-                <output id="6" />
+            <!-- MASTER -->
+            <route id="1">
+                <output module="9" id="1" />
             </route>
-            <route>
-                <input id="0" />
-                <output id="5" />
-                <!-- Route timeline tracks to master -->
-                <output id="2" />
-                <output id="3" />
-                <output id="4" />
+            <route id="2">
+                <input module="10" id="1" />
+                <output module="104" id="1" />
+            </route>
+            <route id="3">
+                <input module="9" id="1" />
+                <output module="11" id="1" />
+            </route>
+            <route id="4">
+                <input module="11" id="1" />
+                <output module="10" id="1" />
             </route>
         </patch>
         <device id="100" output="200" />
         <device id="101" output="201" />
         <device id="102" input="200" />
         <device id="103" input="201" />
-        <keyboard id="104" output="203" octave="4" key="0" />
-        <keyboard id="105" output="204" octave="4" key="0" />
+        <keyboard id="105" output="204">
+            <param value="2" name="octave" />
+            <param value="0" name="shift" />
+            <param value="500" name="velocity" />
+        </keyboard>
 
         <timeline id="8">
             <!-- Note that ids only within a module are distinct -->

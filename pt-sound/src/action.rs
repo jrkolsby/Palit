@@ -9,15 +9,14 @@ pub enum Action {
     Octave(bool), 
     Volume(bool), 
 
-    AddRoute(u16),
-
     AddModule(u16, String),
 
     // Node ID, I/O ID, Route ID
     PatchIn(u16, usize, u16),
     PatchOut(u16, usize, u16),
-
     DeleteRoute(u16),
+    DeletePatch(u16, u16),
+    AddRoute(u16),
 
     // ABSTRACT ACTIONS
     OpenProject(String),

@@ -412,28 +412,29 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
         let argv: Vec<&str> = action_raw.split(":").collect();
 
         let action = match argv[0] {
-
+            "EXIT" => Action::Exit,
             "PLAY" => Action::Play(argv[1].parse::<u16>().unwrap()),
             "STOP" => Action::Stop(argv[1].parse::<u16>().unwrap()),
-
             "NOTE_ON" => Action::NoteOn(argv[1].parse::<u8>().unwrap(), 
                                         argv[2].parse::<f64>().unwrap()),
-
             "NOTE_OFF" => Action::NoteOff(argv[1].parse::<u8>().unwrap()),
-
             "NOTE_ON_AT" => Action::NoteOnAt(argv[1].parse::<u16>().unwrap(),
                                              argv[2].parse::<u8>().unwrap(),
                                              argv[3].parse::<f64>().unwrap()),
-
             "NOTE_OFF_AT" => Action::NoteOffAt(argv[1].parse::<u16>().unwrap(),
                                                argv[2].parse::<u8>().unwrap()),
-
-            "EXIT" => Action::Exit,
-
             "OCTAVE" => Action::Octave(argv[1].parse::<u8>().unwrap() == 1),
-
             "OPEN_PROJECT" => Action::OpenProject(argv[1].to_string()),
-
+            "PATCH_OUT" => Action::PatchOut(argv[1].parse::<u16>().unwrap(),
+                                            argv[2].parse::<usize>().unwrap(),
+                                            argv[3].parse::<u16>().unwrap()),
+            "PATCH_IN" => Action::PatchIn(argv[1].parse::<u16>().unwrap(),
+                                          argv[2].parse::<usize>().unwrap(),
+                                          argv[3].parse::<u16>().unwrap()),
+            "DEL_PATCH" => Action::DeletePatch(argv[1].parse::<u16>().unwrap(),
+                                               argv[2].parse::<u16>().unwrap()),
+            "DEL_ROUTE" => Action::DeleteRoute(argv[1].parse::<u16>().unwrap()),
+            "ADD_ROUTE" => Action::AddRoute(argv[1].parse::<u16>().unwrap()),
             _ => Action::Noop,
         };
 

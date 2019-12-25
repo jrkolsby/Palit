@@ -5,15 +5,14 @@ use xmltree::Element;
 
 use crate::common::{Param, Offset};
 
+pub mod timeline;
+pub mod patch;
+
 pub struct Document {
     pub title: String,
     pub sample_rate: u32,
     pub modules: HashMap<u16, Element>,
 }
-
-pub mod arpeggio;
-pub mod hammond;
-pub mod timeline;
 
 const PALIT_ROOT: &str = "/usr/local/palit/";
 

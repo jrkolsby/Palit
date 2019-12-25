@@ -5,24 +5,19 @@ use xmltree::Element;
 
 use crate::common::{MultiFocus, FocusType, ID, VOID_ID};
 use crate::common::{shift_focus, render_focii, focus_dispatch};
-use crate::common::{Screen, Action, Window, Anchor, Color};
+use crate::common::{Screen, Action, Window, Anchor, Color, Route};
 use crate::common::{write_fg, write_bg};
 use crate::views::{Layer};
 use crate::components::{button, popup};
-
-#[derive(Clone, Debug)]
-struct Route {
-    id: u16,
-    patch: Vec<Anchor>,
-}
+use crate::modules::patch;
 
 #[derive(Clone, Debug)]
 pub struct RoutesState {
-    routes: HashMap<u16, Route>,
-    anchors: HashMap<u16, Anchor>,
-    focus: (usize, usize),
-    selected_route: Option<u16>,
-    selected_anchor: Option<u16>,
+    pub routes: HashMap<u16, Route>,
+    pub anchors: HashMap<u16, Anchor>,
+    pub focus: (usize, usize),
+    pub selected_route: Option<u16>,
+    pub selected_anchor: Option<u16>,
 }
 
 pub struct Routes {
@@ -205,6 +200,7 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
                     Some(id)
                 }
             },
+            Action::DelPatch(_,_) |
             Action::PatchIn(_,_,_) |
             Action::PatchOut(_,_,_) => None,
             _ => state.selected_anchor.clone()
@@ -218,6 +214,7 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
                     Some(id)
                 }
             },
+            Action::DelPatch(_,_) |
             Action::PatchIn(_,_,_) |
             Action::PatchOut(_,_,_) => None,
             _ => state.selected_route.clone()
@@ -239,16 +236,25 @@ impl Routes {
     pub fn new(x: u16, y: u16, width: u16, height: u16, doc: Option<Element>) -> Self {
 
         // Initialize State
-        let mut initial_state: RoutesState = RoutesState {
+        let mut initial_state: RoutesState = if let Some(el) = doc {
+            patch::read(el)
+        } else { RoutesState {
             routes: HashMap::new(),
             anchors: HashMap::new(),
             focus: (0,0),
             selected_anchor: None,
             selected_route: None,
-        };
-        
-        initial_state.routes.insert(1, Route { id: 1, patch: vec![] });
-        initial_state.routes.insert(2, Route { id: 2, patch: vec![] });
+        }};
+
+        initial_state.routes.insert(1, Route {
+            id: 1,
+            patch: vec![Anchor {
+                module_id: 1,
+                id: 0,
+                name: "Radio".to_string(),
+                input: false,
+            }]
+        });
 
         Routes {
             x: x,
@@ -389,7 +395,7 @@ impl Layer for Routes {
                     self.focii = generate_focii(&self.state.routes, &self.state.anchors);
                     Action::Noop
                 },
-                _ => { Action::Noop }
+                a => a
             }
         } else { Action::Noop }
     }

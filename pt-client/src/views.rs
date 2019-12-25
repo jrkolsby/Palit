@@ -24,3 +24,7 @@ pub use piano::PianoState;
 mod routes;
 pub use routes::Routes;
 pub use routes::RoutesState;
+
+mod keyboard;
+pub use keyboard::Keyboard;
+pub use keyboard::KeyboardState;

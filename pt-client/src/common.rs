@@ -72,6 +72,12 @@ pub struct Window {
 }
 
 #[derive(Clone, Debug)]
+pub struct Route {
+    pub id: u16,
+    pub patch: Vec<Anchor>,
+}
+
+#[derive(Clone, Debug)]
 pub struct Anchor {
     pub id: u16,
     pub module_id: u16,

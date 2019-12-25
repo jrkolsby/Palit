@@ -21,7 +21,7 @@ mod common;
 mod components; 
 mod modules;
 
-use views::{Layer, Home, Timeline, Help, Title, Piano, Routes};
+use views::{Layer, Home, Timeline, Help, Title, Piano, Routes, Keyboard};
 use modules::{read_document};
 
 use common::{Screen, Action, Anchor, MARGIN_D0, MARGIN_D1};
@@ -223,21 +223,39 @@ fn main() -> std::io::Result<()> {
                     add_layer(&mut layers, Box::new(Title::new(23, 5, 36, 23)), 0);
                 },
                 Action::Play => {
-                    ipc_sound.write(
-                        format!("PLAY:{} ", target_id).as_bytes()).unwrap();
-                }
+                    ipc_sound.write( format!("PLAY:{} ", target_id).as_bytes()).unwrap();
+                },
                 Action::Stop => {
-                    ipc_sound.write(
-                        format!("STOP:{} ", target_id).as_bytes()).unwrap();
+                    ipc_sound.write( format!("STOP:{} ", target_id).as_bytes()).unwrap();
+                },
+                Action::NoteOn(key, vel) => {
+                    ipc_sound.write( format!("NOTE_ON_AT:{}:{}:{} ", 
+                        target_id, key, vel).as_bytes()).unwrap();
+                },
+                Action::NoteOff(key) => {
+                    ipc_sound.write( format!("NOTE_OFF_AT:{}:{} ", 
+                        target_id, key).as_bytes()).unwrap();
+                },
+                Action::PatchOut(module_id, anchor_id, route_id) => {
+                    ipc_sound.write( format!("PATCH_OUT:{}:{}:{} ", 
+                        module_id, anchor_id, route_id).as_bytes()).unwrap();
+                },
+                Action::PatchIn(module_id, anchor_id, route_id) => {
+                    ipc_sound.write( format!("PATCH_IN:{}:{}:{} ", 
+                        module_id, anchor_id, route_id).as_bytes()).unwrap();
+                },
+                Action::DelPatch(module_id, anchor_id) => {
+                    ipc_sound.write( format!("DEL_PATCH:{}:{} ", 
+                        module_id, anchor_id).as_bytes()).unwrap();
+                },
+                Action::DelRoute(route_id) => {
+                    ipc_sound.write( format!("DEL_ROUTE:{} ", 
+                        route_id).as_bytes()).unwrap();
+                },
+                Action::AddRoute(route_id) => {
+                    ipc_sound.write( format!("ADD_ROUTE:{} ", 
+                        route_id).as_bytes()).unwrap();
                 }
-                Action::NoteOn(k, v) => {
-                    ipc_sound.write(
-                        format!("NOTE_ON_AT:{}:{}:{} ", target_id, k, v).as_bytes()).unwrap();
-                },
-                Action::NoteOff(k) => {
-                    ipc_sound.write(
-                        format!("NOTE_OFF_AT:{}:{} ", target_id, k).as_bytes()).unwrap();
-                },
                 a @ Action::Up | 
                 a @ Action::Down => {
                     // Make sure to pin {home|route|...|route?}
@@ -326,6 +344,8 @@ fn main() -> std::io::Result<()> {
                                 Box::new(Timeline::new(1, 1, size.0, size.1, (*el).to_owned())), *id),
                             "hammond" => add_layer(&mut layers,
                                 Box::new(Piano::new(5,5,size.0,size.1, (*el).to_owned())), *id),
+                            "keyboard" => add_layer(&mut layers,
+                                Box::new(Keyboard::new(1, 1, size.0, size.1, (*el).to_owned())), *id),
                             "patch" => { 
                                 if let Some(r_id) = routes_id {
                                     let mut routes_index: Option<usize> = None;
