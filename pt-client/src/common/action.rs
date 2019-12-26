@@ -47,7 +47,7 @@ pub enum Action {
     FadePatch(u16, f32),
     PatchOut(u16, u16, u16),
     PatchIn(u16, u16, u16),
-    DelPatch(u16, u16),
+    DelPatch(u16, u16, bool),
 
     NoteOn(u16, f32),
     NoteOff(u16),

@@ -66,10 +66,10 @@ fn generate_focii(
     let mut sorted_anchors: Vec<Anchor> = anchors.iter()
         .map(|(_, a)| a.clone()).collect::<Vec<Anchor>>();
 
-    sorted_anchors.sort_by(|a, b| a.id.partial_cmp(&b.id).unwrap());
+    sorted_anchors.sort_by(|a, b| a.index.partial_cmp(&b.index).unwrap());
 
     for anchor in sorted_anchors.iter() {
-        let id = (FocusType::Button, anchor.id);
+        let id = (FocusType::Button, anchor.index);
         let transform: fn(Action, ID, &RoutesState) -> Action = |a, id, state| match a {
             // Change selected route
             Action::Left => if let Some(id) = state.selected_route {
@@ -96,7 +96,7 @@ fn generate_focii(
                 if !focus { write_bg(out, Color::Beige); write_fg(out, Color::Black); }
                 write!(out, "{}{} {}", cursor::Goto(
                     (PADDING.0 * 2) + window.x + 2 * state.routes.len() as u16,
-                    (PADDING.1) + window.y + anchor.id * 2
+                    (PADDING.1) + window.y + anchor.index * 2
                 ), match anchor.input {
                     true =>  "─▶",
                     false =>  "◀◀",
@@ -170,12 +170,12 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
                 new_routes
             },
             Action::PatchAnchor(a_id) |
-            Action::DelPatch(_, a_id) => {
+            Action::DelPatch(_, a_id, _) => {
                 let mut new_routes = state.routes.clone();
                 let module_id = state.anchors.get(&a_id).unwrap().module_id;
                 'search: for (_, route) in new_routes.iter_mut() {
                     for (i, anchor) in route.patch.iter().enumerate() {
-                        if anchor.id == a_id && anchor.module_id == module_id {
+                        if anchor.index == a_id && anchor.module_id == module_id {
                             route.patch.remove(i);
                             break 'search;
                         }
@@ -200,7 +200,7 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
                     Some(id)
                 }
             },
-            Action::DelPatch(_,_) |
+            Action::DelPatch(_,_,_) |
             Action::PatchIn(_,_,_) |
             Action::PatchOut(_,_,_) => None,
             _ => state.selected_anchor.clone()
@@ -214,7 +214,7 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
                     Some(id)
                 }
             },
-            Action::DelPatch(_,_) |
+            Action::DelPatch(_,_,_) |
             Action::PatchIn(_,_,_) |
             Action::PatchOut(_,_,_) => None,
             _ => state.selected_route.clone()
@@ -223,7 +223,7 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
             Action::ShowAnchors(a) => {
                 let mut new_anchors = HashMap::new();
                 for anchor in a {
-                    new_anchors.insert(anchor.id.clone(), anchor);
+                    new_anchors.insert(anchor.index.clone(), anchor);
                 }
                 new_anchors
             },
@@ -245,16 +245,6 @@ impl Routes {
             selected_anchor: None,
             selected_route: None,
         }};
-
-        initial_state.routes.insert(1, Route {
-            id: 1,
-            patch: vec![Anchor {
-                module_id: 1,
-                id: 0,
-                name: "Radio".to_string(),
-                input: false,
-            }]
-        });
 
         Routes {
             x: x,
@@ -324,8 +314,8 @@ impl Layer for Routes {
             }
 
             for anchor in route.patch.iter() {
-                let anchor_y = PADDING.1 + win.y + (anchor.id * 2);
-                if let Some(a) = self.state.anchors.get(&anchor.id) {
+                let anchor_y = PADDING.1 + win.y + (anchor.index * 2);
+                if let Some(a) = self.state.anchors.get(&anchor.index) {
                     if a.module_id == anchor.module_id {
                         render_patch(out, &anchor, route.id, (anchor_x, anchor_y), win);
                     }
@@ -354,6 +344,7 @@ impl Layer for Routes {
         // Set focus, if the multifocus defaults, take no further action
         if let Some(_default) = default {
             let filtered_action = match _default {
+                // On keyup we should patch to the selected route or disconnect this patch
                 Action::Deselect => {
                     if let Some(a_id) = self.state.selected_anchor {
                         let anchor = self.state.anchors.get(&a_id).unwrap();
@@ -361,20 +352,21 @@ impl Layer for Routes {
                             if anchor.input {
                                 Action::PatchIn(
                                     anchor.module_id,
-                                    anchor.id,
+                                    anchor.index,
                                     r_id
                                 )
                             } else {
                                 Action::PatchOut(
                                     anchor.module_id,
-                                    anchor.id,
+                                    anchor.index,
                                     r_id
                                 )
                             }
                         } else { 
                             Action::DelPatch(
                                 anchor.module_id,
-                                anchor.id
+                                anchor.index,
+                                anchor.input
                             )
                         }
                     } else { Action::Noop }
@@ -383,6 +375,15 @@ impl Layer for Routes {
             };
             self.state = reduce(self.state.clone(), filtered_action.clone());
             match filtered_action {
+                // Should delete existing connection on keydown
+                Action::PatchAnchor(id) => {
+                    let anchor = &self.state.anchors[&id];
+                    Action::DelPatch(
+                        anchor.module_id, 
+                        anchor.index, 
+                        anchor.input
+                    )
+                },
                 a @ Action::Exit |
                 a @ Action::Up | a @ Action::Down => {
                     // About to change modules, reset selects

@@ -79,7 +79,7 @@ pub struct Route {
 
 #[derive(Clone, Debug)]
 pub struct Anchor {
-    pub id: u16,
+    pub index: u16,
     pub module_id: u16,
     pub name: String,
     pub input: bool,

@@ -244,9 +244,9 @@ fn main() -> std::io::Result<()> {
                     ipc_sound.write( format!("PATCH_IN:{}:{}:{} ", 
                         module_id, anchor_id, route_id).as_bytes()).unwrap();
                 },
-                Action::DelPatch(module_id, anchor_id) => {
-                    ipc_sound.write( format!("DEL_PATCH:{}:{} ", 
-                        module_id, anchor_id).as_bytes()).unwrap();
+                Action::DelPatch(module_id, anchor_id, input) => {
+                    ipc_sound.write( format!("DEL_PATCH:{}:{}:{} ", 
+                        module_id, anchor_id, if input {"1"} else {"2"}).as_bytes()).unwrap();
                 },
                 Action::DelRoute(route_id) => {
                     ipc_sound.write( format!("DEL_ROUTE:{} ", 
@@ -319,7 +319,7 @@ fn main() -> std::io::Result<()> {
                             match target.dispatch(Action::Route) {
                                 Action::ShowAnchors(a) => {
                                     let anchors_fill = a.iter().map(|a| Anchor {
-                                        id: a.id,
+                                        index: a.index,
                                         module_id: *t_id,
                                         name: a.name.clone(),
                                         input: a.input
@@ -327,7 +327,10 @@ fn main() -> std::io::Result<()> {
                                     routes.1.dispatch(Action::ShowAnchors(anchors_fill)); 
                                     layers.push_back(routes)
                                 },
-                                _ => {}
+                                _ => {
+                                    routes.1.dispatch(Action::ShowAnchors(vec![])); 
+                                    layers.push_back(routes)
+                                }
                             }
                         } else {
                             layers.push_front(routes);
@@ -402,7 +405,7 @@ fn main() -> std::io::Result<()> {
                         let (mod_id, _) = layers.get(layers.len()-1).unwrap();
 
                         let anchors_fill = anchors.iter().map(|a| Anchor {
-                            id: a.id,
+                            index: a.index,
                             module_id: *mod_id,
                             name: a.name.clone(),
                             input: a.input

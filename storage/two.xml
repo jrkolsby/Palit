@@ -13,12 +13,8 @@
                 <output module="9" index="0" />
             </route>
             <route id="2">
-                <input module="10" index="0" />
-                <output module="104" index="1" />
-            </route>
-            <route id="3">
+                <output module="104" index="0" />
                 <input module="9" index="1" />
-                <output module="10" index="0" />
             </route>
         </patch>
 

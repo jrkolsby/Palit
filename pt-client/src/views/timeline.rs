@@ -334,21 +334,24 @@ impl Layer for Timeline {
             },
             Action::Route => {
                 let mut anchors = vec![];
+                let mut counter = 0;
                 for (id, track) in self.state.tracks.iter() {
                     // Track output
                     anchors.push(Anchor {
                         name: format!("Out {}", *id),
-                        id: (*id-1) * 2,
+                        index: counter,
                         module_id: 0,
                         input: false,
                     });
+                    counter += 1;
                     // Track input
                     anchors.push(Anchor {
                         name: format!("In {}", *id),
-                        id: (*id-1) * 2 + 1, 
+                        index: counter,
                         module_id: 0,
                         input: true,
                     });
+                    counter += 1;
                 }
                 (self.state.focus, Some(Action::ShowAnchors(anchors)))
             }

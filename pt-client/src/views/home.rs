@@ -175,7 +175,7 @@ impl Layer for Home {
             Action::Route => {
                 Action::ShowAnchors(vec![
                     Anchor {
-                        id: 0, 
+                        index: 0, 
                         module_id: 0,
                         name: "Radio".to_string(),
                         input: false

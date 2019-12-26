@@ -1,9 +1,9 @@
 use std::io::{Write, Stdout};
 
-use termion::{color};
+use termion::{color, cursor};
 use xmltree::Element;
 
-use crate::common::{Screen, Action, Window};
+use crate::common::{Screen, Action, Window, Anchor};
 use crate::views::{Layer};
 use crate::components::{popup, ivories};
 use crate::modules::param_map;
@@ -73,16 +73,27 @@ impl Keyboard {
 
 impl Layer for Keyboard {
     fn render(&self, out: &mut Screen, target: bool) {
-        ivories::render(out, Window {
+        let win = Window {
             x: self.x,
             y: self.y,
             w: self.width,
             h: self.height
-        }, 3, &self.state.keys_active);
+        };
+        ivories::render(out, win, 3, &self.state.keys_active);
+
+        write!(out, "{}OCT:{}", cursor::Goto(win.x, win.y), self.state.octave);
+        write!(out, "{}SHIFT:{}", cursor::Goto(win.x, win.y+1), self.state.shift);
+        write!(out, "{}VEL:{}", cursor::Goto(win.x, win.y+2), self.state.velocity);
     }
     fn dispatch(&mut self, action: Action) -> Action {
         self.state = reduce(self.state.clone(), action.clone());
         match action {
+            Action::Route => Action::ShowAnchors(vec![Anchor {
+                index: 0,
+                module_id: 0,
+                name: "Keys".to_string(),
+                input: false,
+            }]),
             a @ Action::Up | a @ Action::Down => a,
             _ => Action::Noop
         }

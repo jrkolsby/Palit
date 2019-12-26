@@ -15,7 +15,7 @@ pub enum Action {
     PatchIn(u16, usize, u16),
     PatchOut(u16, usize, u16),
     DeleteRoute(u16),
-    DeletePatch(u16, u16),
+    DeletePatch(u16, usize, bool),
     AddRoute(u16),
 
     // ABSTRACT ACTIONS

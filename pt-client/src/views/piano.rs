@@ -235,16 +235,17 @@ impl Layer for Piano {
                 Action::Route => {
                     Action::ShowAnchors( vec![ 
                         Anchor {
-                            id: 0, 
-                            module_id: 0,
-                            name: "Keys".to_string(),
-                            input: true,
-                        }, Anchor {
-                            id: 1, 
+                            index: 0, 
                             module_id: 0,
                             name: "Out".to_string(),
                             input: false,
-                    }])
+                        },
+                        Anchor {
+                            index: 1, 
+                            module_id: 0,
+                            name: "Keys".to_string(),
+                            input: true,
+                        }])
                 },
                 a @ Action::Up | a @ Action::Down => a,
                 _ => { Action::Noop }

@@ -37,7 +37,7 @@ pub fn read(doc: Element) -> RoutesState {
         };
 
         while let Some(mut anchor) = route.take_child("input") {
-            let a_id = anchor.attributes.get("id").unwrap();
+            let a_id = anchor.attributes.get("index").unwrap();
             let _a_id = a_id.parse::<u16>().unwrap();
             let m_id = anchor.attributes.get("module").unwrap();
             let _m_id = m_id.parse::<u16>().unwrap();
@@ -45,18 +45,18 @@ pub fn read(doc: Element) -> RoutesState {
             eprintln!("{} {}", a_id, m_id);
 
             let anchor = Anchor {
-                id: _a_id,
+                index: _a_id,
                 module_id: _m_id,
                 name: format!("In {}", a_id),
                 input: true,
             };
 
             current_route.patch.push(anchor.clone());
-            state.anchors.insert(anchor.id, anchor);
+            state.anchors.insert(anchor.index, anchor);
         }
 
         while let Some(mut anchor) = route.take_child("output") {
-            let a_id = anchor.attributes.get("id").unwrap();
+            let a_id = anchor.attributes.get("index").unwrap();
             let _a_id = a_id.parse::<u16>().unwrap();
             let m_id = anchor.attributes.get("module").unwrap();
             let _m_id = m_id.parse::<u16>().unwrap();
@@ -64,14 +64,14 @@ pub fn read(doc: Element) -> RoutesState {
             eprintln!("{} {}", a_id, m_id);
 
             let anchor = Anchor {
-                id: _a_id,
+                index: _a_id,
                 module_id: _m_id,
                 name: format!("Out {}", a_id),
                 input: false,
             };
 
             current_route.patch.push(anchor.clone());
-            state.anchors.insert(anchor.id, anchor);
+            state.anchors.insert(anchor.index, anchor);
         }
 
         state.routes.insert(_r_id, current_route);

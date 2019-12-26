@@ -214,7 +214,7 @@ pub enum Module {
     // and every second or so will send all corresponding NoteOff actions.
     // Useful for debugging on OSX where keyup events aren't accessed.
     DebugKeys(Vec<Action>, Vec<Action>, u16),
-    Operator(Vec<Action>, Vec<(NodeIndex)>, Vec<NodeIndex>),
+    Operator(Vec<Action>, Vec<(NodeIndex)>),
     Synth(synth::Store),
     Tape(tape::Store),
     Chord(chord::Store),
@@ -225,7 +225,7 @@ impl Module {
     pub fn dispatch(&mut self, a: Action) {
         match *self {
             Module::Master => {}
-            Module::Operator(ref mut queue, _, _) |
+            Module::Operator(ref mut queue, _,) |
             Module::Passthru(ref mut queue) => { queue.push(a.clone()) }
             Module::DebugKeys(ref mut onqueue, _, _) => { onqueue.push(a.clone()); }
             Module::Synth(ref mut store) => synth::dispatch(store, a.clone()),
@@ -249,7 +249,7 @@ impl Module {
         ) {
 
         match *self {
-            Module::Operator(ref mut queue, _, _) |
+            Module::Operator(ref mut queue, _,) |
             Module::Passthru(ref mut queue) => {
                 let carry = queue.clone();
                 queue.clear();
@@ -432,7 +432,8 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
                                           argv[2].parse::<usize>().unwrap(),
                                           argv[3].parse::<u16>().unwrap()),
             "DEL_PATCH" => Action::DeletePatch(argv[1].parse::<u16>().unwrap(),
-                                               argv[2].parse::<u16>().unwrap()),
+                                               argv[2].parse::<usize>().unwrap(),
+                                               argv[3].parse::<u8>().unwrap() == 1),
             "DEL_ROUTE" => Action::DeleteRoute(argv[1].parse::<u16>().unwrap()),
             "ADD_ROUTE" => Action::AddRoute(argv[1].parse::<u16>().unwrap()),
             _ => Action::Noop,

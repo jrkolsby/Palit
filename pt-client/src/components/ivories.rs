@@ -18,7 +18,7 @@ pub fn render(out: &mut Screen,
     for i in 0..octaves {
         for (j, line) in ASSET.lines().enumerate() {
             write!(out, "{}{}", cursor::Goto(
-                window.x, window.y + 1 + (j as u16) + (i * 6)
+                window.x, window.y + (j as u16) + (i * 6) - 1
             ), line).unwrap();
         };
     }
