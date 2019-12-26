@@ -21,7 +21,16 @@ mod common;
 mod components; 
 mod modules;
 
-use views::{Layer, Home, Timeline, Help, Title, Piano, Routes, Keyboard};
+use views::{Layer, 
+    Home, 
+    Timeline, 
+    Help, 
+    Title, 
+    Piano, 
+    Routes, 
+    Keyboard, 
+    Arpeggio
+};
 use modules::{read_document};
 
 use common::{Screen, Action, Anchor, MARGIN_D0, MARGIN_D1};
@@ -349,6 +358,8 @@ fn main() -> std::io::Result<()> {
                                 Box::new(Piano::new(5,5,size.0,size.1, (*el).to_owned())), *id),
                             "keyboard" => add_layer(&mut layers,
                                 Box::new(Keyboard::new(1, 1, size.0, size.1, (*el).to_owned())), *id),
+                            "arpeggio" => add_layer(&mut layers,
+                                Box::new(Arpeggio::new(1, 1, size.0, size.1, (*el).to_owned())), *id),
                             "patch" => { 
                                 if let Some(r_id) = routes_id {
                                     let mut routes_index: Option<usize> = None;

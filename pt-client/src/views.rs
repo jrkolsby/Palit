@@ -27,4 +27,6 @@ pub use routes::RoutesState;
 
 mod keyboard;
 pub use keyboard::Keyboard;
-pub use keyboard::KeyboardState;
+
+mod arpeggio;
+pub use arpeggio::Arpeggio;
