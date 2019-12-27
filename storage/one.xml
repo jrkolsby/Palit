@@ -57,9 +57,9 @@
         </timeline>
 
         <hammond id="9">
-            <param name="16" value="0" />
-            <param name="5.3" value="128" />
-            <param name="8" value="64" />
+            <param name="16" value="48" />
+            <param name="5.3" value="48" />
+            <param name="8" value="48" />
             <param name="4" value="32" />
             <param name="2.6" value="16" />
             <param name="2" value="8" />

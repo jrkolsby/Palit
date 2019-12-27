@@ -42,6 +42,7 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
 
             Key::Char('[') => "PLAY ",
             Key::Char(']') => "STOP ",
+            Key::Char('\\') => "RECORD ",
 
             Key::Char('m') => "M ",
             Key::Char('r') => "R ",

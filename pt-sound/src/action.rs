@@ -38,6 +38,8 @@ pub enum Action {
     Stop(u16),
     Record(u16),
     Monitor(u16),
+    RecordAt(u16, u16),
+    MuteAt(u16, u16),
 
     // Module ID, region ID, new track, new offset
     MoveRegion(u16, u16, u16, u16), 

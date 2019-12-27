@@ -355,6 +355,9 @@ impl Layer for Timeline {
                 }
                 (self.state.focus, Some(Action::ShowAnchors(anchors)))
             }
+            a @ Action::RecordAt(_) |
+            a @ Action::MuteAt(_) |
+            a @ Action::SoloAt(_) |
             a @ Action::Play |
             a @ Action::Stop |
             a @ Action::Record |

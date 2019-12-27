@@ -38,7 +38,7 @@ pub struct Store {
     pub monitor: bool,
     pub track_id: u16,
     pub out_queue: Vec<Action>,
-    pub in_queue: Vec<Note>,
+    pub note_queue: Vec<Note>,
 }
 
 pub fn init() -> Store {
@@ -58,7 +58,7 @@ pub fn init() -> Store {
         notes: vec![],
         track_id: 0,
         out_queue: vec![],
-        in_queue: vec![]
+        note_queue: vec![]
     }
 }
 
@@ -79,40 +79,60 @@ pub fn dispatch_requested(store: &mut Store) -> (
 }
 
 pub fn dispatch(store: &mut Store, a: Action) {
-    eprintln!("tape {:?} {:?}", store.track_id, a);
     match a {
         Action::Play(_) => { store.playing = true; },
-        Action::Stop(_) => { store.playing = false; store.recording = false; },
-        Action::Record(_) => { store.recording = !store.recording; },
+        Action::Stop(_) => { 
+            store.playing = false; 
+            store.recording = false; 
+            if store.loop_on {
+                store.playhead = store.loop_in;
+            }
+        },
+        Action::RecordAt(_, t_id) => { 
+            if store.track_id == t_id {
+                store.recording = !store.recording;
+            }
+        },
+        Action::MuteAt(_, t_id) => { 
+            if store.track_id == t_id {
+                store.recording = !store.recording;
+            }
+        },
         Action::Monitor(_) => { store.monitor = !store.monitor; },
         Action::Loop(_, loop_in, loop_out) => { 
             store.loop_in = loop_in; 
             store.loop_out = loop_out; 
+            store.loop_on = true;
         },
         Action::LoopOff(_) => { store.loop_on = false; },
         Action::Goto(_, offset) => { store.playhead = offset; },
         Action::NoteOn(note, vel) => {
-            println!("tape NoteOn {}", note);
             // Push a new note to the end of store.notes 
             // ... and redistribute the t_in and t_out 
             // ... based on the rate and samples per bar
-            store.in_queue.push(Note {
-                t_in: store.playhead,
-                t_out: 0,
-                note, 
-                vel,
-            });
-            store.out_queue.push(Action::NoteOn(note, vel));
+            if store.recording {
+                eprintln!("queued note {}", note);
+                store.note_queue.push(Note {
+                    t_in: store.playhead,
+                    t_out: 0,
+                    note, 
+                    vel,
+                });
+            }
+            if store.monitor {
+                store.out_queue.push(Action::NoteOn(note, vel));
+            }
         },
         Action::NoteOff(note) => {
-            if let Some(on_note) = store.in_queue.iter().find(|&n| n.note == note) {
+            if let Some(on_index) = store.note_queue.iter().position(|n| n.note == note) {
+                let on_note = store.note_queue.remove(on_index);
                 let recorded_note = Note {
                     t_in: on_note.t_in,
                     t_out: store.playhead,
                     note: on_note.note,
                     vel: on_note.vel,
                 };
-                if store.recording {
+                if store.recording && store.playing {
                     store.notes.push(recorded_note);
                 }
             }
@@ -128,18 +148,25 @@ pub fn compute(store: &mut Store) -> Output {
     let mut z: f32 = 0.0;
     if !store.playing { return z; }
     for region in store.regions.iter_mut() {
-        if store.playhead >= region.offset && store.playhead < region.offset + region.duration {
-            let index = (store.playhead-region.offset) as usize;
+        if store.playhead >= region.offset && store.playhead - region.offset < region.duration {
+            let index = (store.playhead - region.offset) as usize;
             let x: f32 = region.buffer[index];
             z += x * region.gain;
         }
     }
     for note in store.notes.iter_mut() {
 
-
     }
     let z = z.min(0.999).max(-0.999);
-    store.playhead = store.playhead + 1;
+    store.playhead = if store.loop_on {
+        if store.playhead == store.loop_out {
+            store.loop_in
+        } else {
+            store.playhead + 1
+        }
+    } else { 
+        store.playhead + 1 
+    };
     z
 }
 

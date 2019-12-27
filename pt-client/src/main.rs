@@ -237,6 +237,17 @@ fn main() -> std::io::Result<()> {
                 Action::Stop => {
                     ipc_sound.write(format!("STOP:{} ", target_id).as_bytes()).unwrap();
                 },
+                Action::Record => {
+                    ipc_sound.write(format!("RECORD:{} ", target_id).as_bytes()).unwrap();
+                },
+                Action::MuteAt(track_id) => {
+                    ipc_sound.write(format!("MUTE_AT:{}:{} ", 
+                        target_id, track_id).as_bytes()).unwrap();
+                },
+                Action::RecordAt(track_id) => {
+                    ipc_sound.write(format!("RECORD_AT:{}:{} ", 
+                        target_id, track_id).as_bytes()).unwrap();
+                },
                 Action::NoteOn(key, vel) => {
                     ipc_sound.write(format!("NOTE_ON_AT:{}:{}:{} ", 
                         target_id, key, vel).as_bytes()).unwrap();
