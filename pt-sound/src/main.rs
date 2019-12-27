@@ -107,6 +107,13 @@ fn main() -> Result<(), Box<error::Error>> {
                     patch[*id].dispatch(a)
                 }
             },
+            Action::MoveRegion(m_id, r_id, track, offset) => {
+                if let Some(n_id) = operators.get(&m_id) {
+                    if let Some(node) = patch.node_mut(*n_id) {
+                        node.dispatch(a)
+                    }
+                }
+            },
             Action::AddRoute(r_id) => {
                 let route = patch.add_node(Module::Passthru(vec![]));
                 routes.insert(r_id, route);
@@ -147,13 +154,6 @@ fn main() -> Result<(), Box<error::Error>> {
                         }
                     }
                     _ => {}
-                }
-            }
-            Action::MoveRegion(m_id, r_id, track, offset) => {
-                if let Some(n_id) = operators.get(&m_id) {
-                    if let Some(node) = patch.node_mut(*n_id) {
-                        node.dispatch(a)
-                    }
                 }
             },
             Action::OpenProject(name) => {

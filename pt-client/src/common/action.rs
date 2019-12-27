@@ -36,6 +36,7 @@ pub enum Action {
     Exit,
     Deselect,
     Record,
+    Goto(u32),
 
     // Patching actions
     Route,

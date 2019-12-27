@@ -81,9 +81,6 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
         let sound_buf: &str = match key.clone() {
             Key::Char('q') => "EXIT ",
 
-            Key::Char('[') => "PLAY ",
-            Key::Char(']') => "STOP ",
-
             Key::Char('a') => "NOTE_ON:24:0.4 ", // C1
             Key::Char('w') => "NOTE_ON:25:0.4 ",
             Key::Char('s') => "NOTE_ON:26:0.4 ",

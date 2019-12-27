@@ -3,7 +3,8 @@ use crate::core::{Offset, Volume, Key};
 #[derive(Debug, Clone)]
 pub enum Action {
     // true = on
-    LoopMode(bool),
+    LoopOff(u16),
+    Loop(u16, Offset, Offset),
 
     // true = up
     Octave(bool), 
@@ -30,21 +31,19 @@ pub enum Action {
 
     NoteOnAt(u16, Key, Volume),
     NoteOffAt(u16, Key),
-
     SetParam(u16, String, i32),
 
-    Arm(Offset),
+    Goto(u16, Offset),
+    Play(u16),
+    Stop(u16),
+    Record(u16),
+    Monitor(u16),
 
     // Module ID, region ID, new track, new offset
     MoveRegion(u16, u16, u16, u16), 
 
-    Play(u16),
-    Stop(u16),
-
     Tick,
-
     Exit,
-
     Noop,
 }
 

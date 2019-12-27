@@ -73,7 +73,7 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
             r: |out, window, id, state, focus| 
                 button::render(out, 2, 2, 20, "RECORD"),
             r_t: |a, id, _| match a { 
-                Action::SelectR => Action::RecordAt(id.1), 
+                Action::SelectR => Action::Record, 
                 _ => Action::Noop 
             },
 
@@ -355,6 +355,10 @@ impl Layer for Timeline {
                 }
                 (self.state.focus, Some(Action::ShowAnchors(anchors)))
             }
+            a @ Action::Play |
+            a @ Action::Stop |
+            a @ Action::Record |
+            a @ Action::Goto(_) => (self.state.focus, Some(a)),
             _ => (self.state.focus, None)
         };
 
