@@ -45,7 +45,7 @@ fn reduce(state: PianoState, action: Action) -> PianoState {
             Action::SetParam(key, val) => {
                 let mut new_eq = state.eq.clone();
                 match key.as_ref() {
-                    "16'" => new_eq[0] = val,
+                    "16" => new_eq[0] = val,
                     "5.3" => new_eq[1] = val,
                     "8" => new_eq[2] = val,
                     "4" => new_eq[3] = val,
@@ -111,7 +111,7 @@ impl Piano {
                     },
                     g_id: (FocusType::Button, 0),
                     y: |mut out, window, id, state, focus| {
-                        slider::render(out, window.x+10, window.y+5, "5.3'".to_string(), 
+                        slider::render(out, window.x+10, window.y+5, "5 1/3'".to_string(), 
                             state.eq[1], Direction::North)
                     },
                     y_t: |action, id, state| match action {
