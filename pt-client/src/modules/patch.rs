@@ -42,8 +42,6 @@ pub fn read(doc: Element) -> RoutesState {
             let m_id = anchor.attributes.get("module").unwrap();
             let _m_id = m_id.parse::<u16>().unwrap();
 
-            eprintln!("{} {}", a_id, m_id);
-
             let anchor = Anchor {
                 index: _a_id,
                 module_id: _m_id,
@@ -60,8 +58,6 @@ pub fn read(doc: Element) -> RoutesState {
             let _a_id = a_id.parse::<u16>().unwrap();
             let m_id = anchor.attributes.get("module").unwrap();
             let _m_id = m_id.parse::<u16>().unwrap();
-
-            eprintln!("{} {}", a_id, m_id);
 
             let anchor = Anchor {
                 index: _a_id,

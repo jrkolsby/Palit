@@ -232,38 +232,42 @@ fn main() -> std::io::Result<()> {
                     add_layer(&mut layers, Box::new(Title::new(23, 5, 36, 23)), 0);
                 },
                 Action::Play => {
-                    ipc_sound.write( format!("PLAY:{} ", target_id).as_bytes()).unwrap();
+                    ipc_sound.write(format!("PLAY:{} ", target_id).as_bytes()).unwrap();
                 },
                 Action::Stop => {
-                    ipc_sound.write( format!("STOP:{} ", target_id).as_bytes()).unwrap();
+                    ipc_sound.write(format!("STOP:{} ", target_id).as_bytes()).unwrap();
                 },
                 Action::NoteOn(key, vel) => {
-                    ipc_sound.write( format!("NOTE_ON_AT:{}:{}:{} ", 
+                    ipc_sound.write(format!("NOTE_ON_AT:{}:{}:{} ", 
                         target_id, key, vel).as_bytes()).unwrap();
                 },
                 Action::NoteOff(key) => {
-                    ipc_sound.write( format!("NOTE_OFF_AT:{}:{} ", 
+                    ipc_sound.write(format!("NOTE_OFF_AT:{}:{} ", 
                         target_id, key).as_bytes()).unwrap();
                 },
                 Action::PatchOut(module_id, anchor_id, route_id) => {
-                    ipc_sound.write( format!("PATCH_OUT:{}:{}:{} ", 
+                    ipc_sound.write(format!("PATCH_OUT:{}:{}:{} ", 
                         module_id, anchor_id, route_id).as_bytes()).unwrap();
                 },
                 Action::PatchIn(module_id, anchor_id, route_id) => {
-                    ipc_sound.write( format!("PATCH_IN:{}:{}:{} ", 
+                    ipc_sound.write(format!("PATCH_IN:{}:{}:{} ", 
                         module_id, anchor_id, route_id).as_bytes()).unwrap();
                 },
                 Action::DelPatch(module_id, anchor_id, input) => {
-                    ipc_sound.write( format!("DEL_PATCH:{}:{}:{} ", 
+                    ipc_sound.write(format!("DEL_PATCH:{}:{}:{} ", 
                         module_id, anchor_id, if input {"1"} else {"2"}).as_bytes()).unwrap();
                 },
                 Action::DelRoute(route_id) => {
-                    ipc_sound.write( format!("DEL_ROUTE:{} ", 
+                    ipc_sound.write(format!("DEL_ROUTE:{} ", 
                         route_id).as_bytes()).unwrap();
                 },
                 Action::AddRoute(route_id) => {
-                    ipc_sound.write( format!("ADD_ROUTE:{} ", 
+                    ipc_sound.write(format!("ADD_ROUTE:{} ", 
                         route_id).as_bytes()).unwrap();
+                }
+                Action::SetParam(key, val) => {
+                    ipc_sound.write(format!("SET_PARAM:{}:{}:{} ", 
+                        target_id, key, val).as_bytes()).unwrap();
                 }
                 a @ Action::Up | 
                 a @ Action::Down => {

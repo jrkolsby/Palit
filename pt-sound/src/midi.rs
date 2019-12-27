@@ -89,7 +89,7 @@ pub fn read_midi_event(input: &mut seq::Input) -> Result<Option<Action>, Box<err
         },
         seq::EventType::Controller => {
             let data: seq::EvCtrl = ev.get_data().unwrap();
-            Ok(Some(Action::SetParam(0, data.param, data.value)))
+            Ok(Some(Action::SetParam(0, format!("{}", data.param), data.value)))
         },
         _ => Ok(None),
     }

@@ -436,6 +436,9 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
                                                argv[3].parse::<u8>().unwrap() == 1),
             "DEL_ROUTE" => Action::DeleteRoute(argv[1].parse::<u16>().unwrap()),
             "ADD_ROUTE" => Action::AddRoute(argv[1].parse::<u16>().unwrap()),
+            "SET_PARAM" => Action::SetParam(argv[1].parse::<u16>().unwrap(),
+                                            argv[2].to_string(),
+                                            argv[3].parse::<i32>().unwrap()),
             _ => Action::Noop,
         };
 

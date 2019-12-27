@@ -59,8 +59,6 @@ pub fn dispatch(store: &mut Store, action: Action) {
             }
             store.queue.push(Action::NoteOff(note));
         },
-        Action::SetParam(_, ctrl, value) => {
-        },
         _ => {}
     }
 }

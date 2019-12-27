@@ -73,17 +73,16 @@ pub fn dispatch(store: &mut Store, action: Action) {
             };
         },
         Action::SetParam(_, ctrl, value) => {
-            let idx = match ctrl {
-                // Standard knobs on UMA25S, modify to your liking
-                1 => 0,
-                74 => 1,
-                71 => 2,
-                73 => 3,
-                75 => 4,
-                72 => 5,
-                91 => 6,
-                93 => 7,
-                10 => 8,
+            let idx = match ctrl.as_ref() {
+                "16"    => 0,
+                "5.3"   => 1,
+                "8"     => 2,
+                "4"     => 3,
+                "2.6"   => 4,
+                "2"     => 5,
+                "1.6"   => 6,
+                "1.3"   => 7,
+                "1"     => 8,
                 _ => return,
             };
             store.bar_values[idx] = f64::from(value) / 255.;
@@ -93,7 +92,7 @@ pub fn dispatch(store: &mut Store, action: Action) {
 }
 
 pub fn read(doc: &mut Element) -> Option<Store> {
-    let (mut doc, params) = param_map(doc);
+    let (_, params) = param_map(doc);
     let mut store = init();
     store.bar_values = [
         *params.get("16").unwrap() as f64 / 1000.,

@@ -31,7 +31,7 @@ pub enum Action {
     NoteOnAt(u16, Key, Volume),
     NoteOffAt(u16, Key),
 
-    SetParam(u16, u32, i32),
+    SetParam(u16, String, i32),
 
     Arm(Offset),
 

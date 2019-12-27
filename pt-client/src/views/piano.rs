@@ -3,6 +3,7 @@ use xmltree::Element;
 
 use crate::common::{MultiFocus, shift_focus, render_focii, focus_dispatch};
 use crate::common::{Screen, Action, Direction, FocusType, Window, Anchor};
+use crate::modules::param_map;
 use crate::views::{Layer};
 use crate::components::{piano, slider, button};
 
@@ -19,7 +20,7 @@ pub struct Piano {
 pub struct PianoState {
     focus: (usize, usize),
     notes: Vec<Action>,
-    eq: [i16; 8],
+    eq: [i16; 9],
 }
 
 fn reduce(state: PianoState, action: Action) -> PianoState {
@@ -44,14 +45,15 @@ fn reduce(state: PianoState, action: Action) -> PianoState {
             Action::SetParam(key, val) => {
                 let mut new_eq = state.eq.clone();
                 match key.as_ref() {
-                    "20Hz" => new_eq[0] = val,
-                    "80Hz" => new_eq[1] = val,
-                    "120Hz" => new_eq[2] = val,
-                    "140Hz" => new_eq[3] = val,
-                    "400Hz" => new_eq[4] = val,
-                    "6KHz" => new_eq[5] = val,
-                    "12KHz" => new_eq[6] = val,
-                    "14KHz" => new_eq[7] = val,
+                    "16'" => new_eq[0] = val,
+                    "5.3" => new_eq[1] = val,
+                    "8" => new_eq[2] = val,
+                    "4" => new_eq[3] = val,
+                    "2.6" => new_eq[4] = val,
+                    "2" => new_eq[5] = val,
+                    "1.6" => new_eq[6] = val,
+                    "1.3" => new_eq[7] = val,
+                    "1" => new_eq[8] = val,
                     _ => {},
                 };
                 new_eq
@@ -67,11 +69,25 @@ impl Piano {
 
         let mut path: String = "/usr/local/palit/".to_string();
 
+        let (_, params) = param_map(doc);
+
+        let initial_eq = [
+            *params.get("16").unwrap(),
+            *params.get("5.3").unwrap(),
+            *params.get("8").unwrap(),
+            *params.get("4").unwrap(),
+            *params.get("2.6").unwrap(),
+            *params.get("2").unwrap(),
+            *params.get("1.6").unwrap(),
+            *params.get("1.3").unwrap(),
+            *params.get("1").unwrap(),
+        ];
+
         // Initialize State
         let initial_state: PianoState = PianoState {
             focus: (0,0),
             notes: vec![],
-            eq: [0; 8],
+            eq: initial_eq,
         };
 
         Piano {
@@ -82,121 +98,126 @@ impl Piano {
             state: initial_state,
             focii: vec![vec![
                 MultiFocus::<PianoState> {
-                    r: |mut out, window, id, state, focus| {
-                        button::render(out, window.x+2, window.y+16, 20, "Record")
-                    },
-                    r_t: |action, id, state| Action::Record,
-                    r_id: (FocusType::Button, 0),
                     g: |mut out, window, id, state, focus| {
-                        slider::render(out, window.x+8, window.y+5, "20Hz".to_string(), 
+                        slider::render(out, window.x+5, window.y+5, "16'".to_string(), 
                             state.eq[0], Direction::North)
                     },
                     g_t: |action, id, state| match action {
-                        Action::Up => { Action::SetParam("20Hz".to_string(), 
+                        Action::Up => { Action::SetParam("16".to_string(), 
                                                          state.eq[0]+1) },
-                        Action::Down => { Action::SetParam("20Hz".to_string(), 
+                        Action::Down => { Action::SetParam("16".to_string(), 
                                                          state.eq[0]-1) },
                         _ => Action::Noop
                     },
                     g_id: (FocusType::Button, 0),
                     y: |mut out, window, id, state, focus| {
-                        slider::render(out, window.x+14, window.y+5, "80Hz".to_string(), 
+                        slider::render(out, window.x+10, window.y+5, "5.3'".to_string(), 
                             state.eq[1], Direction::North)
                     },
                     y_t: |action, id, state| match action {
-                        Action::Up => { Action::SetParam("80Hz".to_string(), 
+                        Action::Up => { Action::SetParam("5.3".to_string(), 
                                                          state.eq[1]+1) },
-                        Action::Down => { Action::SetParam("80Hz".to_string(), 
+                        Action::Down => { Action::SetParam("5.3".to_string(), 
                                                          state.eq[1]-1) },
                         _ => Action::Noop
                     },
                     y_id: (FocusType::Button, 0),
                     p: |mut out, window, id, state, focus| {
-                        slider::render(out, window.x+20, window.y+5, "120Hz".to_string(), 
+                        slider::render(out, window.x+15, window.y+5, "8'".to_string(), 
                             state.eq[2], Direction::North)
                     },
                     p_t: |action, id, state| match action { 
-                        Action::Up => { Action::SetParam("120Hz".to_string(), 
+                        Action::Up => { Action::SetParam("8".to_string(), 
                                                          state.eq[2]+1) },
-                        Action::Down => { Action::SetParam("120Hz".to_string(), 
+                        Action::Down => { Action::SetParam("8".to_string(), 
                                                          state.eq[2]-1) },
                         _ => Action::Noop
                     },
                     p_id: (FocusType::Button, 0),
                     b: |mut out, window, id, state, focus| {
-                        slider::render(out, window.x+26, window.y+5, "400Hz".to_string(), 
+                        slider::render(out, window.x+20, window.y+5, "4'".to_string(), 
                             state.eq[3], Direction::North)
                     },
                     b_t: |action, id, state| match action { 
-                        Action::Up => { Action::SetParam("400Hz".to_string(), 
+                        Action::Up => { Action::SetParam("4".to_string(), 
                                                          state.eq[3]+1) },
-                        Action::Down => { Action::SetParam("400Hz".to_string(), 
+                        Action::Down => { Action::SetParam("4".to_string(), 
                                                          state.eq[3]-1) },
                         _ => Action::Noop
                     },
                     b_id: (FocusType::Button, 0),
                     w: |mut out, window, id, state, focus| {},
                     w_id: (FocusType::Void, 0),
+                    r: |mut out, window, id, state, focus| {},
+                    r_t: |action, id, state| Action::Noop,
+                    r_id: (FocusType::Void, 0),
                     active: None,
                 },
                 MultiFocus::<PianoState> {
                     w: |mut out, window, id, state, focus| {},
                     w_id: (FocusType::Void, 0),
-                    r: |mut out, window, id, state, focus| {
-                        button::render(out, window.x+32, window.y+16, 10, "Play")
-                    },
-                    r_t: |action, id, state| Action::Play,
-                    r_id: (FocusType::Button, 0),
 
                     g: |mut out, window, id, state, focus| {
-                        slider::render(out, window.x+32, window.y+5, "6KHz".to_string(), 
+                        slider::render(out, window.x+25, window.y+5, "2.6'".to_string(), 
                             state.eq[4], Direction::North)
                     },
                     g_t: |action, id, state| match action { 
-                        Action::Up => { Action::SetParam("6KHz".to_string(), 
+                        Action::Up => { Action::SetParam("2.6".to_string(), 
                                                          state.eq[4]+1) },
-                        Action::Down => { Action::SetParam("6KHz".to_string(), 
+                        Action::Down => { Action::SetParam("2.6".to_string(), 
                                                          state.eq[4]-1) },
                         _ => Action::Noop
                     }, 
                     g_id: (FocusType::Button, 0),
 
                     y: |mut out, window, id, state, focus| {
-                        slider::render(out, window.x+38, window.y+5, "12KHz".to_string(), 
+                        slider::render(out, window.x+30, window.y+5, "2'".to_string(), 
                             state.eq[5], Direction::North)
                     },
                     y_t: |action, id, state| match action {
-                        Action::Up => { Action::SetParam("12KHz".to_string(), 
+                        Action::Up => { Action::SetParam("2".to_string(), 
                                                          state.eq[5]+1) },
-                        Action::Down => { Action::SetParam("12KHz".to_string(), 
+                        Action::Down => { Action::SetParam("2".to_string(), 
                                                          state.eq[5]-1) },
                         _ => Action::Noop
                     },
                     y_id: (FocusType::Button, 0),
                     p: |mut out, window, id, state, focus| {
-                        slider::render(out, window.x+44, window.y+5, "14KHz".to_string(), 
+                        slider::render(out, window.x+35, window.y+5, "1.6'".to_string(), 
                             state.eq[6], Direction::North)
                     },
                     p_t: |action, id, state| match action {
-                        Action::Up => { Action::SetParam("14KHz".to_string(), 
+                        Action::Up => { Action::SetParam("1.6".to_string(), 
                                                          state.eq[6]+1) },
-                        Action::Down => { Action::SetParam("14KHz".to_string(), 
+                        Action::Down => { Action::SetParam("1.6".to_string(), 
                                                          state.eq[6]-1) },
                         _ => Action::Noop
                     },
                     p_id: (FocusType::Button, 0),
                     b: |mut out, window, id, state, focus| {
-                        slider::render(out, window.x+50, window.y+5, "20KHz".to_string(), 
+                        slider::render(out, window.x+40, window.y+5, "1.3'".to_string(), 
                             state.eq[7], Direction::North)
                     },
                     b_t: |action, id, state| match action {
-                        Action::Up => { Action::SetParam("20KHz".to_string(), 
+                        Action::Up => { Action::SetParam("1.3".to_string(), 
                                                          state.eq[7]+1) },
-                        Action::Down => { Action::SetParam("20KHz".to_string(), 
+                        Action::Down => { Action::SetParam("1.3".to_string(), 
                                                          state.eq[7]-1) },
                         _ => Action::Noop
                     },
                     b_id: (FocusType::Button, 0),
+                    r: |mut out, window, id, state, focus| {
+                        slider::render(out, window.x+45, window.y+5, "1'".to_string(), 
+                            state.eq[8], Direction::North)
+                    },
+                    r_t: |action, id, state| match action { 
+                        Action::Up => { Action::SetParam("1".to_string(), 
+                                                         state.eq[8]+1) },
+                        Action::Down => { Action::SetParam("1".to_string(), 
+                                                         state.eq[8]-1) },
+                        _ => Action::Noop
+                    }, 
+                    r_id: (FocusType::Button, 0),
                     active: None,
                 },
             ]]
@@ -248,6 +269,7 @@ impl Layer for Piano {
                         }])
                 },
                 a @ Action::Up | a @ Action::Down => a,
+                a @ Action::SetParam(_,_) => a,
                 _ => { Action::Noop }
             }
         } else { Action::Noop }
