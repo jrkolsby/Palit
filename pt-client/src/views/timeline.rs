@@ -386,7 +386,7 @@ impl Layer for Timeline {
                 for (id, track) in sorted_tracks.iter() {
                     // Track output
                     anchors.push(Anchor {
-                        name: format!("Out {}", *id),
+                        name: format!("Track {}", *id),
                         index: counter,
                         module_id: 0,
                         input: false,
@@ -394,7 +394,7 @@ impl Layer for Timeline {
                     counter += 1;
                     // Track input
                     anchors.push(Anchor {
-                        name: format!("In {}", *id),
+                        name: format!("Track {}", *id),
                         index: counter,
                         module_id: 0,
                         input: true,

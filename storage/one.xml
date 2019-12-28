@@ -13,12 +13,12 @@
                 <output module="9" index="0" />
             </route>
             <route id="2">
-                <input module="10" index="0" />
+                <input module="10" index="1" />
                 <output module="104" index="0" />
             </route>
             <route id="3">
                 <input module="9" index="1" />
-                <output module="10" index="1" />
+                <output module="10" index="0" />
             </route>
         </patch>
 
@@ -51,8 +51,10 @@
                 <region id="8" asset="0" in="0" out="1488000" offset="80000" />
             </track>
             <track id="3">
-                <region id="7" asset="2" in="0" out="1728000" offset="0" />
+                <region id="7" asset="2" in="0" out="92800" offset="0" />
                 <region id="5" asset="2" in="0" out="708800" offset="1808000" />
+            </track>
+            <track id="4">
             </track>
         </timeline>
 

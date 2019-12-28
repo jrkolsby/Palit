@@ -22,9 +22,9 @@ pub fn render(out: &mut Screen,
             ), line).unwrap();
         };
     }
-    let note_top = (0..window.w).map(|_| "▀").collect::<String>();
-    let note_bottom = (0..window.w).map(|_| "▄").collect::<String>();
-    let note_both = (0..window.w).map(|_| "█").collect::<String>();
+    let note_top = (0..window.w-5).map(|_| "▀").collect::<String>();
+    let note_bottom = (0..window.w-5).map(|_| "▄").collect::<String>();
+    let note_both = (0..window.w-5).map(|_| "█").collect::<String>();
 
     for note in active.iter() {
         match note {
