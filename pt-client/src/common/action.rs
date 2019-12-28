@@ -54,10 +54,11 @@ pub enum Action {
     NoteOff(u16),
     SetParam(String, i16),
     MoveRegion(u16, u16, u32), // module id, region id, offset
-    SoloAt(u16),
-    RecordAt(u16),
-    MuteAt(u16),
+    SoloTrack(u16),
+    RecordTrack(u16),
+    MuteTrack(u16),
     PlayAt(u16),
+    AddNote(u16, u8, f32, u32, u32),
 
     // Default actions
     OpenProject(String),

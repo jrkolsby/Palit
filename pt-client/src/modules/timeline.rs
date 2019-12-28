@@ -30,6 +30,7 @@ pub fn read(doc: Element) -> TimelineState {
         tracks: HashMap::new(),
         assets: HashMap::new(),
         regions: HashMap::new(),
+        notes: vec![],
 
         loop_mode: false,
         tick: true,

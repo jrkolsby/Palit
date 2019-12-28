@@ -64,6 +64,8 @@ fn reduce(state: PianoState, action: Action) -> PianoState {
     }
 }
 
+const SIZE: (u16, u16) = (70, 30);
+
 impl Piano {
     pub fn new(x: u16, y: u16, width: u16, height: u16, doc: Element) -> Self {
 
@@ -91,8 +93,8 @@ impl Piano {
         };
 
         Piano {
-            x: x,
-            y: y,
+            x: x + (width / 2) - (SIZE.0 / 2),
+            y: y + height - SIZE.1,
             width: width,
             height: height,
             state: initial_state,
@@ -258,13 +260,13 @@ impl Layer for Piano {
                         Anchor {
                             index: 0, 
                             module_id: 0,
-                            name: "Out".to_string(),
+                            name: "Speaker".to_string(),
                             input: false,
                         },
                         Anchor {
                             index: 1, 
                             module_id: 0,
-                            name: "Keys".to_string(),
+                            name: "MIDI In".to_string(),
                             input: true,
                         }])
                 },

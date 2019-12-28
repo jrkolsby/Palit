@@ -45,12 +45,14 @@ pub type Key = u8;
 pub type Param = i16;
 
 const CHANNELS: usize = 2;
-const FRAMES: u32 = 512;
+const FRAMES: u32 = 128;
 const SAMPLE_HZ: f64 = 44_100.0;
 
 const DEBUG_KEY_PERIOD: u16 = 24100;
 
+#[derive(Debug, Clone)]
 pub struct Note {
+    pub id: u16,
     pub t_in: Offset,
     pub t_out: Offset,
     pub note: Key,
@@ -372,13 +374,19 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
         }
         if let Some(client_a) = client_d {
             for a in client_a.iter() {
+                eprintln!("{:?}", a);
                 let message = match a {
-                    Action::Tick => "TICK ".to_string(),
-                    Action::NoteOn(n,v) => format!("NOTE_ON:{}:{} ", n, v),
-                    Action::NoteOff(n) => format!("NOTE_OFF:{} ", n),
-                    _ => "".to_string(),
+                    Action::Tick => Some("TICK ".to_string()),
+                    Action::NoteOn(n,v) => Some(format!("NOTE_ON:{}:{} ", n, v)),
+                    Action::NoteOff(n) => Some(format!("NOTE_OFF:{} ", n)),
+                    Action::AddNote(id, n) => Some(format!("NOTE_ADD:{}:{}:{}:{}:{} ",
+                        id, n.note, n.vel, n.t_in, n.t_out
+                    )),
+                    _ => None
                 };
-                ipc_client.write(message.as_bytes());
+                if let Some(text) = message {
+                    ipc_client.write(text.as_bytes());
+                }
             }
         }
     }

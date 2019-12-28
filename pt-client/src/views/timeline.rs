@@ -10,7 +10,7 @@ use std::collections::HashMap;
 use crate::components::{tempo, button, ruler, region};
 use crate::common::{ID, VOID_ID, FocusType};
 use crate::common::{MultiFocus, render_focii, shift_focus };
-use crate::common::{Screen, Action, Asset, Region, Track, Anchor, Window};
+use crate::common::{Screen, Action, Asset, Region, Track, Anchor, Window, Note};
 use crate::common::{beat_offset, offset_beat, generate_waveforms};
 use crate::modules::timeline;
 use crate::views::{Layer};
@@ -37,6 +37,7 @@ pub struct TimelineState {
     pub tracks: HashMap<u16, Track>,
     pub assets: HashMap<u16, Asset>,
     pub regions: HashMap<u16, Region>,
+    pub notes: Vec<Note>,
 
     // Ephemeral variables
     pub tick: bool,
@@ -120,15 +121,24 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
 
                 r: |mut out, win, id, state, focus|
                     button::render(out, win.x+TRACKS_X, win.y+TIMELINE_Y+2*id.1, 3, "R"),
-                r_t: |action, id, _| Action::RecordAt(id.1),
+                r_t: |action, id, _| match action {
+                    Action::SelectR => Action::RecordTrack(id.1),
+                    _ => Action::Noop,
+                },
 
                 g: |mut out, win, id, state, focus|
                     button::render(out, win.x+TRACKS_X+4, win.y+TIMELINE_Y+(2*id.1), 3, "M"),
-                g_t: |action, id, _| Action::MuteAt(id.1),
+                g_t: |action, id, _| match action {
+                    Action::SelectG => Action::MuteTrack(id.1),
+                    _ => Action::Noop,
+                },
 
                 b: |mut out, win, id, state, focus|
                     button::render(out, win.x+TRACKS_X+8, win.y+TIMELINE_Y+(2*id.1), 3, "S"),
-                b_t: |action, id, _| Action::SoloAt(id.1),
+                b_t: |action, id, _| match action {
+                    Action::SelectB => Action::SoloTrack(id.1),
+                    _ => Action::Noop,
+                },
 
                 p: VOID_RENDER,
                 p_t: VOID_TRANSFORM,
@@ -167,7 +177,7 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         sample_rate: state.sample_rate.clone(),
         tracks: state.tracks.clone(),
         assets: state.assets.clone(),
-        regions: match action {
+        regions: match action.clone() {
             Action::MoveRegion(id, t_id, offset) => {
                 let mut new_regions = state.regions.clone();
                 let r = new_regions.get_mut(&id).unwrap();
@@ -176,6 +186,20 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
                 new_regions
             },
             _ => state.regions.clone(),
+        },
+        notes: match action {
+            Action::AddNote(id, note, velocity, t_in, t_out) => {
+                let mut new_notes = state.notes.clone();
+                new_notes.push(Note {
+                    id,
+                    note,
+                    vel: velocity,
+                    t_in,
+                    t_out
+                });
+                new_notes
+            },
+            _ => state.notes.clone()
         },
         tick: (state.playhead % 2) == 0,
         playhead: match action {
@@ -269,6 +293,28 @@ impl Layer for Timeline {
             self.state.zoom,
             self.state.scroll_x,
             playhead_offset);
+
+        for note in self.state.notes.iter() {
+            let note_in_x = beat_offset(
+                note.t_in,
+                self.state.sample_rate,
+                self.state.tempo,
+                self.state.zoom);
+            let note_out_x = beat_offset(
+                note.t_out,
+                self.state.sample_rate,
+                self.state.tempo,
+                self.state.zoom);
+            let glyph = (0..note_out_x-note_in_x).map(|_| "█").collect::<String>();
+            /*
+            let note_bottom = (0..window.w).map(|_| "▄").collect::<String>();
+            let note_both = (0..window.w).map(|_| "▀").collect::<String>();
+            */
+            eprintln!("{}", note.note);
+            write!(out, "{}{}",
+                cursor::Goto(win.x+REGIONS_X+note_in_x, win.y+TIMELINE_Y+note.note as u16-24),
+                glyph).unwrap();
+        }
     }
 
     fn dispatch(&mut self, action: Action) -> Action {
@@ -335,7 +381,9 @@ impl Layer for Timeline {
             Action::Route => {
                 let mut anchors = vec![];
                 let mut counter = 0;
-                for (id, track) in self.state.tracks.iter() {
+                let mut sorted_tracks: Vec<(&u16, &Track)> = self.state.tracks.iter().collect();
+                sorted_tracks.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+                for (id, track) in sorted_tracks.iter() {
                     // Track output
                     anchors.push(Anchor {
                         name: format!("Out {}", *id),
@@ -355,9 +403,9 @@ impl Layer for Timeline {
                 }
                 (self.state.focus, Some(Action::ShowAnchors(anchors)))
             }
-            a @ Action::RecordAt(_) |
-            a @ Action::MuteAt(_) |
-            a @ Action::SoloAt(_) |
+            a @ Action::RecordTrack(_) |
+            a @ Action::MuteTrack(_) |
+            a @ Action::SoloTrack(_) |
             a @ Action::Play |
             a @ Action::Stop |
             a @ Action::Record |

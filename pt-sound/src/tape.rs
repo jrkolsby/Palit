@@ -67,15 +67,24 @@ pub fn dispatch_requested(store: &mut Store) -> (
         Option<Vec<Action>>,
         Option<Vec<Action>>
     ) {
-        let client_actions = if store.playing && store.playhead % 65536 == 0 {
-            Some(vec![Action::Tick])
-        } else { None };
+        let mut client_actions = vec![];
+        if store.playing && store.playhead % 65536 == 0 && store.track_id == 1 {
+            client_actions.push(Action::Tick);
+        }
+        if let Some(new_note) = store.out_queue.iter().position(|x| match x {
+            Action::AddNote(_,_) => true,
+            _ => false
+        }) {
+            client_actions.push(store.out_queue.remove(new_note));
+        }
         let output_actions = if store.out_queue.len() == 0 { None } else {
             let carry = store.out_queue.clone();
             store.out_queue.clear();
             Some(carry) 
         };
-        (client_actions, None, output_actions) 
+        (output_actions, None, if client_actions.len() > 0 {
+            Some(client_actions)
+        } else { None }) 
 }
 
 pub fn dispatch(store: &mut Store, a: Action) {
@@ -83,7 +92,6 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::Play(_) => { store.playing = true; },
         Action::Stop(_) => { 
             store.playing = false; 
-            store.recording = false; 
             if store.loop_on {
                 store.playhead = store.loop_in;
             }
@@ -92,6 +100,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
             if store.track_id == t_id {
                 store.recording = !store.recording;
             }
+            eprintln!("RECORDING {}", store.recording);
         },
         Action::MuteAt(_, t_id) => { 
             if store.track_id == t_id {
@@ -111,8 +120,8 @@ pub fn dispatch(store: &mut Store, a: Action) {
             // ... and redistribute the t_in and t_out 
             // ... based on the rate and samples per bar
             if store.recording {
-                eprintln!("queued note {}", note);
                 store.note_queue.push(Note {
+                    id: store.notes.len() as u16,
                     t_in: store.playhead,
                     t_out: 0,
                     note, 
@@ -125,14 +134,18 @@ pub fn dispatch(store: &mut Store, a: Action) {
         },
         Action::NoteOff(note) => {
             if let Some(on_index) = store.note_queue.iter().position(|n| n.note == note) {
-                let on_note = store.note_queue.remove(on_index);
-                let recorded_note = Note {
-                    t_in: on_note.t_in,
-                    t_out: store.playhead,
-                    note: on_note.note,
-                    vel: on_note.vel,
-                };
                 if store.recording && store.playing {
+                    let on_note = store.note_queue.remove(on_index);
+                    let recorded_note = Note {
+                        id: on_note.id,
+                        t_in: on_note.t_in,
+                        t_out: store.playhead,
+                        note: on_note.note,
+                        vel: on_note.vel,
+                    };
+                    store.out_queue.push(Action::AddNote(
+                        recorded_note.id, recorded_note.clone(),
+                    ));
                     store.notes.push(recorded_note);
                 }
             }

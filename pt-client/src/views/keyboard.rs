@@ -27,6 +27,11 @@ pub struct KeyboardState {
 
 fn reduce(state: KeyboardState, action: Action) -> KeyboardState {
     KeyboardState {
+        octave: match action {
+            Action::PitchUp => state.octave + 1,
+            Action::PitchDown => state.octave - 1,
+            _ => state.octave
+        },
         keys_active: match action {
             a @ Action::NoteOn(_, _) => {
                 let mut new_active = state.keys_active.clone();
@@ -43,7 +48,6 @@ fn reduce(state: KeyboardState, action: Action) -> KeyboardState {
             }
             _ => state.keys_active.clone()
         },
-        octave: state.octave,
         shift: state.shift,
         velocity: state.velocity
     }
