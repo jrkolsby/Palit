@@ -1,6 +1,7 @@
 use termion::{color, cursor};
 use std::io::{Write, Stdout};
 use crate::common::{Screen, Action, Window};
+use itertools::Itertools;
 
 const ASSET: &str = r#"
 ▄▄██
@@ -27,18 +28,19 @@ pub fn render(out: &mut Screen,
     }
 
     let mut sorted_notes: Vec<u16> = active.iter().map(|a| 
-        match a { Action::NoteOn(a, _) => *a, _ => 0}
-    ).collect();
+        // Shift up a half step because c shares a row with b
+        match a { Action::NoteOn(a, _) => *a + 1, _ => 0}
+    ).unique().collect();
 
-    sorted_notes.sort_by(|a, b| b.partial_cmp(a).unwrap());
+    sorted_notes.sort_by(|a, b| a.partial_cmp(b).unwrap());
 
     for i in 0..sorted_notes.len() {
-        let key = sorted_notes[i];
+        let key = sorted_notes[i]; 
 
         let glyph: String = if key % 2 == 0 {
             (0..window.w-5).map(|_| "▄").collect::<String>()
         } else {
-            if i > 0 && sorted_notes[i-1] == key {
+            if i > 0 && sorted_notes[i-1] == key-1 {
                 (0..window.w-5).map(|_| "█").collect::<String>()
             } else {
                 (0..window.w-5).map(|_| "▀").collect::<String>()
