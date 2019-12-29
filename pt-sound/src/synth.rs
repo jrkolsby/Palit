@@ -32,7 +32,7 @@ pub fn init() -> Store {
     Store {
         queue: vec![],
         sigs: iter::repeat(None).take(256).collect(),
-        sample_rate: signal::rate(f64::from(44100)),
+        sample_rate: signal::rate(f64::from(44_100)),
         stored_sample: None,
         bar_values: [0.25, 0.25, 0.25, 0.75, 0.5, 0., 0., 0., 0.],
     }

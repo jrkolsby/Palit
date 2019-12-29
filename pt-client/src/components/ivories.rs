@@ -47,7 +47,7 @@ pub fn render(out: &mut Screen,
             }
         };
         let y_pos = window.y + window.h - (
-            (key - 60) / 2 + C_POSITION
+            (key / 2) - 30 + C_POSITION
         );
 
         write!(out, "{}{}", cursor::Goto(

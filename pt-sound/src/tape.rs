@@ -39,6 +39,8 @@ pub struct Store {
     pub track_id: u16,
     pub out_queue: Vec<Action>,
     pub note_queue: Vec<Note>,
+    pub sample_rate: u32,
+    pub beat: u32,
 }
 
 pub fn init() -> Store {
@@ -58,7 +60,9 @@ pub fn init() -> Store {
         notes: vec![],
         track_id: 0,
         out_queue: vec![],
-        note_queue: vec![]
+        note_queue: vec![],
+        sample_rate: 44180,
+        beat: 0,
     }
 }
 
@@ -68,23 +72,25 @@ pub fn dispatch_requested(store: &mut Store) -> (
         Option<Vec<Action>>
     ) {
         let mut client_actions = vec![];
-        if store.playing && store.playhead % 65536 == 0 && store.track_id == 1 {
-            client_actions.push(Action::Tick);
+        let mut output_actions = vec![];
+
+        for a in store.out_queue.iter() {
+            match a {
+                Action::AddNote(_, _) |
+                Action::Tick => client_actions.push(a.clone()),
+                _ => output_actions.push(a.clone())
+            }
         }
-        if let Some(new_note) = store.out_queue.iter().position(|x| match x {
-            Action::AddNote(_,_) => true,
-            _ => false
-        }) {
-            client_actions.push(store.out_queue.remove(new_note));
-        }
-        let output_actions = if store.out_queue.len() == 0 { None } else {
-            let carry = store.out_queue.clone();
-            store.out_queue.clear();
-            Some(carry) 
-        };
-        (output_actions, None, if client_actions.len() > 0 {
+
+        store.out_queue.clear();
+
+        (if output_actions.len() > 0 {
+            Some(output_actions)
+        } else {None}, 
+            None, 
+        if client_actions.len() > 0 {
             Some(client_actions)
-        } else { None }) 
+        } else { None })
 }
 
 pub fn dispatch(store: &mut Store, a: Action) {
@@ -180,6 +186,9 @@ pub fn compute(store: &mut Store) -> Output {
     } else { 
         store.playhead + 1 
     };
+    if store.playing && store.playhead % store.beat == 0 && store.track_id == 1 {
+        store.out_queue.push(Action::Tick);
+    }
     z
 }
 
@@ -221,6 +230,7 @@ pub fn read(doc: &mut Element) -> Option<Store> {
     store.time_note = (*params.get("time_note").unwrap()).try_into().unwrap();
     store.loop_in = (*marks.get("loop_in").unwrap()).try_into().unwrap();
     store.loop_out = (*marks.get("loop_out").unwrap()).try_into().unwrap();
+    store.beat = (60 * store.sample_rate) / (store.bpm as u32);
 
     for (name, value) in params.drain() {
         param_add(doc, value, name);

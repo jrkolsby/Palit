@@ -7,7 +7,7 @@ use termion::cursor;
 use std::io::{Write, Stdout};
 use std::collections::HashMap;
 
-use crate::components::{tempo, button, ruler, region};
+use crate::components::{tempo, button, ruler, region, roll};
 use crate::common::{ID, VOID_ID, FocusType};
 use crate::common::{MultiFocus, render_focii, shift_focus };
 use crate::common::{Screen, Action, Asset, Region, Track, Anchor, Window, Note};
@@ -294,27 +294,18 @@ impl Layer for Timeline {
             self.state.scroll_x,
             playhead_offset);
 
-        for note in self.state.notes.iter() {
-            let note_in_x = beat_offset(
-                note.t_in,
-                self.state.sample_rate,
-                self.state.tempo,
-                self.state.zoom);
-            let note_out_x = beat_offset(
-                note.t_out,
-                self.state.sample_rate,
-                self.state.tempo,
-                self.state.zoom);
-            let glyph = (0..note_out_x-note_in_x).map(|_| "█").collect::<String>();
-            /*
-            let note_bottom = (0..window.w).map(|_| "▄").collect::<String>();
-            let note_both = (0..window.w).map(|_| "▀").collect::<String>();
-            */
-            eprintln!("{}", note.note);
-            write!(out, "{}{}",
-                cursor::Goto(win.x+REGIONS_X+note_in_x, win.y+TIMELINE_Y+note.note as u16-24),
-                glyph).unwrap();
-        }
+        roll::render(out,
+            Window { 
+                x: win.x + REGIONS_X, 
+                y: win.y + TIMELINE_Y,
+                w: win.w - REGIONS_X,
+                h: win.h - TIMELINE_Y,
+            },
+            self.state.scroll_x.into(),
+            self.state.sample_rate,
+            self.state.tempo,
+            self.state.zoom,
+            &self.state.notes);
     }
 
     fn dispatch(&mut self, action: Action) -> Action {
