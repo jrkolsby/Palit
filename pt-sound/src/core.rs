@@ -236,7 +236,7 @@ impl Module {
             Module::Octave(ref mut queue, ref mut n) => { 
                 match a {
                     Action::NoteOn(_, _) | Action::NoteOff(_) => { queue.push(a.clone()); },
-                    Action::Octave(up) => if up { *n = *n+1; } else { *n = *n-1; },
+                    Action::Octave(up) => if up { *n = *n+1; } else { *n = if *n > 0 { *n-1 } else { 0 }; },
                     _ => (),
                 }
             },
@@ -472,7 +472,6 @@ pub fn event_loop<F: 'static>(
         mut ipc_client: File, 
         mut patch: Graph<[Output; CHANNELS], Module>, 
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
-
     where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) {
     
     // Get audio devices
@@ -498,7 +497,7 @@ pub fn event_loop<F: 'static>(
 
         let ipc_actions: Vec<Action> = ipc_action(&ipc_in);
 
-        match ipc_dispatch(ipc_actions, &mut patch, &dispatch_f) {
+        match ipc_dispatch(ipc_actions, &mut patch, &mut dispatch_f) {
             Action::Exit => { return Ok(()) },
             _ => {}
         }

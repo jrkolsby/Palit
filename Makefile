@@ -10,6 +10,10 @@ demo:
 debug:
 	tmux split-window -v "tail -f /tmp/pt-debug" && tmux split-window -v "cd pt-sound && RUST_BACKTRACE=1 make debug" && tmux split-window -v "cd pt-input && RUST_BACKTRACE=1 cargo run" && cd pt-client/ && RUST_BACKTRACE=1 cargo run 2> /tmp/pt-debug	
 
+.PHONY : prod
+prod: 
+	tmux split-window -v "tail -f /tmp/pt-debug" && tmux split-window -v "cd pt-sound && make prod" && tmux split-window -v "cd pt-input && cargo build && sudo ./target/debug/pt-input" && cd pt-client/ && cargo run --release 2> /tmp/pt-debug	
+
 .PHONY : tick
 tick:
 	watch -n .1 'printf %s TICK > /tmp/pt-client'

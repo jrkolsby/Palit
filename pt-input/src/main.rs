@@ -36,6 +36,11 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
         let key = c.unwrap();
 
         let client_buf: &str = match key.clone() {
+            Key::Up => "UP ",
+            Key::Down => "DN ",
+            Key::Left => "LT ",
+            Key::Right => "RT ",
+
             Key::Char('q') => "EXIT ",
             Key::Char('1') => "1 ",
             Key::Char('2') => "2 ",
@@ -74,16 +79,14 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
             Key::Char('p') => "NOTE_ON:75:1 ",
             Key::Char(';') => "NOTE_ON:76:1 ",
 
-            Key::Up => "UP ",
-            Key::Down => "DN ",
-            Key::Left => "LT ",
-            Key::Right => "RT ",
-
             _ => "",
         };
 
         let sound_buf: &str = match key.clone() {
             Key::Char('q') => "EXIT ",
+
+            Key::Char('-') => "OCTAVE:0 ",
+            Key::Char('+') => "OCTAVE:1 ",
 
             Key::Char('a') => "NOTE_ON:60:1 ",
             Key::Char('w') => "NOTE_ON:61:1 ",
@@ -102,9 +105,6 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
             Key::Char('l') => "NOTE_ON:74:1 ",
             Key::Char('p') => "NOTE_ON:75:1 ",
             Key::Char(';') => "NOTE_ON:76:1 ",
-
-            Key::Char('-') => "OCTAVE:0 ",
-            Key::Char('+') => "OCTAVE:1 ",
 
             _ => "",
         };
@@ -136,6 +136,11 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
         let client_buf: &str = match event {
             /* (EventType::Release, _) => "GO", */
             (EventType::Push, k) => match k {
+                Keys::KEY_UP => "UP ",
+                Keys::KEY_DOWN => "DN ",
+                Keys::KEY_LEFT => "LT ",
+                Keys::KEY_RIGHT => "RT ",
+
                 Keys::KEY_Q => "EXIT ",
                 Keys::KEY_1 => "1 ",
                 Keys::KEY_2 => "2 ",
@@ -149,12 +154,29 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
                 Keys::KEY_I => "I ",
                 Keys::KEY_SPACE => "SPC ",
 
-                Keys::KEY_UP => "UP ",
-                Keys::KEY_DOWN => "DN ",
-                Keys::KEY_LEFT => "LT ",
-                Keys::KEY_RIGHT => "RT ",
+                Keys::KEY_TAB => "ROUTE ",
 
-                _ => ""
+                Keys::KEY_KPPLUS => "OCTAVE:1 ",
+                Keys::KEY_KPMINUS => "OCTAVE:0 ",
+
+                Keys::KEY_A => "NOTE_ON:60:0.4 ",
+                Keys::KEY_W => "NOTE_ON:61:0.4 ",
+                Keys::KEY_S => "NOTE_ON:62:0.4 ",
+                Keys::KEY_E => "NOTE_ON:63:0.4 ",
+                Keys::KEY_D => "NOTE_ON:64:0.4 ",
+                Keys::KEY_F => "NOTE_ON:65:0.4 ",
+                Keys::KEY_T => "NOTE_ON:66:0.4 ",
+                Keys::KEY_G => "NOTE_ON:67:0.4 ",
+                Keys::KEY_Y => "NOTE_ON:68:0.4 ",
+                Keys::KEY_H => "NOTE_ON:69:0.4 ",
+                Keys::KEY_U => "NOTE_ON:70:0.4 ",
+                Keys::KEY_J => "NOTE_ON:71:0.4 ",
+                Keys::KEY_K => "NOTE_ON:72:0.4 ",
+                Keys::KEY_O => "NOTE_ON:73:0.4 ",
+                Keys::KEY_L => "NOTE_ON:74:0.4 ",
+                Keys::KEY_P => "NOTE_ON:75:0.4 ",
+
+                _ => { eprintln!("{:?}", k); "" }
             },
             (EventType::Release, k) => match k {
                 Keys::KEY_M |
@@ -162,12 +184,36 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
                 Keys::KEY_V |
                 Keys::KEY_I |
                 Keys::KEY_SPACE => "DESELECT ",
+                
+                Keys::KEY_A => "NOTE_OFF:60 ",
+                Keys::KEY_W => "NOTE_OFF:61 ",
+                Keys::KEY_S => "NOTE_OFF:62 ",
+                Keys::KEY_E => "NOTE_OFF:63 ",
+                Keys::KEY_D => "NOTE_OFF:64 ",
+                Keys::KEY_F => "NOTE_OFF:65 ",
+                Keys::KEY_T => "NOTE_OFF:66 ",
+                Keys::KEY_G => "NOTE_OFF:67 ",
+                Keys::KEY_Y => "NOTE_OFF:68 ",
+                Keys::KEY_H => "NOTE_OFF:69 ",
+                Keys::KEY_U => "NOTE_OFF:70 ",
+                Keys::KEY_J => "NOTE_OFF:71 ",
+                Keys::KEY_K => "NOTE_OFF:72 ",
+                Keys::KEY_O => "NOTE_OFF:73 ",
+                Keys::KEY_L => "NOTE_OFF:74 ",
+                Keys::KEY_P => "NOTE_OFF:75 ",
+
+                _ => ""
             },
             (_, _) => ""
         };
 
         let sound_buf: &str = match event {
             (EventType::Push, k) => match k {
+                Keys::KEY_Q => "EXIT ",
+
+                Keys::KEY_EQUAL => "OCTAVE:1 ",
+                Keys::KEY_MINUS => "OCTAVE:0 ",
+
                 Keys::KEY_A => "NOTE_ON:60:1 ",
                 Keys::KEY_W => "NOTE_ON:61:1 ",
                 Keys::KEY_S => "NOTE_ON:62:1 ",
@@ -184,12 +230,6 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
                 Keys::KEY_O => "NOTE_ON:73:1 ",
                 Keys::KEY_L => "NOTE_ON:74:1 ",
                 Keys::KEY_P => "NOTE_ON:75:1 ",
-
-                Keys::KEY_TAB => "OCTAVE:0 ",
-                Keys::KEY_GRAVE => "OCTAVE:1 ",
-
-                Keys::KEY_LEFTBRACE => "PLAY ",
-                Keys::KEY_RIGHTBRACE => "STOP ",
 
                 _ => ""
             },
