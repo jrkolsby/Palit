@@ -317,7 +317,7 @@ impl Layer for Timeline {
         self.state = reduce(self.state.clone(), _action.clone());
         
         // Intercept arrow actions to change focus or to return
-        let (focus, default) = match _action {
+        let (focus, default) = match _action.clone() {
             // Only shift focus horizontally if playhead has exceeded current region
             Action::Left => match multi_focus.w_id.0 {
                 FocusType::Region => {
@@ -408,7 +408,11 @@ impl Layer for Timeline {
 
         match default {
             Some(a) => a,
-            None => Action::Noop
+            None => match _action {
+                Action::Left |
+                Action::Right => Action::Goto(self.state.playhead),
+                _ => Action::Noop
+            }
         }
     }
     fn undo(&mut self) {

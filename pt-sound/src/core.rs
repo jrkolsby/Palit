@@ -452,6 +452,8 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "SET_PARAM" => Action::SetParam(argv[1].parse::<u16>().unwrap(),
                                             argv[2].to_string(),
                                             argv[3].parse::<i32>().unwrap()),
+            "GOTO" => Action::Goto(argv[1].parse::<u16>().unwrap(),
+                                   argv[2].parse::<u32>().unwrap()),
             _ => Action::Noop,
         };
 

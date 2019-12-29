@@ -291,7 +291,10 @@ fn main() -> std::io::Result<()> {
                 Action::SetParam(key, val) => {
                     ipc_sound.write(format!("SET_PARAM:{}:{}:{} ", 
                         target_id, key, val).as_bytes()).unwrap();
-                }
+                },
+                Action::Goto(playhead) => {
+                    ipc_sound.write(format!("GOTO:{}:{} ", target_id, playhead).as_bytes()).unwrap();
+                },
                 a @ Action::Up | 
                 a @ Action::Down => {
                     // Make sure to pin {home|route|...|route?}

@@ -87,6 +87,7 @@ fn main() -> Result<(), Box<error::Error>> {
 
         eprintln!("ACTION {:?}", a);
         match a {
+            Action::Goto(n_id, _) |
             Action::RecordAt(n_id, _) |
             Action::MuteAt(n_id, _) |
             Action::NoteOnAt(n_id, _, _) | 

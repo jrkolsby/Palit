@@ -120,7 +120,10 @@ pub fn dispatch(store: &mut Store, a: Action) {
             store.loop_on = true;
         },
         Action::LoopOff(_) => { store.loop_on = false; },
-        Action::Goto(_, offset) => { store.playhead = offset; },
+        Action::Goto(_, offset) => { 
+            store.note_queue.clear();
+            store.playhead = offset; 
+        },
         Action::NoteOn(note, vel) => {
             // Push a new note to the end of store.notes 
             // ... and redistribute the t_in and t_out 
@@ -174,7 +177,12 @@ pub fn compute(store: &mut Store) -> Output {
         }
     }
     for note in store.notes.iter_mut() {
-
+        if note.t_in == store.playhead {
+            store.out_queue.push(Action::NoteOn(note.note, note.vel));
+        }
+        if note.t_out == store.playhead {
+            store.out_queue.push(Action::NoteOff(note.note));
+        }
     }
     let z = z.min(0.999).max(-0.999);
     store.playhead = if store.loop_on {
