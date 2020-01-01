@@ -57,9 +57,8 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 - [X] UI-21: Add route, patch io
 
-- [ ] SOUND-10: Midi Tape
-- [ ] SOUND-13: Timeline looping
-- [ ] SOUND-14: Timeline editing
+- [X] SOUND-10: Midi Tape
+- [X] SOUND-14: Timeline editing
 - [X] SOUND-15: Timeline XML save/load (BIG BRANCH)
 
 - [X] INF-11: Double buffer
@@ -70,6 +69,7 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 - [ ] UI-17: Add module modal
 
+- [ ] SOUND-13: Timeline looping
 - [ ] SOUND-20: Import audio file to timeline
 
 ### MARCH 1 ( v1.0 )
