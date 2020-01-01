@@ -102,7 +102,7 @@ impl Home {
 impl Layer for Home {
     fn render(&self, out: &mut Screen, target: bool) {
 
-    bigtext::render(out, self.x, self.y, "Music Shell".to_string());
+    bigtext::render(out, self.x, self.y, "James Richard Tricia".to_string());
 	button::render(out, self.x + 6, self.y + 6, 17, "New Project");
 
 	// Project Listing

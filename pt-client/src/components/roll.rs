@@ -56,8 +56,12 @@ pub fn render(out: &mut Screen,
         } else {
             for j in 0..len {
                 if x_in + j < window.w {
+                    if canvas[y_size][(x_in + j) as usize] == "█" { 
+                        continue;
+                    } 
                     canvas[y_size][(x_in + j) as usize] = 
-                        if canvas[y_size][(x_in + j) as usize] == "▄" { "█" } else { "▀" }
+                        if canvas[y_size][(x_in + j) as usize] == "▄" { "█" } 
+                        else { "▀" }
                 }
             };
         };
@@ -65,10 +69,12 @@ pub fn render(out: &mut Screen,
 
     for (i, line) in canvas.iter().enumerate() {
         for (j, beat) in line.iter().enumerate() {
-            write!(out, "{}{}", cursor::Goto(
-                window.x + (j as u16),
-                window.y+i as u16,
-            ), beat).unwrap();
+            if *beat != "" {
+                write!(out, "{}{}", cursor::Goto(
+                    window.x + (j as u16),
+                    window.y+i as u16,
+                ), beat).unwrap();
+            }
         }
     }
 }
