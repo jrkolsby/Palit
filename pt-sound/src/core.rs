@@ -21,7 +21,8 @@ use dsp::daggy::petgraph::Bfs;
 #[cfg(target_os = "macos")]
 use portaudio as pa;
 
-use sample::signal;
+use sample::{Signal, signal, ring_buffer};
+use sample::interpolate::{Converter, Floor, Linear, Sinc};
 
 use crate::midi::{open_midi_dev, read_midi_event, connect_midi_source_ports};
 use crate::action::Action;
@@ -311,8 +312,15 @@ impl Node<[Output; CHANNELS]> for Module {
                 });
             },
             Module::Tape(ref mut store) => {
+                // Regardless of the target rate we are going to generate
+                // the same number of samples. However the playhead will
+                // progress depending on the target rate.
+                let source = signal::gen_mut(|| [tape::compute(store)]);
+                let frames = ring_buffer::Fixed::from(vec![[0.0]; buffer.len()]);
+                let interp = Sinc::new(frames);
+                let mut resampled = source.from_hz_to_hz(interp, 44100.0, 11025.0);
                 dsp::slice::map_in_place(buffer, |_| {
-                    Frame::from_fn(|_| tape::compute(store))
+                    Frame::from_fn(|_| resampled.next()[0])
                 });
             },
             // Modules which aren't sound-producing can still implement audio_requested
