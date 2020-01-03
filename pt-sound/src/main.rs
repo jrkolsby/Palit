@@ -87,14 +87,16 @@ fn main() -> Result<(), Box<error::Error>> {
 
         eprintln!("ACTION {:?}", a);
         match a {
-            Action::SetParam(n_id, _, _) => {
+            Action::Goto(n_id, _) |
+            Action::RecordAt(n_id, _) |
+            Action::MuteAt(n_id, _) |
+            Action::NoteOnAt(n_id, _, _) | 
+            Action::NoteOffAt(n_id, _) |
+            Action::SetParam(n_id, _, _) |
+            Action::Play(n_id) | 
+            Action::Stop(n_id) => {
                 if let Some(id) = operators.get(&n_id) {
                     patch[*id].dispatch(a)
-                }
-            },
-            Action::NoteOnAt(n_id, _, _) | Action::NoteOffAt(n_id, _) => {
-                if let Some(id) = operators.get(&n_id) {
-                    patch[*id].dispatch(a);
                 }
             },
             Action::NoteOn(_,_) | Action::NoteOff(_) | Action::Octave(_) => {
@@ -102,9 +104,11 @@ fn main() -> Result<(), Box<error::Error>> {
                     patch[*id].dispatch(a)
                 }
             },
-            Action::Play(n_id) | Action::Stop(n_id) => {
-                if let Some(id) = operators.get(&n_id) {
-                    patch[*id].dispatch(a)
+            Action::MoveRegion(m_id, r_id, track, offset) => {
+                if let Some(n_id) = operators.get(&m_id) {
+                    if let Some(node) = patch.node_mut(*n_id) {
+                        node.dispatch(a)
+                    }
                 }
             },
             Action::AddRoute(r_id) => {
@@ -148,13 +152,6 @@ fn main() -> Result<(), Box<error::Error>> {
                     }
                     _ => {}
                 }
-            }
-            Action::MoveRegion(m_id, r_id, track, offset) => {
-                if let Some(n_id) = operators.get(&m_id) {
-                    if let Some(node) = patch.node_mut(*n_id) {
-                        node.dispatch(a)
-                    }
-                }
             },
             Action::OpenProject(name) => {
                 *patch = Graph::new();
@@ -165,6 +162,8 @@ fn main() -> Result<(), Box<error::Error>> {
                     match &el.name[..] {
                         "timeline" => {
                             let mut anchors: Vec<NodeIndex> = vec![];
+                            // Mutate el by removing track elements until
+                            // none are left
                             while let Some(store) = tape::read(el) {
                                 let tape = patch.add_node(Module::Tape(store));
                                 anchors.push(tape); // INPUT
@@ -173,8 +172,14 @@ fn main() -> Result<(), Box<error::Error>> {
                             let operator = patch.add_node(Module::Operator(vec![], 
                                 anchors.clone(), 
                             ));
+                            // Because each track is stored as two anchors,
+                            // ... we need to make sure there is only one edge
+                            // ... to each track, otherwise actions will be 
+                            // ... dispatched two times. :^)
                             for anchor in anchors.iter() {
-                                patch.add_connection(operator, *anchor);
+                                if patch.find_connection(operator, *anchor).is_none() {
+                                    patch.add_connection(operator, *anchor);
+                                }
                             }
                             operators.insert(*id, operator);
                         },
@@ -213,7 +218,7 @@ fn main() -> Result<(), Box<error::Error>> {
                         },
                         "keyboard" => {
                             let (_, params) = param_map(el);
-                            let shift = *params.get("octave").unwrap_or(&4) as Key;
+                            let shift = *params.get("octave").unwrap_or(&0) as Key;
                             let octave = patch.add_node(Module::Octave(vec![], shift));
                             //let shift = patch.add_node(Module::Octave(vec![], 4));
                             let operator = patch.add_node(Module::Operator(vec![], 

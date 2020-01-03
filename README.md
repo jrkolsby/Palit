@@ -57,19 +57,19 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 - [X] UI-21: Add route, patch io
 
-- [ ] SOUND-13: Timeline looping
-- [ ] SOUND-14: Timeline editing
-- [ ] SOUND-15: Timeline XML save/load (BIG BRANCH)
+- [X] SOUND-10: Midi Tape
+- [X] SOUND-14: Timeline editing
+- [X] SOUND-15: Timeline XML save/load (BIG BRANCH)
 
-- [ ] INF-11: Double buffer
+- [X] INF-11: Double buffer
 
 ### FEBRUARY 1 2020
 
 - [ ] INF-5: Unicode Support in linux TTY with KMSCON
 
 - [ ] UI-17: Add module modal
-- [ ] SOUND-10: Midi Tape
 
+- [ ] SOUND-13: Timeline looping
 - [ ] SOUND-20: Import audio file to timeline
 
 ### MARCH 1 ( v1.0 )

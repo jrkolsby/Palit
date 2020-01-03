@@ -8,7 +8,7 @@ use sample::{signal, Signal, Sample};
 use xmltree::Element;
 use wavefile::{WaveFile, WaveFileIterator};
 
-use crate::core::{SF, SigGen, Output};
+use crate::core::{SF, SigGen, Output, Note, Key, Offset};
 use crate::action::Action;
 use crate::document::{param_map, param_add, mark_map, mark_add};
 
@@ -32,8 +32,15 @@ pub struct Store {
     pub duration: u32,
     pub playhead: u32, 
     pub regions: Vec<Region>,
+    pub notes: Vec<Note>,
     pub playing: bool,
+    pub recording: bool,
+    pub monitor: bool,
     pub track_id: u16,
+    pub out_queue: Vec<Action>,
+    pub note_queue: Vec<Note>,
+    pub sample_rate: u32,
+    pub beat: u32,
 }
 
 pub fn init() -> Store {
@@ -47,27 +54,114 @@ pub fn init() -> Store {
         loop_out: 0,
         playhead: 0,
         playing: false,
+        monitor: true,
+        recording: false,
         regions: vec![],
+        notes: vec![],
         track_id: 0,
+        out_queue: vec![],
+        note_queue: vec![],
+        sample_rate: 44180,
+        beat: 0,
     }
 }
 
 pub fn dispatch_requested(store: &mut Store) -> (
-        Option<Vec<Action>>, // Actions for outputs
-        Option<Vec<Action>>, // Actions for inputs
-        Option<Vec<Action>> // Actions for client
+        Option<Vec<Action>>,
+        Option<Vec<Action>>,
+        Option<Vec<Action>>
     ) {
-        if store.playing && store.playhead % 65536 == 0 {
-            (None, None, Some(vec![Action::Tick]))
-        } else {
-            (None, None, None)
+        let mut client_actions = vec![];
+        let mut output_actions = vec![];
+
+        for a in store.out_queue.iter() {
+            match a {
+                Action::AddNote(_, _) |
+                Action::Tick => client_actions.push(a.clone()),
+                _ => output_actions.push(a.clone())
+            }
         }
+
+        store.out_queue.clear();
+
+        (if output_actions.len() > 0 {
+            Some(output_actions)
+        } else {None}, 
+            None, 
+        if client_actions.len() > 0 {
+            Some(client_actions)
+        } else { None })
 }
 
 pub fn dispatch(store: &mut Store, a: Action) {
     match a {
         Action::Play(_) => { store.playing = true; },
-        Action::Stop(_) => { store.playing = false; },
+        Action::Stop(_) => { 
+            store.playing = false; 
+            if store.loop_on {
+                store.playhead = store.loop_in;
+            }
+        },
+        Action::RecordAt(_, t_id) => { 
+            if store.track_id == t_id {
+                store.recording = !store.recording;
+            }
+            eprintln!("RECORDING {}", store.recording);
+        },
+        Action::MuteAt(_, t_id) => { 
+            if store.track_id == t_id {
+                store.recording = !store.recording;
+            }
+        },
+        Action::Monitor(_) => { store.monitor = !store.monitor; },
+        Action::Loop(_, loop_in, loop_out) => { 
+            store.loop_in = loop_in; 
+            store.loop_out = loop_out; 
+            store.loop_on = true;
+        },
+        Action::LoopOff(_) => { store.loop_on = false; },
+        Action::Goto(_, offset) => { 
+            store.note_queue.clear();
+            store.playhead = offset; 
+        },
+        Action::NoteOn(note, vel) => {
+            // Push a new note to the end of store.notes 
+            // ... and redistribute the t_in and t_out 
+            // ... based on the rate and samples per bar
+            if store.recording {
+                store.note_queue.push(Note {
+                    id: store.notes.len() as u16,
+                    t_in: store.playhead,
+                    t_out: 0,
+                    note, 
+                    vel,
+                });
+            }
+            if store.monitor {
+                store.out_queue.push(Action::NoteOn(note, vel));
+            }
+        },
+        Action::NoteOff(note) => {
+            if let Some(on_index) = store.note_queue.iter().position(|n| n.note == note) {
+                if store.recording && store.playing {
+                    let on_note = store.note_queue.remove(on_index);
+                    let recorded_note = Note {
+                        id: on_note.id,
+                        t_in: on_note.t_in,
+                        t_out: store.playhead,
+                        note: on_note.note,
+                        vel: on_note.vel,
+                    };
+                    store.out_queue.push(Action::AddNote(
+                        recorded_note.id, recorded_note.clone(),
+                    ));
+                    store.notes.push(recorded_note);
+                }
+            }
+            if store.monitor {
+                store.out_queue.push(Action::NoteOff(note));
+            }
+        },
         _ => {}
     }
 }
@@ -76,14 +170,33 @@ pub fn compute(store: &mut Store) -> Output {
     let mut z: f32 = 0.0;
     if !store.playing { return z; }
     for region in store.regions.iter_mut() {
-        if store.playhead >= region.offset && store.playhead < region.offset + region.duration {
-            let index = (store.playhead-region.offset) as usize;
+        if store.playhead >= region.offset && store.playhead - region.offset < region.duration {
+            let index = (store.playhead - region.offset) as usize;
             let x: f32 = region.buffer[index];
             z += x * region.gain;
         }
     }
+    for note in store.notes.iter_mut() {
+        if note.t_in == store.playhead {
+            store.out_queue.push(Action::NoteOn(note.note, note.vel));
+        }
+        if note.t_out == store.playhead {
+            store.out_queue.push(Action::NoteOff(note.note));
+        }
+    }
     let z = z.min(0.999).max(-0.999);
-    store.playhead = store.playhead + 1;
+    store.playhead = if store.loop_on {
+        if store.playhead == store.loop_out {
+            store.loop_in
+        } else {
+            store.playhead + 1
+        }
+    } else { 
+        store.playhead + 1 
+    };
+    if store.playing && store.playhead % store.beat == 0 && store.track_id == 1 {
+        store.out_queue.push(Action::Tick);
+    }
     z
 }
 
@@ -125,6 +238,7 @@ pub fn read(doc: &mut Element) -> Option<Store> {
     store.time_note = (*params.get("time_note").unwrap()).try_into().unwrap();
     store.loop_in = (*marks.get("loop_in").unwrap()).try_into().unwrap();
     store.loop_out = (*marks.get("loop_out").unwrap()).try_into().unwrap();
+    store.beat = (60 * store.sample_rate) / (store.bpm as u32);
 
     for (name, value) in params.drain() {
         param_add(doc, value, name);

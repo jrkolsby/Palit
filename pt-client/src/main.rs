@@ -94,10 +94,22 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "I" => Action::SelectB,
             "SPC" => Action::SelectR,
 
+            "OCTAVE" => if argv[1].parse::<usize>().unwrap() == 1 {
+                Action::PitchUp 
+            } else {
+                Action::PitchDown
+            },
+
             "NOTE_ON" => Action::NoteOn(argv[1].parse::<u16>().unwrap(), 
                                         argv[2].parse::<f32>().unwrap()),
 
             "NOTE_OFF" => Action::NoteOff(argv[1].parse::<u16>().unwrap()),
+            
+            "NOTE_ADD" => Action::AddNote(argv[1].parse::<u16>().unwrap(),
+                                          argv[2].parse::<u8>().unwrap(),
+                                          argv[3].parse::<f32>().unwrap(),
+                                          argv[4].parse::<u32>().unwrap(),
+                                          argv[5].parse::<u32>().unwrap()),
 
             "UP" => Action::Up,
             "DN" => Action::Down,
@@ -237,6 +249,17 @@ fn main() -> std::io::Result<()> {
                 Action::Stop => {
                     ipc_sound.write(format!("STOP:{} ", target_id).as_bytes()).unwrap();
                 },
+                Action::Record => {
+                    ipc_sound.write(format!("RECORD:{} ", target_id).as_bytes()).unwrap();
+                },
+                Action::MuteTrack(track_id) => {
+                    ipc_sound.write(format!("MUTE_AT:{}:{} ", 
+                        target_id, track_id).as_bytes()).unwrap();
+                },
+                Action::RecordTrack(track_id) => {
+                    ipc_sound.write(format!("RECORD_AT:{}:{} ", 
+                        target_id, track_id).as_bytes()).unwrap();
+                },
                 Action::NoteOn(key, vel) => {
                     ipc_sound.write(format!("NOTE_ON_AT:{}:{}:{} ", 
                         target_id, key, vel).as_bytes()).unwrap();
@@ -268,7 +291,10 @@ fn main() -> std::io::Result<()> {
                 Action::SetParam(key, val) => {
                     ipc_sound.write(format!("SET_PARAM:{}:{}:{} ", 
                         target_id, key, val).as_bytes()).unwrap();
-                }
+                },
+                Action::Goto(playhead) => {
+                    ipc_sound.write(format!("GOTO:{}:{} ", target_id, playhead).as_bytes()).unwrap();
+                },
                 a @ Action::Up | 
                 a @ Action::Down => {
                     // Make sure to pin {home|route|...|route?}

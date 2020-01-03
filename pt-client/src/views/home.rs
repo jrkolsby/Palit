@@ -10,9 +10,9 @@ use crate::views::{Layer};
 use crate::components::{logo, button, bigtext};
 
 const PALIT_ROOT: &str = "/usr/local/palit/";
-const NUM_FOCII: usize = 3;
+const NUM_FOCII: usize = 1;
 const NUM_PROJECTS: usize = 4;
-const SIZE: (u16, u16) = (35, 15);
+const SIZE: (u16, u16) = (34, 15);
 
 // one possible implementation of walking a directory only visiting files
 fn visit_dirs(dir: &Path, mut collection: Vec<String>) -> io::Result<Vec<String>> {
@@ -102,8 +102,8 @@ impl Home {
 impl Layer for Home {
     fn render(&self, out: &mut Screen, target: bool) {
 
-    bigtext::render(out, self.x, self.y, "Iridosiklitis".to_string());
-	button::render(out, self.x + 10, self.y + 6, 17, "New Project");
+    bigtext::render(out, self.x, self.y, "James Richard Tricia".to_string());
+	button::render(out, self.x + 6, self.y + 6, 17, "New Project");
 
 	// Project Listing
 	let mut col: [u16; 2] = [4,4];

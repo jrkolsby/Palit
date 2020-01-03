@@ -26,10 +26,11 @@ pub fn read(doc: Element) -> TimelineState {
         seq_out: *marks.get("seq_out").unwrap(),
         loop_in: *marks.get("loop_in").unwrap(),
         loop_out: *marks.get("loop_out").unwrap(),
-        sample_rate: 48_000,
+        sample_rate: 44_100,
         tracks: HashMap::new(),
         assets: HashMap::new(),
         regions: HashMap::new(),
+        notes: vec![],
 
         loop_mode: false,
         tick: true,

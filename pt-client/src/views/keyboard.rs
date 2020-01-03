@@ -27,6 +27,11 @@ pub struct KeyboardState {
 
 fn reduce(state: KeyboardState, action: Action) -> KeyboardState {
     KeyboardState {
+        octave: match action {
+            Action::PitchUp => state.octave + 1,
+            Action::PitchDown => state.octave - 1,
+            _ => state.octave
+        },
         keys_active: match action {
             a @ Action::NoteOn(_, _) => {
                 let mut new_active = state.keys_active.clone();
@@ -43,7 +48,6 @@ fn reduce(state: KeyboardState, action: Action) -> KeyboardState {
             }
             _ => state.keys_active.clone()
         },
-        octave: state.octave,
         shift: state.shift,
         velocity: state.velocity
     }
@@ -55,7 +59,7 @@ impl Keyboard {
         // Initialize State
         let initial_state: KeyboardState = KeyboardState {
             keys_active: vec![],
-            octave: *params.get("octave").unwrap_or(&4) as usize,
+            octave: *params.get("octave").unwrap_or(&0) as usize,
             shift: *params.get("shift").unwrap_or(&0) as i8,
             velocity: *params.get("velocity").unwrap_or(&500) as f32 / 1000.
         };
@@ -79,7 +83,7 @@ impl Layer for Keyboard {
             w: self.width,
             h: self.height
         };
-        ivories::render(out, win, 3, &self.state.keys_active);
+        ivories::render(out, win, 5, &self.state.keys_active);
 
         write!(out, "{}OCT:{}", cursor::Goto(win.x, win.y), self.state.octave);
         write!(out, "{}SHIFT:{}", cursor::Goto(win.x, win.y+1), self.state.shift);

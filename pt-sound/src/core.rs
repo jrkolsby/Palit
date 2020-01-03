@@ -45,12 +45,14 @@ pub type Key = u8;
 pub type Param = i16;
 
 const CHANNELS: usize = 2;
-const FRAMES: u32 = 512;
+const FRAMES: u32 = 128;
 const SAMPLE_HZ: f64 = 44_100.0;
 
 const DEBUG_KEY_PERIOD: u16 = 24100;
 
+#[derive(Debug, Clone)]
 pub struct Note {
+    pub id: u16,
     pub t_in: Offset,
     pub t_out: Offset,
     pub note: Key,
@@ -234,7 +236,7 @@ impl Module {
             Module::Octave(ref mut queue, ref mut n) => { 
                 match a {
                     Action::NoteOn(_, _) | Action::NoteOff(_) => { queue.push(a.clone()); },
-                    Action::Octave(up) => if up { *n = *n+1; } else { *n = *n-1; },
+                    Action::Octave(up) => if up { *n = *n+1; } else { *n = if *n > 0 { *n-1 } else { 0 }; },
                     _ => (),
                 }
             },
@@ -372,13 +374,19 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
         }
         if let Some(client_a) = client_d {
             for a in client_a.iter() {
+                eprintln!("{:?}", a);
                 let message = match a {
-                    Action::Tick => "TICK ".to_string(),
-                    Action::NoteOn(n,v) => format!("NOTE_ON:{}:{} ", n, v),
-                    Action::NoteOff(n) => format!("NOTE_OFF:{} ", n),
-                    _ => "".to_string(),
+                    Action::Tick => Some("TICK ".to_string()),
+                    Action::NoteOn(n,v) => Some(format!("NOTE_ON:{}:{} ", n, v)),
+                    Action::NoteOff(n) => Some(format!("NOTE_OFF:{} ", n)),
+                    Action::AddNote(id, n) => Some(format!("NOTE_ADD:{}:{}:{}:{}:{} ",
+                        id, n.note, n.vel, n.t_in, n.t_out
+                    )),
+                    _ => None
                 };
-                ipc_client.write(message.as_bytes());
+                if let Some(text) = message {
+                    ipc_client.write(text.as_bytes());
+                }
             }
         }
     }
@@ -415,6 +423,11 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "EXIT" => Action::Exit,
             "PLAY" => Action::Play(argv[1].parse::<u16>().unwrap()),
             "STOP" => Action::Stop(argv[1].parse::<u16>().unwrap()),
+            "RECORD" => Action::Record(argv[1].parse::<u16>().unwrap()),
+            "RECORD_AT" => Action::RecordAt(argv[1].parse::<u16>().unwrap(),
+                                          argv[2].parse::<u16>().unwrap()),
+            "MUTE_AT" => Action::MuteAt(argv[1].parse::<u16>().unwrap(),
+                                        argv[2].parse::<u16>().unwrap()),
             "NOTE_ON" => Action::NoteOn(argv[1].parse::<u8>().unwrap(), 
                                         argv[2].parse::<f64>().unwrap()),
             "NOTE_OFF" => Action::NoteOff(argv[1].parse::<u8>().unwrap()),
@@ -439,6 +452,8 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "SET_PARAM" => Action::SetParam(argv[1].parse::<u16>().unwrap(),
                                             argv[2].to_string(),
                                             argv[3].parse::<i32>().unwrap()),
+            "GOTO" => Action::Goto(argv[1].parse::<u16>().unwrap(),
+                                   argv[2].parse::<u32>().unwrap()),
             _ => Action::Noop,
         };
 
@@ -457,7 +472,6 @@ pub fn event_loop<F: 'static>(
         mut ipc_client: File, 
         mut patch: Graph<[Output; CHANNELS], Module>, 
         mut dispatch_f: F) -> Result<(), Box<error::Error>> 
-
     where F: FnMut(&mut Graph<[Output; CHANNELS], Module>, Action) {
     
     // Get audio devices
@@ -483,7 +497,7 @@ pub fn event_loop<F: 'static>(
 
         let ipc_actions: Vec<Action> = ipc_action(&ipc_in);
 
-        match ipc_dispatch(ipc_actions, &mut patch, &dispatch_f) {
+        match ipc_dispatch(ipc_actions, &mut patch, &mut dispatch_f) {
             Action::Exit => { return Ok(()) },
             _ => {}
         }

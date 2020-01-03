@@ -29,7 +29,7 @@
             <mark value="0" name="seq_in" />
             <mark value="0" name="seq_out" />
             <mark value="0" name="loop_in" />
-            <mark value="0" name="loop_out" />
+            <mark value="480000" name="loop_out" />
             <mark value="0" name="playhead" />
             <param value="4" name="time_beat" />
             <param value="4" name="time_note" />
@@ -47,7 +47,7 @@
                 <region id="8" asset="0" in="0" out="1488000" offset="80000" />
             </track>
             <track id="3">
-                <region id="7" asset="2" in="0" out="1728000" offset="0" />
+                <region id="7" asset="2" in="0" out="172800" offset="0" />
                 <region id="5" asset="2" in="0" out="708800" offset="1808000" />
             </track>
         </timeline>

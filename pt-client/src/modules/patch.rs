@@ -24,9 +24,6 @@ pub fn read(doc: Element) -> RoutesState {
         focus: (0,0),
     };
 
-    // keep track of track index for vertical positioning
-    let mut counter: u16 = 0;
-
     while let Some(mut route) = doc.take_child("route") {
         let r_id: &str = route.attributes.get("id").unwrap();
         let _r_id = r_id.parse::<u16>().unwrap();

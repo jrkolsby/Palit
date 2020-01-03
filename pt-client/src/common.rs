@@ -63,6 +63,15 @@ pub enum Direction {
     SE,
 }
 
+#[derive(Clone, Debug)]
+pub struct Note {
+    pub id: u16,
+    pub note: Key,
+    pub vel: f32,
+    pub t_in: Offset,
+    pub t_out: Offset,
+}
+
 #[derive(Clone, Copy, Debug)]
 pub struct Window {
     pub x: u16,

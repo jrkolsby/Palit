@@ -7,10 +7,10 @@ use termion::cursor;
 use std::io::{Write, Stdout};
 use std::collections::HashMap;
 
-use crate::components::{tempo, button, ruler, region};
+use crate::components::{tempo, button, ruler, region, roll};
 use crate::common::{ID, VOID_ID, FocusType};
 use crate::common::{MultiFocus, render_focii, shift_focus };
-use crate::common::{Screen, Action, Asset, Region, Track, Anchor, Window};
+use crate::common::{Screen, Action, Asset, Region, Track, Anchor, Window, Note};
 use crate::common::{beat_offset, offset_beat, generate_waveforms};
 use crate::modules::timeline;
 use crate::views::{Layer};
@@ -37,6 +37,7 @@ pub struct TimelineState {
     pub tracks: HashMap<u16, Track>,
     pub assets: HashMap<u16, Asset>,
     pub regions: HashMap<u16, Region>,
+    pub notes: Vec<Note>,
 
     // Ephemeral variables
     pub tick: bool,
@@ -73,7 +74,7 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
             r: |out, window, id, state, focus| 
                 button::render(out, 2, 2, 20, "RECORD"),
             r_t: |a, id, _| match a { 
-                Action::SelectR => Action::RecordAt(id.1), 
+                Action::SelectR => Action::Record, 
                 _ => Action::Noop 
             },
 
@@ -120,15 +121,24 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
 
                 r: |mut out, win, id, state, focus|
                     button::render(out, win.x+TRACKS_X, win.y+TIMELINE_Y+2*id.1, 3, "R"),
-                r_t: |action, id, _| Action::RecordAt(id.1),
+                r_t: |action, id, _| match action {
+                    Action::SelectR => Action::RecordTrack(id.1),
+                    _ => Action::Noop,
+                },
 
                 g: |mut out, win, id, state, focus|
                     button::render(out, win.x+TRACKS_X+4, win.y+TIMELINE_Y+(2*id.1), 3, "M"),
-                g_t: |action, id, _| Action::MuteAt(id.1),
+                g_t: |action, id, _| match action {
+                    Action::SelectG => Action::MuteTrack(id.1),
+                    _ => Action::Noop,
+                },
 
                 b: |mut out, win, id, state, focus|
                     button::render(out, win.x+TRACKS_X+8, win.y+TIMELINE_Y+(2*id.1), 3, "S"),
-                b_t: |action, id, _| Action::SoloAt(id.1),
+                b_t: |action, id, _| match action {
+                    Action::SelectB => Action::SoloTrack(id.1),
+                    _ => Action::Noop,
+                },
 
                 p: VOID_RENDER,
                 p_t: VOID_TRANSFORM,
@@ -167,7 +177,7 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         sample_rate: state.sample_rate.clone(),
         tracks: state.tracks.clone(),
         assets: state.assets.clone(),
-        regions: match action {
+        regions: match action.clone() {
             Action::MoveRegion(id, t_id, offset) => {
                 let mut new_regions = state.regions.clone();
                 let r = new_regions.get_mut(&id).unwrap();
@@ -176,6 +186,20 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
                 new_regions
             },
             _ => state.regions.clone(),
+        },
+        notes: match action {
+            Action::AddNote(id, note, velocity, t_in, t_out) => {
+                let mut new_notes = state.notes.clone();
+                new_notes.push(Note {
+                    id,
+                    note,
+                    vel: velocity,
+                    t_in,
+                    t_out
+                });
+                new_notes
+            },
+            _ => state.notes.clone()
         },
         tick: (state.playhead % 2) == 0,
         playhead: match action {
@@ -269,6 +293,19 @@ impl Layer for Timeline {
             self.state.zoom,
             self.state.scroll_x,
             playhead_offset);
+
+        roll::render(out,
+            Window { 
+                x: win.x + REGIONS_X, 
+                y: win.y + TIMELINE_Y,
+                w: win.w - REGIONS_X,
+                h: win.h - TIMELINE_Y,
+            },
+            self.state.scroll_x.into(),
+            self.state.sample_rate,
+            self.state.tempo,
+            self.state.zoom,
+            &self.state.notes);
     }
 
     fn dispatch(&mut self, action: Action) -> Action {
@@ -280,7 +317,7 @@ impl Layer for Timeline {
         self.state = reduce(self.state.clone(), _action.clone());
         
         // Intercept arrow actions to change focus or to return
-        let (focus, default) = match _action {
+        let (focus, default) = match _action.clone() {
             // Only shift focus horizontally if playhead has exceeded current region
             Action::Left => match multi_focus.w_id.0 {
                 FocusType::Region => {
@@ -335,10 +372,12 @@ impl Layer for Timeline {
             Action::Route => {
                 let mut anchors = vec![];
                 let mut counter = 0;
-                for (id, track) in self.state.tracks.iter() {
+                let mut sorted_tracks: Vec<(&u16, &Track)> = self.state.tracks.iter().collect();
+                sorted_tracks.sort_by(|a, b| a.0.partial_cmp(&b.0).unwrap());
+                for (id, track) in sorted_tracks.iter() {
                     // Track output
                     anchors.push(Anchor {
-                        name: format!("Out {}", *id),
+                        name: format!("Track {}", *id),
                         index: counter,
                         module_id: 0,
                         input: false,
@@ -346,7 +385,7 @@ impl Layer for Timeline {
                     counter += 1;
                     // Track input
                     anchors.push(Anchor {
-                        name: format!("In {}", *id),
+                        name: format!("Track {}", *id),
                         index: counter,
                         module_id: 0,
                         input: true,
@@ -355,6 +394,13 @@ impl Layer for Timeline {
                 }
                 (self.state.focus, Some(Action::ShowAnchors(anchors)))
             }
+            a @ Action::RecordTrack(_) |
+            a @ Action::MuteTrack(_) |
+            a @ Action::SoloTrack(_) |
+            a @ Action::Play |
+            a @ Action::Stop |
+            a @ Action::Record |
+            a @ Action::Goto(_) => (self.state.focus, Some(a)),
             _ => (self.state.focus, None)
         };
 
@@ -362,7 +408,11 @@ impl Layer for Timeline {
 
         match default {
             Some(a) => a,
-            None => Action::Noop
+            None => match _action {
+                Action::Left |
+                Action::Right => Action::Goto(self.state.playhead),
+                _ => Action::Noop
+            }
         }
     }
     fn undo(&mut self) {

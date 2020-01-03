@@ -64,6 +64,8 @@ fn reduce(state: PianoState, action: Action) -> PianoState {
     }
 }
 
+const SIZE: (u16, u16) = (70, 30);
+
 impl Piano {
     pub fn new(x: u16, y: u16, width: u16, height: u16, doc: Element) -> Self {
 
@@ -91,8 +93,8 @@ impl Piano {
         };
 
         Piano {
-            x: x,
-            y: y,
+            x: x + (width / 2) - (SIZE.0 / 2),
+            y: y + height - SIZE.1,
             width: width,
             height: height,
             state: initial_state,
@@ -111,7 +113,7 @@ impl Piano {
                     },
                     g_id: (FocusType::Button, 0),
                     y: |mut out, window, id, state, focus| {
-                        slider::render(out, window.x+10, window.y+5, "5 1/3'".to_string(), 
+                        slider::render(out, window.x+10, window.y+5, "5⅓'".to_string(), 
                             state.eq[1], Direction::North)
                     },
                     y_t: |action, id, state| match action {
@@ -158,7 +160,7 @@ impl Piano {
                     w_id: (FocusType::Void, 0),
 
                     g: |mut out, window, id, state, focus| {
-                        slider::render(out, window.x+25, window.y+5, "2.6'".to_string(), 
+                        slider::render(out, window.x+25, window.y+5, "2⅔'".to_string(), 
                             state.eq[4], Direction::North)
                     },
                     g_t: |action, id, state| match action { 
@@ -183,7 +185,7 @@ impl Piano {
                     },
                     y_id: (FocusType::Button, 0),
                     p: |mut out, window, id, state, focus| {
-                        slider::render(out, window.x+35, window.y+5, "1.6'".to_string(), 
+                        slider::render(out, window.x+35, window.y+5, "1⅗'".to_string(), 
                             state.eq[6], Direction::North)
                     },
                     p_t: |action, id, state| match action {
@@ -195,7 +197,7 @@ impl Piano {
                     },
                     p_id: (FocusType::Button, 0),
                     b: |mut out, window, id, state, focus| {
-                        slider::render(out, window.x+40, window.y+5, "1.3'".to_string(), 
+                        slider::render(out, window.x+40, window.y+5, "1⅓'".to_string(), 
                             state.eq[7], Direction::North)
                     },
                     b_t: |action, id, state| match action {
@@ -258,13 +260,13 @@ impl Layer for Piano {
                         Anchor {
                             index: 0, 
                             module_id: 0,
-                            name: "Out".to_string(),
+                            name: "Speaker".to_string(),
                             input: false,
                         },
                         Anchor {
                             index: 1, 
                             module_id: 0,
-                            name: "Keys".to_string(),
+                            name: "MIDI In".to_string(),
                             input: true,
                         }])
                 },

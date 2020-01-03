@@ -64,13 +64,14 @@ impl Layer for Arpeggio {
             Action::Route => Action::ShowAnchors(vec![Anchor {
                 index: 0,
                 module_id: 0,
-                name: "In".to_string(),
-                input: true,
-            }, Anchor {
-                index: 1,
-                module_id: 0,
                 name: "Arp Out".to_string(),
                 input: false,
+            },
+            Anchor {
+                index: 1,
+                module_id: 0,
+                name: "Arp In".to_string(),
+                input: true,
             }]),
             a @ Action::Up | a @ Action::Down => a,
             _ => Action::Noop

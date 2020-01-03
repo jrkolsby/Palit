@@ -32,6 +32,7 @@ fn distribute_notes(notes: &mut Vec<Note>, length: Offset) {
     for mut note in notes.iter_mut() {
         note.t_in = i*samples_per_event;
         note.t_out = (i+1)*samples_per_event;
+        note.id = i as u16;
         i = i+2;
     }
 }
@@ -39,11 +40,11 @@ fn distribute_notes(notes: &mut Vec<Note>, length: Offset) {
 pub fn dispatch(store: &mut Store, action: Action) {
     match action {
         Action::NoteOn(note, vel) => {
-            println!("arp on {}", note);
             // Push a new note to the end of store.notes 
             // ... and redistribute the t_in and t_out 
             // ... based on the rate and samples per bar
             store.notes.push(Note {
+                id: 0,
                 t_in: 0,
                 t_out: 0,
                 note, 
