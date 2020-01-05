@@ -293,10 +293,10 @@ pub fn read(doc: &mut Element) -> Option<Store> {
                     let src: &str = asset.attributes.get("src").unwrap();
                     let duration: &str = asset.attributes.get("size").unwrap();
 
-                    let mut wav_f = WaveFile::open("Who.wav").unwrap();
+                    let mut wav_f = WaveFile::open(src).unwrap();
                     let mut wav_iter = wav_f.iter();
 
-                    buffer = wav_iter.map(|f| f[0] as f32 * 0.0000001).collect();
+                    buffer = wav_iter.map(|f| f[0] as f32 * 0.000001).collect();
                 }
             }
 
