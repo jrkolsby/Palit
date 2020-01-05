@@ -42,11 +42,11 @@ pub enum Action {
     MuteAt(u16, u16),
     AddNote(u16, Note),
     Scrub(u16, bool),
+    Tick(Offset),
 
     // Module ID, region ID, new track, new offset
     MoveRegion(u16, u16, u16, u16), 
 
-    Tick,
     Exit,
     Noop,
 }

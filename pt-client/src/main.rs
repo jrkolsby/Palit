@@ -78,7 +78,7 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
         let action = match argv[0] {
             "ROUTE" => Action::Route,
 
-            "TICK" => Action::Tick,
+            "TICK" => Action::Tick(argv[1].parse::<u32>().unwrap()),
 
             "?" => Action::Noop,
 

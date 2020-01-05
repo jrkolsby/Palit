@@ -79,7 +79,7 @@ pub fn dispatch_requested(store: &mut Store) -> (
         for a in store.out_queue.iter() {
             match a {
                 Action::AddNote(_, _) |
-                Action::Tick => client_actions.push(a.clone()),
+                Action::Tick(_) => client_actions.push(a.clone()),
                 _ => output_actions.push(a.clone())
             }
         }
@@ -116,7 +116,6 @@ pub fn dispatch(store: &mut Store, a: Action) {
             if store.track_id == t_id {
                 store.recording = !store.recording;
             }
-            eprintln!("RECORDING {}", store.recording);
         },
         Action::MuteAt(_, t_id) => { 
             if store.track_id == t_id {
@@ -198,12 +197,12 @@ pub fn compute(store: &mut Store) -> Output {
 
     // Metronome
     if store.playhead % store.beat == 0 && store.track_id == 1 {
-        store.out_queue.push(Action::Tick);
+        store.out_queue.push(Action::Tick(store.playhead));
     }
 
     // Play direction
     store.playhead = if store.velocity > 0.0 { store.playhead + 1 }
-        else if store.velocity < 0.0 { store.playhead - 1 } 
+        else if store.velocity < 0.0 && store.playhead > 0 { store.playhead - 1 } 
         else { store.playhead };
 
     // Looping

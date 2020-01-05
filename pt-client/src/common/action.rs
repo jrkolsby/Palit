@@ -32,11 +32,11 @@ pub enum Action {
     VolumeUp,
     VolumeDown,
     Help,
-    Tick,
     Exit,
     Deselect,
     Record,
     Goto(u32),
+    Tick(u32),
     Scrub(bool),
 
     // Patching actions

@@ -50,7 +50,7 @@ const FRAMES: u32 = 128;
 const SAMPLE_HZ: f64 = 44_100.0;
 const DEBUG_KEY_PERIOD: u16 = 24100;
 const SCRUB_MAX: f64 = 4.0;
-const SCRUB_FACTOR: f64 = 1.05;
+const SCRUB_INERTIA: f64 = 1.005;
 
 #[derive(Debug, Clone)]
 pub struct Note {
@@ -323,26 +323,17 @@ impl Node<[Output; CHANNELS]> for Module {
                     let mut source = signal::gen_mut(|| [tape::compute(store)] );
                     let interp = Linear::from_source(&mut source);
                     let mut resampled = source.scale_hz(interp, interp_factor);
-
                     dsp::slice::map_in_place(buffer, |_| {
                         Frame::from_fn(|_| resampled.next()[0])
                     });
                 }
 
-                // EXPO SCRUBBING
+                // Exponential velocity scrub (tape inertia)
                 if let Some(dir) = store.scrub {
-                    let expo_vel = store.velocity * if dir { 
-                        SCRUB_FACTOR 
-                    } else { 
-                        -SCRUB_FACTOR 
-                    };
-                    if expo_vel > SCRUB_MAX {
-                        store.velocity = SCRUB_MAX;
-                    } else if expo_vel < -SCRUB_MAX {
-                        store.velocity = -SCRUB_MAX;
-                    } else {
-                        store.velocity = expo_vel;
-                    }
+                    let expo_vel = store.velocity * SCRUB_INERTIA;
+                    store.velocity = if expo_vel > SCRUB_MAX { SCRUB_MAX } 
+                        else if expo_vel < -SCRUB_MAX { -SCRUB_MAX } 
+                        else { expo_vel }
                 }
 
                 /* SINC IS TOO SLOW
@@ -415,7 +406,7 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
             for a in client_a.iter() {
                 eprintln!("{:?}", a);
                 let message = match a {
-                    Action::Tick => Some("TICK ".to_string()),
+                    Action::Tick(offset) => Some(format!("TICK:{} ", offset)),
                     Action::NoteOn(n,v) => Some(format!("NOTE_ON:{}:{} ", n, v)),
                     Action::NoteOff(n) => Some(format!("NOTE_OFF:{} ", n)),
                     Action::AddNote(id, n) => Some(format!("NOTE_ADD:{}:{}:{}:{}:{} ",
