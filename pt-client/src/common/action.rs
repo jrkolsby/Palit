@@ -37,6 +37,7 @@ pub enum Action {
     Deselect,
     Record,
     Goto(u32),
+    Scrub(bool),
 
     // Patching actions
     Route,

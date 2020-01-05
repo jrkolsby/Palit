@@ -48,8 +48,9 @@ pub type Param = i16;
 const CHANNELS: usize = 2;
 const FRAMES: u32 = 128;
 const SAMPLE_HZ: f64 = 44_100.0;
-
 const DEBUG_KEY_PERIOD: u16 = 24100;
+const SCRUB_MAX: f64 = 4.0;
+const SCRUB_FACTOR: f64 = 1.05;
 
 #[derive(Debug, Clone)]
 pub struct Note {
@@ -312,16 +313,46 @@ impl Node<[Output; CHANNELS]> for Module {
                 });
             },
             Module::Tape(ref mut store) => {
-                // Regardless of the target rate we are going to generate
-                // the same number of samples. However the playhead will
-                // progress depending on the target rate.
-                let source = signal::gen_mut(|| [tape::compute(store)]);
-                let frames = ring_buffer::Fixed::from(vec![[0.0]; buffer.len()]);
+                let interp_factor = store.velocity.abs();
+                if interp_factor == 0.0 { return; }
+                if interp_factor == 1.0 {
+                    dsp::slice::map_in_place(buffer, |_| {
+                        Frame::from_fn(|_| tape::compute(store))
+                    });
+                } else {
+                    let mut source = signal::gen_mut(|| [tape::compute(store)] );
+                    let interp = Linear::from_source(&mut source);
+                    let mut resampled = source.scale_hz(interp, interp_factor);
+
+                    dsp::slice::map_in_place(buffer, |_| {
+                        Frame::from_fn(|_| resampled.next()[0])
+                    });
+                }
+
+                // EXPO SCRUBBING
+                if let Some(dir) = store.scrub {
+                    let expo_vel = store.velocity * if dir { 
+                        SCRUB_FACTOR 
+                    } else { 
+                        -SCRUB_FACTOR 
+                    };
+                    if expo_vel > SCRUB_MAX {
+                        store.velocity = SCRUB_MAX;
+                    } else if expo_vel < -SCRUB_MAX {
+                        store.velocity = -SCRUB_MAX;
+                    } else {
+                        store.velocity = expo_vel;
+                    }
+                }
+
+                /* SINC IS TOO SLOW
+                let frames = ring_buffer::Fixed::from(vec![[0.0]; 10]);
                 let interp = Sinc::new(frames);
-                let mut resampled = source.from_hz_to_hz(interp, 44100.0, 11025.0);
+                let mut resampled = source.from_hz_to_hz(interp, 44100.0, 44100.0);
                 dsp::slice::map_in_place(buffer, |_| {
                     Frame::from_fn(|_| resampled.next()[0])
                 });
+                */
             },
             // Modules which aren't sound-producing can still implement audio_requested
             // ... to keep time, such as envelopes or arpeggiators
@@ -445,6 +476,8 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "NOTE_OFF_AT" => Action::NoteOffAt(argv[1].parse::<u16>().unwrap(),
                                                argv[2].parse::<u8>().unwrap()),
             "OCTAVE" => Action::Octave(argv[1].parse::<u8>().unwrap() == 1),
+            "SCRUB" => Action::Scrub(argv[1].parse::<u16>().unwrap(),
+                                     argv[2].parse::<u8>().unwrap() == 1),
             "OPEN_PROJECT" => Action::OpenProject(argv[1].to_string()),
             "PATCH_OUT" => Action::PatchOut(argv[1].parse::<u16>().unwrap(),
                                             argv[2].parse::<usize>().unwrap(),

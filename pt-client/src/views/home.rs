@@ -47,10 +47,7 @@ pub struct HomeState {
 }
 
 fn reduce(state: HomeState, action: Action) -> HomeState {
-    let scroll_max = match state.projects.len()/4 {
-        0 => 1,
-        x => x+1,
-    };
+    let scroll_max = (match state.projects.len() { 0 => 0, x => x - 1 }) / 4 + 1;
     let scroll_x = match action {
         Action::Left => {
             if state.scroll_x == 0 { scroll_max-1 } else {
@@ -102,11 +99,11 @@ impl Home {
 impl Layer for Home {
     fn render(&self, out: &mut Screen, target: bool) {
 
-    bigtext::render(out, self.x, self.y, "James Richard Tricia".to_string());
-	button::render(out, self.x + 6, self.y + 6, 17, "New Project");
+        bigtext::render(out, self.x, self.y, "Palit Studio".to_string());
+        button::render(out, self.x + 6, self.y + 6, 17, "New Project");
 
-	// Project Listing
-	let mut col: [u16; 2] = [4,4];
+        // Project Listing
+        let mut col: [u16; 2] = [4,4];
         for (i, project) in self.state.projects.iter().enumerate() {
             if i >= self.state.scroll_x * NUM_PROJECTS && 
                 i < (self.state.scroll_x+1) * NUM_PROJECTS {
@@ -141,11 +138,8 @@ impl Layer for Home {
     fn dispatch(&mut self, action: Action) -> Action {
         self.state = reduce(self.state.clone(), action.clone());
         let num_projects: usize = self.state.projects.len();
-        let num_choices: usize = {
-            if (self.state.scroll_x+1)*NUM_PROJECTS < num_projects {
-                NUM_PROJECTS
-            } else { num_projects % NUM_PROJECTS }
-        };
+        let mut num_choices = num_projects - (self.state.scroll_x * NUM_PROJECTS);
+        num_choices = if num_choices > 4 { 4 } else { num_choices };
         match action {
             Action::SelectR => { Action::InputTitle }
             Action::SelectY => {

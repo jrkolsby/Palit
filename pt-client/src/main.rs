@@ -252,6 +252,10 @@ fn main() -> std::io::Result<()> {
                 Action::Record => {
                     ipc_sound.write(format!("RECORD:{} ", target_id).as_bytes()).unwrap();
                 },
+                Action::Scrub(dir) => {
+                    ipc_sound.write(format!("SCRUB:{}:{} ", 
+                        target_id, if dir { "1"} else { "0" }).as_bytes()).unwrap();
+                },
                 Action::MuteTrack(track_id) => {
                     ipc_sound.write(format!("MUTE_AT:{}:{} ", 
                         target_id, track_id).as_bytes()).unwrap();

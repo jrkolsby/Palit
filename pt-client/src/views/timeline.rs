@@ -204,9 +204,6 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         tick: (state.playhead % 2) == 0,
         playhead: match action {
             Action::Tick => state.playhead + o1,
-            Action::Right => state.playhead + o1,
-            Action::Left => if state.playhead < o1 { 0 } 
-                else { state.playhead - o1 },
             _ => state.playhead.clone(),
         },
         zoom: state.zoom.clone(),
@@ -319,6 +316,7 @@ impl Layer for Timeline {
         // Intercept arrow actions to change focus or to return
         let (focus, default) = match _action.clone() {
             // Only shift focus horizontally if playhead has exceeded current region
+            /*
             Action::Left => match multi_focus.w_id.0 {
                 FocusType::Region => {
                     let region = self.state.regions.get(&multi_focus.w_id.1).unwrap();
@@ -348,6 +346,9 @@ impl Layer for Timeline {
                 },
                 _ => shift_focus(self.state.focus, &self.focii, Action::Right),
             },
+            */
+            Action::Left => (self.state.focus, Some(Action::Scrub(false))),
+            Action::Right => (self.state.focus, Some(Action::Scrub(true))),
             Action::Up | Action::Down => shift_focus(self.state.focus, &self.focii, _action.clone()),
             Action::Deselect => {
                 // Get the global (white) ID of the current focus, generate a new focii
