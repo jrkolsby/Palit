@@ -308,42 +308,36 @@ impl Layer for Timeline {
 
         self.state = reduce(self.state.clone(), _action.clone());
         
-        // Intercept arrow actions to change focus or to return
+        // Actions which affect focii
         let (focus, default) = match _action.clone() {
-            // Only shift focus horizontally if playhead has exceeded current region
-            /*
-            Action::Left => match multi_focus.w_id.0 {
+            // Move focus to intersecting region on Tick
+            Action::Tick(time) => match multi_focus.w_id.0 {
                 FocusType::Region => {
-                    let region = self.state.regions.get(&multi_focus.w_id.1).unwrap();
-
-                    if self.state.playhead <= region.offset  {
-                        shift_focus(self.state.focus, &self.focii, Action::Left)
-                    } else {
-                        (self.state.focus, None)
+                    // Find selected region within selected track
+                    let mut new_focus = self.state.focus.0;
+                    for (i, focus) in self.focii[self.state.focus.1].iter().enumerate() {
+                        let region = self.state.regions.get(&focus.w_id.1).unwrap();
+                        let duration = region.asset_out - region.asset_in;
+                        if time >= region.offset && time < region.offset + duration {
+                            new_focus = i;
+                        }
                     }
+                    ((new_focus, self.state.focus.1), Some(Action::Noop))
                 },
+                _ => (self.state.focus, Some(Action::Noop))
+            },
+            Action::Left => match multi_focus.w_id.0 {
+                FocusType::Region => if self.state.playhead == 0 {
+                    shift_focus(self.state.focus, &self.focii, Action::Left)
+                } else {
+                    (self.state.focus, Some(Action::Scrub(false)))
+                }
                 _ => shift_focus(self.state.focus, &self.focii, Action::Left),
             },
             Action::Right => match multi_focus.w_id.0 {
-                FocusType::Region => {
-                    if self.state.focus.0 == self.focii[self.state.focus.1].len()-1 {
-                        (self.state.focus, None)
-                    } else {
-                        let next_focus = &mut self.focii[self.state.focus.1][self.state.focus.0+1];
-                        let next_region = self.state.regions.get(&next_focus.w_id.1).unwrap();
-
-                        if self.state.playhead >= next_region.offset {
-                            shift_focus(self.state.focus, &self.focii, Action::Right)
-                        } else {
-                            (self.state.focus, None)
-                        }
-                    }
-                },
+                FocusType::Region => (self.state.focus, Some(Action::Scrub(true))),
                 _ => shift_focus(self.state.focus, &self.focii, Action::Right),
             },
-            */
-            Action::Left => (self.state.focus, Some(Action::Scrub(false))),
-            Action::Right => (self.state.focus, Some(Action::Scrub(true))),
             Action::Up | Action::Down => shift_focus(self.state.focus, &self.focii, _action.clone()),
             Action::Deselect => {
                 // Get the global (white) ID of the current focus, generate a new focii

@@ -50,7 +50,7 @@ const FRAMES: u32 = 128;
 const SAMPLE_HZ: f64 = 44_100.0;
 const DEBUG_KEY_PERIOD: u16 = 24100;
 const SCRUB_MAX: f64 = 4.0;
-const SCRUB_INERTIA: f64 = 1.005;
+const SCRUB_ACC: f64 = 0.1;
 
 #[derive(Debug, Clone)]
 pub struct Note {
@@ -191,8 +191,11 @@ pub fn event_loop<F: 'static>(
 
     // Construct PortAudio and the stream.
     let pa = pa::PortAudio::new()?;
-    let settings =
-        pa.default_output_stream_settings::<Output>(CHANNELS as i32, SAMPLE_HZ, FRAMES)?;
+    let settings = pa.default_output_stream_settings::<Output>(
+        CHANNELS as i32, 
+        SAMPLE_HZ, 
+        FRAMES
+    )?;
     let mut stream = pa.open_non_blocking_stream(settings, callback)?;
     stream.start()?;
 
@@ -313,7 +316,15 @@ impl Node<[Output; CHANNELS]> for Module {
                 });
             },
             Module::Tape(ref mut store) => {
+                // Exponential velocity scrub (tape inertia)
                 let interp_factor = store.velocity.abs();
+                if let Some(dir) = store.scrub {
+                    let expo_vel = store.velocity + if dir { SCRUB_ACC } 
+                        else { -SCRUB_ACC };
+                    store.velocity = if expo_vel > SCRUB_MAX { SCRUB_MAX } 
+                        else if expo_vel < -SCRUB_MAX { -SCRUB_MAX } 
+                        else { expo_vel }
+                }
                 if interp_factor == 0.0 { return; }
                 if interp_factor == 1.0 {
                     dsp::slice::map_in_place(buffer, |_| {
@@ -328,15 +339,8 @@ impl Node<[Output; CHANNELS]> for Module {
                     });
                 }
 
-                // Exponential velocity scrub (tape inertia)
-                if let Some(dir) = store.scrub {
-                    let expo_vel = store.velocity * SCRUB_INERTIA;
-                    store.velocity = if expo_vel > SCRUB_MAX { SCRUB_MAX } 
-                        else if expo_vel < -SCRUB_MAX { -SCRUB_MAX } 
-                        else { expo_vel }
-                }
 
-                /* SINC IS TOO SLOW
+                /*
                 let frames = ring_buffer::Fixed::from(vec![[0.0]; 10]);
                 let interp = Sinc::new(frames);
                 let mut resampled = source.from_hz_to_hz(interp, 44100.0, 44100.0);

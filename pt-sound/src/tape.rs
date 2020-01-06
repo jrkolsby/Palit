@@ -99,8 +99,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
     match a {
         Action::Scrub(_, dir) => {
             store.scrub = Some(dir);
-            store.velocity = if dir { 0.1 } else { -0.1 };
-        }
+        },
         Action::Play(_) => { 
             store.velocity = 1.0; 
             store.scrub = None;
@@ -179,7 +178,8 @@ pub fn compute(store: &mut Store) -> Output {
     let mut z: f32 = 0.0;
     if store.velocity == 0.0 { return z; }
     for region in store.regions.iter_mut() {
-        if store.playhead >= region.offset && store.playhead - region.offset < region.duration {
+        if store.playhead >= region.offset && 
+            store.playhead - region.offset < region.duration {
             let index = (store.playhead - region.offset) as usize;
             let x: f32 = region.buffer[index];
             z += x * region.gain;
@@ -195,6 +195,11 @@ pub fn compute(store: &mut Store) -> Output {
     }
     let z = z.min(0.999).max(-0.999);
 
+    if store.velocity < 0.0 && store.playhead == 0 { 
+        store.scrub = None;
+        store.velocity = 0.0 
+    }
+
     // Metronome
     if store.playhead % store.beat == 0 && store.track_id == 1 {
         store.out_queue.push(Action::Tick(store.playhead));
@@ -202,8 +207,9 @@ pub fn compute(store: &mut Store) -> Output {
 
     // Play direction
     store.playhead = if store.velocity > 0.0 { store.playhead + 1 }
-        else if store.velocity < 0.0 && store.playhead > 0 { store.playhead - 1 } 
+        else if store.playhead > 0 { store.playhead - 1 } 
         else { store.playhead };
+
 
     // Looping
     if store.loop_on {
