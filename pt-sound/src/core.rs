@@ -21,7 +21,8 @@ use dsp::daggy::petgraph::Bfs;
 #[cfg(target_os = "macos")]
 use portaudio as pa;
 
-use sample::signal;
+use sample::{Signal, signal, ring_buffer};
+use sample::interpolate::{Converter, Floor, Linear, Sinc};
 
 use crate::midi::{open_midi_dev, read_midi_event, connect_midi_source_ports};
 use crate::action::Action;
@@ -47,8 +48,9 @@ pub type Param = i16;
 const CHANNELS: usize = 2;
 const FRAMES: u32 = 128;
 const SAMPLE_HZ: f64 = 44_100.0;
-
 const DEBUG_KEY_PERIOD: u16 = 24100;
+const SCRUB_MAX: f64 = 4.0;
+const SCRUB_ACC: f64 = 0.1;
 
 #[derive(Debug, Clone)]
 pub struct Note {
@@ -189,8 +191,11 @@ pub fn event_loop<F: 'static>(
 
     // Construct PortAudio and the stream.
     let pa = pa::PortAudio::new()?;
-    let settings =
-        pa.default_output_stream_settings::<Output>(CHANNELS as i32, SAMPLE_HZ, FRAMES)?;
+    let settings = pa.default_output_stream_settings::<Output>(
+        CHANNELS as i32, 
+        SAMPLE_HZ, 
+        FRAMES
+    )?;
     let mut stream = pa.open_non_blocking_stream(settings, callback)?;
     stream.start()?;
 
@@ -311,9 +316,38 @@ impl Node<[Output; CHANNELS]> for Module {
                 });
             },
             Module::Tape(ref mut store) => {
+                // Exponential velocity scrub (tape inertia)
+                let interp_factor = store.velocity.abs();
+                if let Some(dir) = store.scrub {
+                    let expo_vel = store.velocity + if dir { SCRUB_ACC } 
+                        else { -SCRUB_ACC };
+                    store.velocity = if expo_vel > SCRUB_MAX { SCRUB_MAX } 
+                        else if expo_vel < -SCRUB_MAX { -SCRUB_MAX } 
+                        else { expo_vel }
+                }
+                if interp_factor == 0.0 { return; }
+                if interp_factor == 1.0 {
+                    dsp::slice::map_in_place(buffer, |_| {
+                        Frame::from_fn(|_| tape::compute(store))
+                    });
+                } else {
+                    let mut source = signal::gen_mut(|| [tape::compute(store)] );
+                    let interp = Linear::from_source(&mut source);
+                    let mut resampled = source.scale_hz(interp, interp_factor);
+                    dsp::slice::map_in_place(buffer, |_| {
+                        Frame::from_fn(|_| resampled.next()[0])
+                    });
+                }
+
+
+                /*
+                let frames = ring_buffer::Fixed::from(vec![[0.0]; 10]);
+                let interp = Sinc::new(frames);
+                let mut resampled = source.from_hz_to_hz(interp, 44100.0, 44100.0);
                 dsp::slice::map_in_place(buffer, |_| {
-                    Frame::from_fn(|_| tape::compute(store))
+                    Frame::from_fn(|_| resampled.next()[0])
                 });
+                */
             },
             // Modules which aren't sound-producing can still implement audio_requested
             // ... to keep time, such as envelopes or arpeggiators
@@ -376,7 +410,7 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
             for a in client_a.iter() {
                 eprintln!("{:?}", a);
                 let message = match a {
-                    Action::Tick => Some("TICK ".to_string()),
+                    Action::Tick(offset) => Some(format!("TICK:{} ", offset)),
                     Action::NoteOn(n,v) => Some(format!("NOTE_ON:{}:{} ", n, v)),
                     Action::NoteOff(n) => Some(format!("NOTE_OFF:{} ", n)),
                     Action::AddNote(id, n) => Some(format!("NOTE_ADD:{}:{}:{}:{}:{} ",
@@ -437,6 +471,8 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "NOTE_OFF_AT" => Action::NoteOffAt(argv[1].parse::<u16>().unwrap(),
                                                argv[2].parse::<u8>().unwrap()),
             "OCTAVE" => Action::Octave(argv[1].parse::<u8>().unwrap() == 1),
+            "SCRUB" => Action::Scrub(argv[1].parse::<u16>().unwrap(),
+                                     argv[2].parse::<u8>().unwrap() == 1),
             "OPEN_PROJECT" => Action::OpenProject(argv[1].to_string()),
             "PATCH_OUT" => Action::PatchOut(argv[1].parse::<u16>().unwrap(),
                                             argv[2].parse::<usize>().unwrap(),

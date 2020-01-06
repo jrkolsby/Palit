@@ -166,15 +166,15 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
 fn reduce(state: TimelineState, action: Action) -> TimelineState {
     let o1 = offset_beat(1, state.sample_rate, state.tempo, state.zoom);
     TimelineState {
-        tempo: state.tempo.clone(),
-        time_beat: state.time_beat.clone(),
-        time_note: state.time_note.clone(),
-        loop_mode: state.loop_mode.clone(),
-        seq_in: state.seq_in.clone(),
-        seq_out: state.seq_out.clone(),
-        loop_in: state.loop_in.clone(),
-        loop_out: state.loop_out.clone(),
-        sample_rate: state.sample_rate.clone(),
+        tempo: state.tempo,
+        time_beat: state.time_beat,
+        time_note: state.time_note,
+        loop_mode: state.loop_mode,
+        seq_in: state.seq_in,
+        seq_out: state.seq_out,
+        loop_in: state.loop_in,
+        loop_out: state.loop_out,
+        sample_rate: state.sample_rate,
         tracks: state.tracks.clone(),
         assets: state.assets.clone(),
         regions: match action.clone() {
@@ -201,15 +201,15 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             },
             _ => state.notes.clone()
         },
-        tick: (state.playhead % 2) == 0,
-        playhead: match action {
-            Action::Tick => state.playhead + o1,
-            Action::Right => state.playhead + o1,
-            Action::Left => if state.playhead < o1 { 0 } 
-                else { state.playhead - o1 },
-            _ => state.playhead.clone(),
+        tick: match action {
+            Action::Tick(_) => !state.tick,
+            _ => state.tick
         },
-        zoom: state.zoom.clone(),
+        playhead: match action {
+            Action::Tick(o) => o,
+            _ => state.playhead
+        },
+        zoom: state.zoom,
         scroll_x: {
             let playhead_offset = beat_offset(
                 state.playhead,
@@ -217,25 +217,17 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
                 state.tempo,
                 state.zoom);
 
-            match action {
-                Action::Left => 
-                    if playhead_offset > 0 && state.scroll_x > 0 && 
-                        playhead_offset < state.scroll_x + SCROLL_L {
-                        state.scroll_x-1
-                    } else { 
-                        state.scroll_x.clone() 
-                    },
-                Action::Right => 
-                    if playhead_offset > state.scroll_x + SCROLL_R {
-                        state.scroll_x+1
-                    } else {
-                        state.scroll_x.clone()
-                    },
-                _ => state.scroll_x.clone(),
+            if playhead_offset > state.scroll_x + SCROLL_R {
+                state.scroll_x+1 
+            } else if playhead_offset > 0 && state.scroll_x > 0 && 
+                playhead_offset < state.scroll_x + SCROLL_L {
+                state.scroll_x-1
+            } else {
+                state.scroll_x
             }
         },
-        scroll_y: state.scroll_y.clone(), 
-        focus: state.focus.clone(),
+        scroll_y: state.scroll_y,
+        focus: state.focus,
     }
 }
 
@@ -316,36 +308,34 @@ impl Layer for Timeline {
 
         self.state = reduce(self.state.clone(), _action.clone());
         
-        // Intercept arrow actions to change focus or to return
+        // Actions which affect focii
         let (focus, default) = match _action.clone() {
-            // Only shift focus horizontally if playhead has exceeded current region
-            Action::Left => match multi_focus.w_id.0 {
+            // Move focus to intersecting region on Tick
+            Action::Tick(time) => match multi_focus.w_id.0 {
                 FocusType::Region => {
-                    let region = self.state.regions.get(&multi_focus.w_id.1).unwrap();
-
-                    if self.state.playhead <= region.offset  {
-                        shift_focus(self.state.focus, &self.focii, Action::Left)
-                    } else {
-                        (self.state.focus, None)
+                    // Find selected region within selected track
+                    let mut new_focus = self.state.focus.0;
+                    for (i, focus) in self.focii[self.state.focus.1].iter().enumerate() {
+                        let region = self.state.regions.get(&focus.w_id.1).unwrap();
+                        let duration = region.asset_out - region.asset_in;
+                        if time >= region.offset && time < region.offset + duration {
+                            new_focus = i;
+                        }
                     }
+                    ((new_focus, self.state.focus.1), Some(Action::Noop))
                 },
+                _ => (self.state.focus, Some(Action::Noop))
+            },
+            Action::Left => match multi_focus.w_id.0 {
+                FocusType::Region => if self.state.playhead == 0 {
+                    shift_focus(self.state.focus, &self.focii, Action::Left)
+                } else {
+                    (self.state.focus, Some(Action::Scrub(false)))
+                }
                 _ => shift_focus(self.state.focus, &self.focii, Action::Left),
             },
             Action::Right => match multi_focus.w_id.0 {
-                FocusType::Region => {
-                    if self.state.focus.0 == self.focii[self.state.focus.1].len()-1 {
-                        (self.state.focus, None)
-                    } else {
-                        let next_focus = &mut self.focii[self.state.focus.1][self.state.focus.0+1];
-                        let next_region = self.state.regions.get(&next_focus.w_id.1).unwrap();
-
-                        if self.state.playhead >= next_region.offset {
-                            shift_focus(self.state.focus, &self.focii, Action::Right)
-                        } else {
-                            (self.state.focus, None)
-                        }
-                    }
-                },
+                FocusType::Region => (self.state.focus, Some(Action::Scrub(true))),
                 _ => shift_focus(self.state.focus, &self.focii, Action::Right),
             },
             Action::Up | Action::Down => shift_focus(self.state.focus, &self.focii, _action.clone()),

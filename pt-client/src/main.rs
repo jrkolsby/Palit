@@ -78,7 +78,7 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
         let action = match argv[0] {
             "ROUTE" => Action::Route,
 
-            "TICK" => Action::Tick,
+            "TICK" => Action::Tick(argv[1].parse::<u32>().unwrap()),
 
             "?" => Action::Noop,
 
@@ -251,6 +251,10 @@ fn main() -> std::io::Result<()> {
                 },
                 Action::Record => {
                     ipc_sound.write(format!("RECORD:{} ", target_id).as_bytes()).unwrap();
+                },
+                Action::Scrub(dir) => {
+                    ipc_sound.write(format!("SCRUB:{}:{} ", 
+                        target_id, if dir { "1"} else { "0" }).as_bytes()).unwrap();
                 },
                 Action::MuteTrack(track_id) => {
                     ipc_sound.write(format!("MUTE_AT:{}:{} ", 

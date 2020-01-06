@@ -33,7 +33,8 @@ pub struct Store {
     pub playhead: u32, 
     pub regions: Vec<Region>,
     pub notes: Vec<Note>,
-    pub playing: bool,
+    pub velocity: f64,
+    pub scrub: Option<bool>,
     pub recording: bool,
     pub monitor: bool,
     pub track_id: u16,
@@ -53,7 +54,8 @@ pub fn init() -> Store {
         loop_in: 0,
         loop_out: 0,
         playhead: 0,
-        playing: false,
+        velocity: 0.0,
+        scrub: None,
         monitor: true,
         recording: false,
         regions: vec![],
@@ -77,7 +79,7 @@ pub fn dispatch_requested(store: &mut Store) -> (
         for a in store.out_queue.iter() {
             match a {
                 Action::AddNote(_, _) |
-                Action::Tick => client_actions.push(a.clone()),
+                Action::Tick(_) => client_actions.push(a.clone()),
                 _ => output_actions.push(a.clone())
             }
         }
@@ -95,9 +97,16 @@ pub fn dispatch_requested(store: &mut Store) -> (
 
 pub fn dispatch(store: &mut Store, a: Action) {
     match a {
-        Action::Play(_) => { store.playing = true; },
+        Action::Scrub(_, dir) => {
+            store.scrub = Some(dir);
+        },
+        Action::Play(_) => { 
+            store.velocity = 1.0; 
+            store.scrub = None;
+        },
         Action::Stop(_) => { 
-            store.playing = false; 
+            store.velocity = 0.0; 
+            store.scrub = None;
             if store.loop_on {
                 store.playhead = store.loop_in;
             }
@@ -106,7 +115,6 @@ pub fn dispatch(store: &mut Store, a: Action) {
             if store.track_id == t_id {
                 store.recording = !store.recording;
             }
-            eprintln!("RECORDING {}", store.recording);
         },
         Action::MuteAt(_, t_id) => { 
             if store.track_id == t_id {
@@ -143,7 +151,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
         },
         Action::NoteOff(note) => {
             if let Some(on_index) = store.note_queue.iter().position(|n| n.note == note) {
-                if store.recording && store.playing {
+                if store.recording && store.velocity != 0.0 {
                     let on_note = store.note_queue.remove(on_index);
                     let recorded_note = Note {
                         id: on_note.id,
@@ -168,9 +176,10 @@ pub fn dispatch(store: &mut Store, a: Action) {
 
 pub fn compute(store: &mut Store) -> Output {
     let mut z: f32 = 0.0;
-    if !store.playing { return z; }
+    if store.velocity == 0.0 { return z; }
     for region in store.regions.iter_mut() {
-        if store.playhead >= region.offset && store.playhead - region.offset < region.duration {
+        if store.playhead >= region.offset && 
+            store.playhead - region.offset < region.duration {
             let index = (store.playhead - region.offset) as usize;
             let x: f32 = region.buffer[index];
             z += x * region.gain;
@@ -185,17 +194,28 @@ pub fn compute(store: &mut Store) -> Output {
         }
     }
     let z = z.min(0.999).max(-0.999);
-    store.playhead = if store.loop_on {
-        if store.playhead == store.loop_out {
-            store.loop_in
-        } else {
-            store.playhead + 1
+
+    if store.velocity < 0.0 && store.playhead == 0 { 
+        store.scrub = None;
+        store.velocity = 0.0 
+    }
+
+    // Metronome
+    if store.playhead % store.beat == 0 && store.track_id == 1 {
+        store.out_queue.push(Action::Tick(store.playhead));
+    }
+
+    // Play direction
+    store.playhead = if store.velocity > 0.0 { store.playhead + 1 }
+        else if store.playhead > 0 { store.playhead - 1 } 
+        else { store.playhead };
+
+
+    // Looping
+    if store.loop_on {
+        if store.velocity > 0.0 && store.playhead == store.loop_out {
+            store.playhead == store.loop_in;
         }
-    } else { 
-        store.playhead + 1 
-    };
-    if store.playing && store.playhead % store.beat == 0 && store.track_id == 1 {
-        store.out_queue.push(Action::Tick);
     }
     z
 }
@@ -279,10 +299,10 @@ pub fn read(doc: &mut Element) -> Option<Store> {
                     let src: &str = asset.attributes.get("src").unwrap();
                     let duration: &str = asset.attributes.get("size").unwrap();
 
-                    let mut wav_f = WaveFile::open("Who.wav").unwrap();
+                    let mut wav_f = WaveFile::open(src).unwrap();
                     let mut wav_iter = wav_f.iter();
 
-                    buffer = wav_iter.map(|f| f[0] as f32 * 0.0000001).collect();
+                    buffer = wav_iter.map(|f| f[0] as f32 * 0.000001).collect();
                 }
             }
 
