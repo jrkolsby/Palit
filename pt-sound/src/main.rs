@@ -87,6 +87,8 @@ fn main() -> Result<(), Box<error::Error>> {
 
         eprintln!("ACTION {:?}", a);
         match a {
+            Action::LoopMode(n_id, _) |
+            Action::SetLoop(n_id, _, _) |
             Action::Scrub(n_id, _) |
             Action::Goto(n_id, _) |
             Action::RecordAt(n_id, _) |
@@ -98,6 +100,12 @@ fn main() -> Result<(), Box<error::Error>> {
             Action::Stop(n_id) => {
                 if let Some(id) = operators.get(&n_id) {
                     patch[*id].dispatch(a)
+                }
+            },
+            Action::SetMeter(_, _) |
+            Action::SetTempo(_) => {
+                for (_, node) in operators.iter() {
+                    patch[*node].dispatch(a.clone())
                 }
             },
             Action::NoteOn(_,_) | Action::NoteOff(_) | Action::Octave(_) => {

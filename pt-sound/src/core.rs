@@ -490,6 +490,14 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
                                             argv[3].parse::<i32>().unwrap()),
             "GOTO" => Action::Goto(argv[1].parse::<u16>().unwrap(),
                                    argv[2].parse::<u32>().unwrap()),
+            "SET_TEMPO" => Action::SetTempo(argv[1].parse::<u16>().unwrap()),
+            "SET_METER" => Action::SetMeter(argv[1].parse::<u16>().unwrap(),
+                                            argv[2].parse::<u16>().unwrap()),
+            "LOOP_MODE" => Action::LoopMode(argv[1].parse::<u16>().unwrap(),
+                                            argv[2].parse::<u8>().unwrap() == 1),
+            "SET_LOOP" => Action::SetLoop(argv[1].parse::<u16>().unwrap(),
+                                          argv[2].parse::<u32>().unwrap(),
+                                          argv[3].parse::<u32>().unwrap()),
             _ => Action::Noop,
         };
 
