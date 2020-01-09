@@ -39,8 +39,8 @@
             <mark value="0" name="loop_in" />
             <mark value="480000" name="loop_out" />
             <mark value="0" name="playhead" />
-            <param value="4" name="time_beat" />
-            <param value="4" name="time_note" />
+            <param value="4" name="meter_beat" />
+            <param value="4" name="meter_note" />
             <param value="127" name="bpm" />
             <track id="1">
             </track>

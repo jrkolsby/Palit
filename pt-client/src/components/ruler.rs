@@ -7,7 +7,7 @@ pub fn render(out: &mut Screen,
     origin_y: u16, 
     width: u16,
     height: u16,
-    time_beat: usize,
+    meter_beat: usize,
     zoom: usize,
     scroll: u16, 
     playhead: u16) {
@@ -23,7 +23,7 @@ pub fn render(out: &mut Screen,
             }
         }
         if i % _zoom == 0 {
-            let glyph = if (beat+scroll+1) % time_beat as u16 == 0 { "!" } else { "." };
+            let glyph = if (beat+scroll+1) % meter_beat as u16 == 0 { "!" } else { "." };
             write!(out, "{}{}",
                 cursor::Goto(origin_x+i, origin_y),
                 glyph).unwrap();

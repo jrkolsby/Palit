@@ -50,7 +50,7 @@ const FRAMES: u32 = 128;
 const SAMPLE_HZ: f64 = 44_100.0;
 const DEBUG_KEY_PERIOD: u16 = 24100;
 const SCRUB_MAX: f64 = 4.0;
-const SCRUB_ACC: f64 = 0.1;
+const SCRUB_ACC: f64 = 0.01;
 
 #[derive(Debug, Clone)]
 pub struct Note {

@@ -1,7 +1,7 @@
 use std::io::{Write, Stdout};
 use termion::{cursor};
 use crate::common::{Screen, MultiFocus, FocusType, Action, ID, Window};
-use crate::common::{beat_offset, offset_beat};
+use crate::common::{char_offset, offset_char};
 use crate::components::{waveform};
 use crate::views::TimelineState;
 
@@ -21,13 +21,13 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
             let region = state.regions.get(&id.1).unwrap();
             let waveform = &state.assets.get(&region.asset_id).unwrap().waveform;
 
-            let region_offset = beat_offset(region.offset,
+            let region_offset = char_offset(region.offset,
                 state.sample_rate, state.tempo, state.zoom);
 
-            let asset_start_offset = beat_offset(region.asset_in,
+            let asset_start_offset = char_offset(region.asset_in,
                 state.sample_rate, state.tempo, state.zoom);
 
-            let asset_length_offset = beat_offset(region.asset_out - region.asset_in,
+            let asset_length_offset = char_offset(region.asset_out - region.asset_in,
                 state.sample_rate, state.tempo, state.zoom);
 
             // Region appears to left of timeline
@@ -70,7 +70,7 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
             if focus {
                 let region = state.regions.get(&id.1).unwrap();
 
-                let region_offset = beat_offset(region.offset,
+                let region_offset = char_offset(region.offset,
                     state.sample_rate, state.tempo, state.zoom);
 
                 let timeline_offset = if region_offset >= state.scroll_x {
@@ -90,7 +90,7 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
             if focus {
                 let region = state.regions.get(&id.1).unwrap();
 
-                let region_offset = beat_offset(region.offset,
+                let region_offset = char_offset(region.offset,
                     state.sample_rate, state.tempo, state.zoom);
 
                 let timeline_offset = if region_offset >= state.scroll_x {
@@ -107,12 +107,12 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
         g_t: |action, id, state| match action {
             Action::Right => { 
                 let r = state.regions.get(&id.1).unwrap();
-                let d_offset = offset_beat(1, state.sample_rate, state.tempo, state.zoom);
+                let d_offset = offset_char(1, state.sample_rate, state.tempo, state.zoom);
                 Action::MoveRegion(id.1, r.track, r.offset+d_offset) 
             },
             Action::Left => { 
                 let r = state.regions.get(&id.1).unwrap();
-                let d_offset = offset_beat(1, state.sample_rate, state.tempo, state.zoom);
+                let d_offset = offset_char(1, state.sample_rate, state.tempo, state.zoom);
                 Action::MoveRegion(id.1, r.track, r.offset-d_offset) 
             },
             Action::Up => { 
@@ -130,7 +130,7 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
             if focus {
                 let region = state.regions.get(&id.1).unwrap();
 
-                let region_offset = beat_offset(region.offset,
+                let region_offset = char_offset(region.offset,
                     state.sample_rate, state.tempo, state.zoom);
 
                 let timeline_offset = if region_offset >= state.scroll_x {

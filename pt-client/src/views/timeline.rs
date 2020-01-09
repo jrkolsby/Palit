@@ -11,7 +11,7 @@ use crate::components::{tempo, button, ruler, region, roll};
 use crate::common::{ID, VOID_ID, FocusType};
 use crate::common::{MultiFocus, render_focii, shift_focus };
 use crate::common::{Screen, Action, Asset, Region, Track, Anchor, Window, Note};
-use crate::common::{beat_offset, offset_beat, generate_waveforms};
+use crate::common::{char_offset, offset_char, generate_waveforms};
 use crate::modules::timeline;
 use crate::views::{Layer};
 
@@ -26,8 +26,11 @@ static ASSET_PREFIX: &str = "storage/";
 pub struct TimelineState {
     // Requires XML write/read
     pub tempo: u16,
-    pub time_beat: usize,
-    pub time_note: usize,
+    pub temp_tempo: Option<u16>,
+    pub zoom: usize,
+    pub temp_zoom: Option<usize>,
+    pub meter_beat: usize,
+    pub meter_note: usize,
     pub loop_mode: bool,
     pub seq_in: u32,
     pub seq_out: u32,
@@ -43,7 +46,6 @@ pub struct TimelineState {
     pub tick: bool,
     pub playhead: u32,
     pub scroll_x: u16,
-    pub zoom: usize,
     pub scroll_y: u16,
     pub focus: (usize, usize),
 }
@@ -67,41 +69,131 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                   regions: &HashMap<u16, Region>) -> Vec<Vec<MultiFocus<TimelineState>>> {
     let mut focii: Vec<Vec<MultiFocus<TimelineState>>> = vec![vec![
         MultiFocus::<TimelineState> {
-            w: VOID_RENDER,
-            w_id: VOID_ID.clone(),
-
             r_id: (FocusType::Button, 0),
             r: |out, window, id, state, focus| 
-                button::render(out, 2, 2, 20, "RECORD"),
-            r_t: |a, id, _| match a { 
-                Action::SelectR => Action::Record, 
+                write!(out, "{} {} ", cursor::Goto(38, 1), if state.loop_mode { 
+                    "LOOP" 
+                } else { 
+                    "SEQ"
+                }).unwrap(),
+            r_t: |a, id, state| match a { 
+                Action::Up |
+                Action::Down |
+                Action::SelectR => Action::LoopMode(!state.loop_mode),
                 _ => Action::Noop 
             },
 
-            g_id: (FocusType::Button, 1),
-            g: |out, window, id, state, focus|
-                button::render(out, 24, 2, 19, "IMPORT"),
-            g_t: VOID_TRANSFORM,
-            
-            y_id: (FocusType::Param, 0),
-            y: |out, window, id, state, focus|
-                tempo::render(out, window.x+window.w-3, window.y,
-                    state.time_beat,
-                    state.time_note,
-                    state.tempo,
-                    state.tick),
-            y_t: VOID_TRANSFORM,
+            w: VOID_RENDER,
+            w_id: VOID_ID.clone(),
 
             p_id: VOID_ID.clone(),
             p: VOID_RENDER,
             p_t: VOID_TRANSFORM,
+
+            g_id: VOID_ID.clone(),
+            g: VOID_RENDER,
+            g_t: VOID_TRANSFORM,
+
+            y_id: VOID_ID.clone(),
+            y: VOID_RENDER,
+            y_t: VOID_TRANSFORM,
 
             b_id: VOID_ID.clone(),
             b: VOID_RENDER,
             b_t: VOID_TRANSFORM,
 
             active: None,
-        }
+        },
+        MultiFocus::<TimelineState> {
+            r_id: (FocusType::Button, 0),
+            r: |out, window, id, state, focus| {
+                let offset_out = char_offset(
+                    state.loop_out,
+                    state.sample_rate,
+                    state.tempo,
+                    state.zoom);
+                let out_x = offset_out - state.scroll_x;
+                if out_x >= 0 {
+                    write!(out, "{}>> ", cursor::Goto(
+                        window.x + REGIONS_X + out_x - 3, 
+                        window.y + TIMELINE_Y)
+                    ).unwrap()
+                }
+            },
+            r_t: |a, id, state| {
+                let o1 = offset_char(1, state.sample_rate, state.tempo, state.zoom);
+                match a { 
+                    Action::Left => Action::SetLoop(state.loop_in, state.loop_out - o1), 
+                    Action::Right => Action::SetLoop(state.loop_in, state.loop_out + o1), 
+                    _ => Action::Noop 
+                }
+            },
+
+            g_id: (FocusType::Button, 1),
+            g: |out, window, id, state, focus| {
+                let offset_in = char_offset(
+                    state.loop_in,
+                    state.sample_rate,
+                    state.tempo,
+                    state.zoom);
+                let in_x = offset_in - state.scroll_x;
+                if in_x >= 0 {
+                    write!(out, "{} <<", cursor::Goto(
+                        window.x + REGIONS_X + in_x - 3, 
+                        window.y + TIMELINE_Y)
+                    ).unwrap()
+                }
+            },
+            g_t: |a, id, state| {
+                let o1 = offset_char(1, state.sample_rate, state.tempo, state.zoom);
+                match a { 
+                    Action::Left => Action::SetLoop(state.loop_in - o1, state.loop_out), 
+                    Action::Right => Action::SetLoop(state.loop_in + o1, state.loop_out), 
+                    _ => Action::Noop 
+                }
+            },
+            
+            y_id: (FocusType::Param, 0),
+            y: |out, window, id, state, focus| {
+                let tempo = if let Some(t) = state.temp_tempo { t } else { state.tempo };
+                tempo::render(out, window.x+window.w-3, window.y, tempo, state.tick);
+            },
+            y_t: |a, id, state| {
+                let tempo = if let Some(t) = state.temp_tempo { t } else { state.tempo };
+                match a {
+                    Action::Up => Action::SetTempo(tempo + 1),
+                    Action::Down => Action::SetTempo(tempo - 1),
+                    _ => Action::Noop
+                }
+            },
+
+            p_id: (FocusType::Param, 0),
+            p: |out, window, id, state, focus|
+                write!(out, "{} {} ", cursor::Goto(
+                    window.x+window.w-14, 2
+                ), state.meter_beat).unwrap(),
+            p_t: |a, id, state| match a {
+                Action::Up => Action::SetMeter(state.meter_beat + 1, state.meter_note),
+                Action::Down => Action::SetMeter(state.meter_beat - 1, state.meter_note),
+                _ => Action::Noop,
+            },
+            
+            b_id: (FocusType::Param, 0),
+            b: |out, window, id, state, focus|
+                write!(out, "{} {} ", cursor::Goto(
+                    window.x+window.w-14, 3
+                ), state.meter_note).unwrap(),
+            b_t: |a, id, state| match a {
+                Action::Up => Action::SetMeter(state.meter_beat, state.meter_note + 1),
+                Action::Down => Action::SetMeter(state.meter_beat, state.meter_note - 1),
+                _ => Action::Noop,
+            },
+
+            w: VOID_RENDER,
+            w_id: VOID_ID.clone(),
+
+            active: None,
+        },
     ]];
 
     let mut track_vec: Vec<(&u16, &Track)> = tracks.iter().collect();
@@ -164,19 +256,69 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
 }
 
 fn reduce(state: TimelineState, action: Action) -> TimelineState {
-    let o1 = offset_beat(1, state.sample_rate, state.tempo, state.zoom);
+    let o1 = offset_char(1, state.sample_rate, state.tempo, state.zoom);
     TimelineState {
-        tempo: state.tempo,
-        time_beat: state.time_beat,
-        time_note: state.time_note,
-        loop_mode: state.loop_mode,
+        tempo: match action.clone() {
+            Action::Deselect => if let Some(t) = state.temp_tempo { t }
+                else { state.tempo },
+            _ => state.tempo
+        },
+        temp_tempo: match action.clone() {
+            Action::SetTempo(t) => if t > 0 { Some(t) } else { Some(1) },
+            _ => None
+        },
+        zoom: match action.clone() {
+            Action::Deselect => if let Some(z) = state.temp_zoom { z }
+                else { state.zoom },
+            _ => state.zoom
+        },
+        temp_zoom: match action.clone() {
+            // Action::Zoom(z) => Some(z)
+            _ => None
+        },
+        meter_beat: match action.clone() {
+            Action::SetMeter(beat, _) => if beat > 0 { beat } else { 1 },
+            _ => state.meter_beat,
+        },
+        meter_note: match action.clone() {
+            Action::SetMeter(_, note) => if note > 0 { note } else { 1 },
+            _ => state.meter_note,
+        },
+        loop_mode: match action.clone() {
+            Action::LoopMode(on) => on,
+            _ => state.loop_mode
+        },
         seq_in: state.seq_in,
         seq_out: state.seq_out,
-        loop_in: state.loop_in,
-        loop_out: state.loop_out,
+        loop_in: match action.clone() {
+            Action::SetLoop(mark_in, mark_out) => if mark_in >= 0 { 
+                if mark_in < mark_out { mark_in } else { state.loop_in }
+            } else { 0 },
+            _ => state.loop_in,
+        },
+        loop_out: match action.clone() {
+            Action::SetLoop(mark_in, mark_out) => if mark_out >= 0 { 
+                if mark_out > mark_in { mark_out } else { state.loop_out }
+            } else { 0 },
+            _ => state.loop_out,
+        },
         sample_rate: state.sample_rate,
         tracks: state.tracks.clone(),
-        assets: state.assets.clone(),
+        assets: match action.clone() {
+            Action::Deselect /* |
+            Action::Zoom(z) */ => {
+                let zoom = if let Some(z) = state.temp_zoom { z } else { state.zoom };
+                let tempo = if let Some(t) = state.temp_tempo { t } else { state.tempo };
+                if zoom != state.zoom || tempo != state.tempo {
+                    let mut new_assets = state.assets.clone();
+                    generate_waveforms(&mut new_assets, state.sample_rate, tempo, zoom);
+                    new_assets
+                } else {
+                    state.assets.to_owned()
+                }
+            },
+            _ => state.assets.to_owned()
+        },
         regions: match action.clone() {
             Action::MoveRegion(id, t_id, offset) => {
                 let mut new_regions = state.regions.clone();
@@ -209,9 +351,8 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             Action::Tick(o) => o,
             _ => state.playhead
         },
-        zoom: state.zoom,
         scroll_x: {
-            let playhead_offset = beat_offset(
+            let playhead_offset = char_offset(
                 state.playhead,
                 state.sample_rate,
                 state.tempo,
@@ -271,7 +412,7 @@ impl Layer for Timeline {
                 id).unwrap();
         }
 
-        let playhead_offset = beat_offset(
+        let playhead_offset = char_offset(
             self.state.playhead,
             self.state.sample_rate,
             self.state.tempo,
@@ -281,7 +422,7 @@ impl Layer for Timeline {
         ruler::render(out, REGIONS_X, 6, 
             self.width-4,
             self.height,
-            self.state.time_beat,
+            self.state.meter_beat,
             self.state.zoom,
             self.state.scroll_x,
             playhead_offset);
@@ -298,6 +439,12 @@ impl Layer for Timeline {
             self.state.tempo,
             self.state.zoom,
             &self.state.notes);
+
+        if let Some(t) = self.state.temp_tempo {
+            write!(out, "{}Generating waveforms...", cursor::Goto(
+                win.x + (win.w / 2) - 10, win.y
+            )).unwrap();
+        }
     }
 
     fn dispatch(&mut self, action: Action) -> Action {
@@ -345,19 +492,23 @@ impl Layer for Timeline {
                 // focus that shares the ID of our current focus, and return 
                 // that focus
                 let current_id = self.focii[self.state.focus.1][self.state.focus.0].w_id.clone();
-                self.focii = generate_focii(&self.state.tracks, &self.state.regions);
-                let mut new_focus: (usize, usize) = self.state.focus;
+                match current_id.0 {
+                    FocusType::Region => {
+                        self.focii = generate_focii(&self.state.tracks, &self.state.regions);
+                        let mut new_focus: (usize, usize) = self.state.focus;
 
-                'search: for (j, col) in self.focii.iter().enumerate() {
-                    for (i, focus) in col.iter().enumerate() {
-                        if focus.w_id == current_id {
-                            new_focus = (i,j);
-                            break 'search;
+                        'search: for (j, col) in self.focii.iter().enumerate() {
+                            for (i, focus) in col.iter().enumerate() {
+                                if focus.w_id == current_id {
+                                    new_focus = (i,j);
+                                    break 'search;
+                                }
+                            }
                         }
-                    }
+                        (new_focus, None)
+                    },
+                    _ => (self.state.focus, None)
                 }
-
-                (new_focus, None)
             },
             Action::Route => {
                 let mut anchors = vec![];
@@ -384,6 +535,10 @@ impl Layer for Timeline {
                 }
                 (self.state.focus, Some(Action::ShowAnchors(anchors)))
             }
+            a @ Action::SetLoop(_,_) |
+            a @ Action::LoopMode(_) |
+            a @ Action::SetMeter(_,_) |
+            a @ Action::SetTempo(_) |
             a @ Action::RecordTrack(_) |
             a @ Action::MuteTrack(_) |
             a @ Action::SoloTrack(_) |

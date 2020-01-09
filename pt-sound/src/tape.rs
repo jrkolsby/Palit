@@ -24,8 +24,8 @@ pub struct Region {
 
 pub struct Store {
     pub bpm: u16,
-    pub time_beat: usize,
-    pub time_note: usize,
+    pub meter_beat: usize,
+    pub meter_note: usize,
     pub loop_on: bool,
     pub loop_in: u32,
     pub loop_out: u32,
@@ -48,8 +48,8 @@ pub fn init() -> Store {
     return Store {
         bpm: 127,
         duration: 960000,
-        time_beat: 4,
-        time_note: 4,
+        meter_beat: 4,
+        meter_note: 4,
         loop_on: false,
         loop_in: 0,
         loop_out: 0,
@@ -224,8 +224,8 @@ pub fn write(s: Store, doc: Option<Element>) -> Element {
     let mut el = Element::new("timeline");
 
     param_add(&mut el, s.bpm, "bpm".to_string());
-    param_add(&mut el, s.time_beat, "time_beat".to_string());
-    param_add(&mut el, s.time_note, "time_note".to_string());
+    param_add(&mut el, s.meter_beat, "meter_beat".to_string());
+    param_add(&mut el, s.meter_note, "meter_note".to_string());
 
     mark_add(&mut el, s.loop_in, "loop_in".to_string());
     mark_add(&mut el, s.loop_out, "loop_out".to_string());
@@ -254,8 +254,8 @@ pub fn read(doc: &mut Element) -> Option<Store> {
     store.bpm = (*params.get("bpm").unwrap()).try_into().unwrap();
     store.duration = (*marks.get("seq_out").unwrap() - 
                    *marks.get("seq_in").unwrap()).try_into().unwrap();
-    store.time_beat = (*params.get("time_beat").unwrap()).try_into().unwrap();
-    store.time_note = (*params.get("time_note").unwrap()).try_into().unwrap();
+    store.meter_beat = (*params.get("meter_beat").unwrap()).try_into().unwrap();
+    store.meter_note = (*params.get("meter_note").unwrap()).try_into().unwrap();
     store.loop_in = (*marks.get("loop_in").unwrap()).try_into().unwrap();
     store.loop_out = (*marks.get("loop_out").unwrap()).try_into().unwrap();
     store.beat = (60 * store.sample_rate) / (store.bpm as u32);

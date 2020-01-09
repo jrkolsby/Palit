@@ -1,7 +1,7 @@
 use termion::{color, cursor};
 use std::io::{Write, Stdout};
 use crate::common::{Screen, Action, Window, Note};
-use crate::common::{beat_offset};
+use crate::common::{char_offset};
 use itertools::Itertools;
 
 const C_POSITION: u16 = 13;
@@ -31,8 +31,8 @@ pub fn render(out: &mut Screen,
 
     for note in sorted_notes.iter() {
 
-        let x_in = beat_offset(note.t_in, sample_rate, bpm, zoom) - start;
-        let x_out = beat_offset(note.t_out, sample_rate, bpm, zoom) - start;
+        let x_in = char_offset(note.t_in, sample_rate, bpm, zoom) - start;
+        let x_out = char_offset(note.t_out, sample_rate, bpm, zoom) - start;
         let len = if x_out - x_in > 0 { x_out - x_in } else { 1 }; 
 
         // Note ends before the window
