@@ -239,6 +239,7 @@ fn main() -> std::io::Result<()> {
             };
 
             // capture default action if returned from layer
+            eprintln!("DEFAULT {:?}", default);
             match default {
                 Action::InputTitle => {
                     add_layer(&mut layers, Box::new(Title::new(23, 5, 36, 23)), 0);
@@ -296,8 +297,25 @@ fn main() -> std::io::Result<()> {
                     ipc_sound.write(format!("SET_PARAM:{}:{}:{} ", 
                         target_id, key, val).as_bytes()).unwrap();
                 },
+                Action::SetMeter(beat, note) => {
+                    ipc_sound.write(format!("SET_METER:{}:{} ", 
+                        beat, note).as_bytes()).unwrap();
+                },
+                Action::SetTempo(tempo) => {
+                    ipc_sound.write(format!("SET_TEMPO:{} ", 
+                        tempo).as_bytes()).unwrap();
+                },
+                Action::SetLoop(l_in, l_out) => {
+                    ipc_sound.write(format!("SET_LOOP:{}:{}:{} ", 
+                        target_id, l_in, l_out).as_bytes()).unwrap();
+                },
+                Action::LoopMode(on) => {
+                    ipc_sound.write(format!("LOOP_MODE:{}:{} ", 
+                        target_id, if on { "1" } else { "0" }).as_bytes()).unwrap();
+                },
                 Action::Goto(playhead) => {
-                    ipc_sound.write(format!("GOTO:{}:{} ", target_id, playhead).as_bytes()).unwrap();
+                    ipc_sound.write(format!("GOTO:{}:{} ", 
+                        target_id, playhead).as_bytes()).unwrap();
                 },
                 a @ Action::Up | 
                 a @ Action::Down => {

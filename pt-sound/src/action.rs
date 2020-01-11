@@ -24,6 +24,7 @@ pub enum Action {
     CreateProject(String),
     Pepper,
     InputTitle,
+    Tick(Offset),
 
     NoteOn(Key, Volume),
     NoteOff(Key),
@@ -42,7 +43,12 @@ pub enum Action {
     MuteAt(u16, u16),
     AddNote(u16, Note),
     Scrub(u16, bool),
-    Tick(Offset),
+    SetLoop(u16, Offset, Offset),
+    LoopMode(u16, bool),
+
+    // Global actions
+    SetTempo(u16),
+    SetMeter(u16, u16),
 
     // Module ID, region ID, new track, new offset
     MoveRegion(u16, u16, u16, u16), 

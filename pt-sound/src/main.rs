@@ -83,10 +83,11 @@ fn main() -> Result<(), Box<error::Error>> {
         // r_id Route ID
         // a_id Anchor ID (Any input or output from a module)
         // op_id Module Operator ID (Dispatches to a cluster of nodes)
-        // 
 
         eprintln!("ACTION {:?}", a);
         match a {
+            Action::LoopMode(n_id, _) |
+            Action::SetLoop(n_id, _, _) |
             Action::Scrub(n_id, _) |
             Action::Goto(n_id, _) |
             Action::RecordAt(n_id, _) |
@@ -98,6 +99,12 @@ fn main() -> Result<(), Box<error::Error>> {
             Action::Stop(n_id) => {
                 if let Some(id) = operators.get(&n_id) {
                     patch[*id].dispatch(a)
+                }
+            },
+            Action::SetMeter(_, _) |
+            Action::SetTempo(_) => {
+                for (_, node) in operators.iter() {
+                    patch[*node].dispatch(a.clone())
                 }
             },
             Action::NoteOn(_,_) | Action::NoteOff(_) | Action::Octave(_) => {
@@ -219,7 +226,7 @@ fn main() -> Result<(), Box<error::Error>> {
                         },
                         "keyboard" => {
                             let (_, params) = param_map(el);
-                            let shift = *params.get("octave").unwrap_or(&0) as Key;
+                            let shift = *params.get("octave").unwrap_or(&3) as Key;
                             let octave = patch.add_node(Module::Octave(vec![], shift));
                             //let shift = patch.add_node(Module::Octave(vec![], 4));
                             let operator = patch.add_node(Module::Operator(vec![], 

@@ -10,8 +10,8 @@ mod layout;
 
 pub use pcm::file_to_pairs;
 pub use pcm::generate_waveforms;
-pub use pcm::beat_offset;
-pub use pcm::offset_beat;
+pub use pcm::char_offset;
+pub use pcm::offset_char;
 pub use pcm::Asset;
 pub use pcm::Region;
 pub use pcm::Track;

@@ -20,8 +20,8 @@ pub fn read(doc: Element) -> TimelineState {
     let mut state = TimelineState {
 
         tempo: *params.get("bpm").unwrap() as u16,
-        time_beat: *params.get("time_beat").unwrap() as usize,
-        time_note: *params.get("time_note").unwrap() as usize,
+        meter_beat: *params.get("meter_beat").unwrap() as usize,
+        meter_note: *params.get("meter_note").unwrap() as usize,
         seq_in: *marks.get("seq_in").unwrap(),
         seq_out: *marks.get("seq_out").unwrap(),
         loop_in: *marks.get("loop_in").unwrap(),
@@ -38,6 +38,8 @@ pub fn read(doc: Element) -> TimelineState {
         zoom: 1,
         scroll_x: 0,
         scroll_y: 0,
+        temp_tempo: None,
+        temp_zoom: None,
         focus: (0,0),
     };
 

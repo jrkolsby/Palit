@@ -24,8 +24,8 @@ pub struct Region {
 
 pub struct Store {
     pub bpm: u16,
-    pub time_beat: usize,
-    pub time_note: usize,
+    pub meter_beat: u16,
+    pub meter_note: u16,
     pub loop_on: bool,
     pub loop_in: u32,
     pub loop_out: u32,
@@ -44,12 +44,16 @@ pub struct Store {
     pub beat: u32,
 }
 
+fn calculate_beat(sample_rate: u32, bpm: u16) -> u32 {
+    (60 * sample_rate) / (bpm as u32)
+}
+
 pub fn init() -> Store {
     return Store {
         bpm: 127,
         duration: 960000,
-        time_beat: 4,
-        time_note: 4,
+        meter_beat: 4,
+        meter_note: 4,
         loop_on: false,
         loop_in: 0,
         loop_out: 0,
@@ -97,6 +101,22 @@ pub fn dispatch_requested(store: &mut Store) -> (
 
 pub fn dispatch(store: &mut Store, a: Action) {
     match a {
+        Action::LoopMode(_, on) => {
+            eprintln!("LOOP {}", on);
+            store.loop_on = on;
+        },
+        Action::SetLoop(_, l_in, l_out) => {
+            store.loop_in = l_in;
+            store.loop_out = l_out;
+        },
+        Action::SetTempo(t) => {
+            store.bpm = t;
+            store.beat = calculate_beat(store.sample_rate, t);
+        },
+        Action::SetMeter(beat, note) => {
+            store.meter_beat = beat;
+            store.meter_note = note;
+        },
         Action::Scrub(_, dir) => {
             store.scrub = Some(dir);
         },
@@ -210,11 +230,10 @@ pub fn compute(store: &mut Store) -> Output {
         else if store.playhead > 0 { store.playhead - 1 } 
         else { store.playhead };
 
-
     // Looping
     if store.loop_on {
-        if store.velocity > 0.0 && store.playhead == store.loop_out {
-            store.playhead == store.loop_in;
+        if store.velocity > 0.0 && store.playhead >= store.loop_out {
+            store.playhead = store.loop_in;
         }
     }
     z
@@ -224,8 +243,8 @@ pub fn write(s: Store, doc: Option<Element>) -> Element {
     let mut el = Element::new("timeline");
 
     param_add(&mut el, s.bpm, "bpm".to_string());
-    param_add(&mut el, s.time_beat, "time_beat".to_string());
-    param_add(&mut el, s.time_note, "time_note".to_string());
+    param_add(&mut el, s.meter_beat, "meter_beat".to_string());
+    param_add(&mut el, s.meter_note, "meter_note".to_string());
 
     mark_add(&mut el, s.loop_in, "loop_in".to_string());
     mark_add(&mut el, s.loop_out, "loop_out".to_string());
@@ -254,11 +273,11 @@ pub fn read(doc: &mut Element) -> Option<Store> {
     store.bpm = (*params.get("bpm").unwrap()).try_into().unwrap();
     store.duration = (*marks.get("seq_out").unwrap() - 
                    *marks.get("seq_in").unwrap()).try_into().unwrap();
-    store.time_beat = (*params.get("time_beat").unwrap()).try_into().unwrap();
-    store.time_note = (*params.get("time_note").unwrap()).try_into().unwrap();
+    store.meter_beat = (*params.get("meter_beat").unwrap()).try_into().unwrap();
+    store.meter_note = (*params.get("meter_note").unwrap()).try_into().unwrap();
     store.loop_in = (*marks.get("loop_in").unwrap()).try_into().unwrap();
     store.loop_out = (*marks.get("loop_out").unwrap()).try_into().unwrap();
-    store.beat = (60 * store.sample_rate) / (store.bpm as u32);
+    store.beat = calculate_beat(store.sample_rate, store.bpm);
 
     for (name, value) in params.drain() {
         param_add(doc, value, name);
