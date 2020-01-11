@@ -71,10 +71,10 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
         MultiFocus::<TimelineState> {
             r_id: (FocusType::Button, 0),
             r: |out, window, id, state, focus| 
-                write!(out, "{} {} ", cursor::Goto(38, 1), if state.loop_mode { 
-                    "LOOP" 
+                write!(out, "{} {} ", cursor::Goto(window.x + 2, window.y + 2), if state.loop_mode { 
+                    "LOOP ON" 
                 } else { 
-                    "SEQ"
+                    "LOOP OFF"
                 }).unwrap(),
             r_t: |a, id, state| match a { 
                 Action::Up |
@@ -115,7 +115,7 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                 let out_x = offset_out - state.scroll_x;
                 if out_x >= 0 {
                     write!(out, "{}>> ", cursor::Goto(
-                        window.x + REGIONS_X + out_x - 3, 
+                        window.x + REGIONS_X + out_x, 
                         window.y + TIMELINE_Y)
                     ).unwrap()
                 }
@@ -544,8 +544,7 @@ impl Layer for Timeline {
             a @ Action::SoloTrack(_) |
             a @ Action::Play |
             a @ Action::Stop |
-            a @ Action::Record |
-            a @ Action::Goto(_) => (self.state.focus, Some(a)),
+            a @ Action::Record => (self.state.focus, Some(a)),
             _ => (self.state.focus, None)
         };
 
@@ -553,11 +552,7 @@ impl Layer for Timeline {
 
         match default {
             Some(a) => a,
-            None => match _action {
-                Action::Left |
-                Action::Right => Action::Goto(self.state.playhead),
-                _ => Action::Noop
-            }
+            None => Action::Noop,
         }
     }
     fn undo(&mut self) {

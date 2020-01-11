@@ -70,7 +70,7 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [ ] UI-17: Add, remove module 
 - [ ] UI-22: Snap to grid
 
-- [ ] SOUND-13: Timeline looping
+- [X] SOUND-13: Timeline looping
 - [ ] SOUND-19: Timeline audio recording
 - [X] SOUND-21: Timeline scrubbing
 

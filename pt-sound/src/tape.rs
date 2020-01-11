@@ -232,7 +232,7 @@ pub fn compute(store: &mut Store) -> Output {
 
     // Looping
     if store.loop_on {
-        if store.velocity > 0.0 && store.playhead == store.loop_out {
+        if store.velocity > 0.0 && store.playhead >= store.loop_out {
             store.playhead = store.loop_in;
         }
     }

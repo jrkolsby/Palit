@@ -58,6 +58,7 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
             Key::Char('\n') => "DESELECT ",
             Key::Char('\t') => "ROUTE ",
 
+            /*
             Key::Char('-') => "OCTAVE:0 ",
             Key::Char('+') => "OCTAVE:1 ",
 
@@ -78,6 +79,7 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
             Key::Char('l') => "NOTE_ON:74:1 ",
             Key::Char('p') => "NOTE_ON:75:1 ",
             Key::Char(';') => "NOTE_ON:76:1 ",
+            */
 
             _ => "",
         };
@@ -86,7 +88,7 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
             Key::Char('q') => "EXIT ",
 
             Key::Char('-') => "OCTAVE:0 ",
-            Key::Char('+') => "OCTAVE:1 ",
+            Key::Char('=') => "OCTAVE:1 ",
 
             Key::Char('a') => "NOTE_ON:60:1 ",
             Key::Char('w') => "NOTE_ON:61:1 ",

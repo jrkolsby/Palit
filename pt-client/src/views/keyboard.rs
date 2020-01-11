@@ -59,7 +59,7 @@ impl Keyboard {
         // Initialize State
         let initial_state: KeyboardState = KeyboardState {
             keys_active: vec![],
-            octave: *params.get("octave").unwrap_or(&0) as usize,
+            octave: *params.get("octave").unwrap_or(&3) as usize,
             shift: *params.get("shift").unwrap_or(&0) as i8,
             velocity: *params.get("velocity").unwrap_or(&500) as f32 / 1000.
         };

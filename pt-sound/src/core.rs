@@ -263,11 +263,13 @@ impl Module {
                 return (Some(carry), None, None)
             },
             Module::Octave(ref mut queue, ref mut dn) => {
+                eprintln!("{}", dn);
                 let mut carry = Vec::new();
                 while let Some(note) = queue.pop() {
                     carry.push(match note {
-                        Action::NoteOn(n, v) => Action::NoteOn(n + (12 * *dn), v),
-                        Action::NoteOff(n) => Action::NoteOff(n + (12 * *dn)),
+                        // C3 is middle C (60)
+                        Action::NoteOn(n, v) => Action::NoteOn(n + (12 * (*dn-3)), v),
+                        Action::NoteOff(n) => Action::NoteOff(n + (12 * (*dn-3))),
                         _ => Action::Noop,
                     });
                 }
@@ -378,11 +380,11 @@ where
     ((phase * PI * 2.0).sin() as f64 * volume).to_sample::<S>()
 }
 
-// NOTE ABT EVENT LOOP TIMING
+// NOTE ABOUT EVENT LOOP TIMING
 // assume buffer size of 512 frames, and a 48000Hz sample_rate,
 // for each loop, we must write 512 frames to the audio device, 
 // while the computation of these 512 frames might not take 
-// 48000 / 512 seconds to calculate, that is the limit, otherwise
+// 48000 / 512 seconds to calculate, that is the deadline, otherwise
 // we get an audio underrun.
 fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Module>) {
     // Nodes dispatch actions to its ins, outs, or to client. Midi signals
