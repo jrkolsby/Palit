@@ -30,3 +30,6 @@ pub use keyboard::Keyboard;
 
 mod arpeggio;
 pub use arpeggio::Arpeggio;
+
+mod modules;
+pub use modules::Modules;

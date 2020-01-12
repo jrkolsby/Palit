@@ -226,12 +226,6 @@ fn main() -> std::io::Result<()> {
                     )), DEFAULT_HELP_ID); 
                     Action::Noop
                 },
-                Action::Back => {
-                    if let Some(current) = layers.pop_back() {
-                        layers.push_front(current);
-                    }
-                    Action::Noop
-                },
                 a => {
                     let (_, target) = layers.get_mut(target_index).unwrap();
                     target.dispatch(a)
@@ -239,8 +233,13 @@ fn main() -> std::io::Result<()> {
             };
 
             // capture default action if returned from layer
-            eprintln!("DEFAULT {:?}", default);
             match default {
+                Action::Cancel => { layers.pop_back(); },
+                Action::Back => {
+                    if let Some(current) = layers.pop_back() {
+                        layers.push_front(current);
+                    }
+                },
                 Action::InputTitle => {
                     add_layer(&mut layers, Box::new(Title::new(23, 5, 36, 23)), 0);
                 },

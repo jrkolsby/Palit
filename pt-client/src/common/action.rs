@@ -69,6 +69,7 @@ pub enum Action {
     CreateProject(String),
     Pepper,
     InputTitle,
+    Cancel,
     Noop,
 
     Error(String),

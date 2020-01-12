@@ -1,5 +1,5 @@
-use termion::{color, cursor};
-use std::io::{Write, Stdout};
+use termion::cursor;
+use std::io::Write;
 use crate::common::{Window, Screen};
 
 pub fn render(out: &mut Screen, win: Window) {

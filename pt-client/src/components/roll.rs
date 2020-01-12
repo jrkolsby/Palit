@@ -1,5 +1,5 @@
-use termion::{color, cursor};
-use std::io::{Write, Stdout};
+use termion::cursor;
+use std::io::Write;
 use crate::common::{Screen, Action, Window, Note};
 use crate::common::{char_offset};
 use itertools::Itertools;

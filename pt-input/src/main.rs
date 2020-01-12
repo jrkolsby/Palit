@@ -58,6 +58,9 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
             Key::Char('\n') => "DESELECT ",
             Key::Char('\t') => "ROUTE ",
 
+            Key::Char('z') => "EFFECT ",
+            Key::Char('x') => "INSTRUMENT ",
+
             /*
             Key::Char('-') => "OCTAVE:0 ",
             Key::Char('+') => "OCTAVE:1 ",

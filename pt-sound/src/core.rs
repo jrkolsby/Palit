@@ -263,7 +263,6 @@ impl Module {
                 return (Some(carry), None, None)
             },
             Module::Octave(ref mut queue, ref mut dn) => {
-                eprintln!("{}", dn);
                 let mut carry = Vec::new();
                 while let Some(note) = queue.pop() {
                     carry.push(match note {

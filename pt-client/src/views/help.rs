@@ -67,7 +67,8 @@ impl Layer for Help {
     fn dispatch(&mut self, action: Action) -> Action {
         self.state = reduce(self.state.clone(), action.clone());
         match action {
-            Action::SelectR => Action::Back,
+            Action::Back |
+            Action::SelectR => Action::Cancel,
             _ => Action::Noop
         }
     }

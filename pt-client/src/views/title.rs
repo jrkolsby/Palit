@@ -87,6 +87,7 @@ impl Layer for Title {
         self.state = reduce(self.state.clone(), action.clone());
 
         match action {
+            Action::Back => Action::Cancel,
             Action::SelectR => Action::CreateProject(self.state.title_val.clone()),
             _ => Action::Noop
         }

@@ -1,5 +1,5 @@
-use termion::{color, cursor};
-use std::io::{Write, Stdout};
+use termion::cursor;
+use std::io::Write;
 use crate::common::{Action, Screen};
 
 const KEYBOARD: &str = r#"
@@ -12,9 +12,8 @@ const KEYBOARD: &str = r#"
 
 pub fn render(out: &mut Screen, current_actions: &Vec<Action>, x: u16, y: u16) {
     for (i, line) in KEYBOARD.lines().enumerate() {
-        write!(out, "{}{}{}",
+        write!(out, "{}{}",
             cursor::Goto(x, (i as u16)+y+1),
-            color::Fg(color::Black),
             line).unwrap();
     };
     for action in current_actions.iter() {
@@ -40,10 +39,8 @@ pub fn render(out: &mut Screen, current_actions: &Vec<Action>, x: u16, y: u16) {
             _ => (0,0,0)
         };
         let fg: &str = &KEYBOARD.lines().nth(dy+1).unwrap()[dx..dx+len];
-        write!(out, "{}{}{}{}",
+        write!(out, "{}{}",
             cursor::Goto(x+(dx as u16), y+(dy as u16)),
-            color::Fg(color::Black),
-            color::Bg(color::Red),
             fg).unwrap();
     }
 }

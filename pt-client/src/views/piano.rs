@@ -69,8 +69,6 @@ const SIZE: (u16, u16) = (70, 30);
 impl Piano {
     pub fn new(x: u16, y: u16, width: u16, height: u16, doc: Element) -> Self {
 
-        let mut path: String = "/usr/local/palit/".to_string();
-
         let (_, params) = param_map(doc);
 
         let initial_eq = [

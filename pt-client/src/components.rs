@@ -14,3 +14,4 @@ pub mod border;
 pub mod bigtext;
 pub mod ivories;
 pub mod roll;
+pub mod scroll;

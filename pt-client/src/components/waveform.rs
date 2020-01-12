@@ -1,6 +1,6 @@
 use crate::common::Screen;
-use termion::{color, cursor};
-use std::io::{Write, Stdout};
+use termion::cursor;
+use std::io::Write;
 
 pub fn pair_to_char(pair: (u8, u8)) -> char {
 

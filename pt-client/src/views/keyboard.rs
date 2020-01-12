@@ -1,6 +1,5 @@
-use std::io::{Write, Stdout};
-
-use termion::{color, cursor};
+use std::io::Write;
+use termion::cursor;
 use xmltree::Element;
 
 use crate::common::{Screen, Action, Window, Anchor};
