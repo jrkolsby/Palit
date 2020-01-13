@@ -400,7 +400,7 @@ impl Layer for Timeline {
         render_focii(
             out, win, 
             self.state.focus.clone(), 
-            &self.focii, &self.state, !target);
+            &self.focii, &self.state, false, !target);
 
         // Print track numbers
         for (id, track) in self.state.tracks.iter() {

@@ -48,6 +48,7 @@ pub enum Action {
     PatchAnchor(u16),
     PatchRoute(u16),
     AddRoute(u16),
+    AddModule(String),
     DelRoute(u16),
     FadePatch(u16, f32),
     PatchOut(u16, u16, u16),

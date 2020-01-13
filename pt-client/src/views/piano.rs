@@ -237,7 +237,7 @@ impl Layer for Piano {
 
         render_focii(out, win, 
             self.state.focus.clone(), 
-            &self.focii, &self.state, !target);
+            &self.focii, &self.state, false, !target);
     }
 
     fn dispatch(&mut self, action: Action) -> Action {

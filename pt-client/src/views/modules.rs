@@ -2,11 +2,30 @@ use std::io::Write;
 use termion::cursor;
 
 use crate::common::{Screen, Action, Direction, FocusType, Window, Anchor};
-use crate::common::{MultiFocus, ID, focus_dispatch};
+use crate::common::{MultiFocus, ID, focus_dispatch, render_focii, Color, write_bg, write_fg};
 use crate::common::{get_files, PALIT_MODULES};
+use crate::components::{popup};
 use crate::views::{Layer};
 
+static PADDING: (u16, u16) = (3, 3);
+
+const CORE_MODULES: [&str; 4] = [
+    "timeline",
+    "hammond",
+    "arpeggio",
+    "keyboard",
+];
+
+/*
+struct Module {
+    name: String,
+    src: String,
+    icon: String,
+}
+*/
+
 pub struct Modules {
+    window: Window,
     state: ModulesState,
     focii: Vec<Vec<MultiFocus<ModulesState>>>,
 }
@@ -19,12 +38,18 @@ pub struct ModulesState {
 
 impl Modules {
     pub fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
-        let modules = get_files(PALIT_MODULES, vec![]);
+        let mut core: Vec<String> = CORE_MODULES.iter().map(|a| a.to_string()).collect();
+        let modules = get_files(PALIT_MODULES, core);
         let initial_state = ModulesState {
             focus: (0,0),
             modules: modules.unwrap(),
         };
         return Modules {
+            window: Window {
+                x, y,
+                w: width,
+                h: height,
+            },
             focii: generate_focii(&initial_state.modules),
             state: initial_state,
         }
@@ -59,13 +84,60 @@ fn generate_focii(modules: &Vec<String>) -> Vec<Vec<MultiFocus<ModulesState>>> {
         b_t: |_, _, _| Action::Noop,
         active: None,
     };
+
+    let mut counter = 0;
     let mut focii = vec![];
+    let mut focus_acc = void_focus.clone();
+
+    let mut sorted_modules = modules.clone();
+    sorted_modules.sort();
+
+    for (i, module) in sorted_modules.iter().enumerate() {
+        let id = (FocusType::Button, i as u16);
+        let transform: fn(Action, ID, &ModulesState) -> Action = |a, id, state| match a {
+            Action::SelectR |
+            Action::SelectG |
+            Action::SelectP |
+            Action::SelectY |
+            Action::SelectB => Action::AddModule(state.modules[id.1 as usize].clone()),
+            _ => Action::Noop
+        };
+        let render: fn(&mut Screen, Window, ID, &ModulesState, bool) = 
+            |mut out, window, id, state, focus| {
+                let module = &state.modules[id.1 as usize];
+                if !focus { write_bg(out, Color::Beige); write_fg(out, Color::Black); }
+                write!(out, "{}{}", cursor::Goto(
+                    PADDING.0 + window.x, 
+                    PADDING.1 + window.y + id.1 * 2,
+                ), module).unwrap();
+        };
+        counter = match counter {
+            0 => { focus_acc.r_id = id; focus_acc.r = render; focus_acc.r_t = transform; 1 },
+            1 => { focus_acc.g_id = id; focus_acc.g = render; focus_acc.g_t = transform; 2 },
+            2 => { focus_acc.p_id = id; focus_acc.p = render; focus_acc.p_t = transform; 3 },
+            3 => { focus_acc.y_id = id; focus_acc.y = render; focus_acc.y_t = transform; 4 },
+            _ => { focus_acc.b_id = id; focus_acc.b = render; focus_acc.b_t = transform; 0 },
+        };
+        if counter == 0 { 
+            focii.push(vec![focus_acc]);
+            focus_acc = void_focus.clone();
+        }
+    }
+    if counter > 0 { focii.push(vec![focus_acc]); }
     focii
 }
 
 impl Layer for Modules {
     fn render(&self, out: &mut Screen, target: bool) {
-        write!(out, "HI");
+        popup::render(out, 
+                      self.window.x,
+                      self.window.y,
+                      self.window.w,
+                      self.window.h,
+                      &"Add Module".to_string());
+        render_focii(out, self.window, 
+            self.state.focus.clone(), 
+            &self.focii, &self.state, true, !target);
     }
 
     fn dispatch(&mut self, action: Action) -> Action {

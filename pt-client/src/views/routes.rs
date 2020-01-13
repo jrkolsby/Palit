@@ -1,11 +1,11 @@
 use std::io::{Write, Stdout};
 use std::collections::HashMap;
-use termion::{color, cursor};
+use termion::cursor;
 use xmltree::Element;
 
 use crate::common::{MultiFocus, FocusType, ID, VOID_ID};
 use crate::common::{shift_focus, render_focii, focus_dispatch};
-use crate::common::{Screen, Action, Window, Anchor, Color, Route};
+use crate::common::{Screen, Action, Window, Anchor, Route};
 use crate::common::{write_fg, write_bg};
 use crate::views::{Layer};
 use crate::components::{button, popup};
@@ -93,7 +93,6 @@ fn generate_focii(
         let render: fn(&mut Screen, Window, ID, &RoutesState, bool) = 
             |mut out, window, id, state, focus| {
                 let anchor = &state.anchors.get(&id.1).unwrap();
-                if !focus { write_bg(out, Color::Beige); write_fg(out, Color::Black); }
                 write!(out, "{}{} {}", cursor::Goto(
                     (PADDING.0 * 2) + window.x + 2 * state.routes.len() as u16,
                     (PADDING.1) + window.y + anchor.index * 2
@@ -118,6 +117,7 @@ fn generate_focii(
 
     let mut footer_options = void_focus.clone();
 
+    footer_options.r_id = (FocusType::Button, 0);
     footer_options.r = |out, win, id, state, focus| {
         write!(out, "{}Add Route", cursor::Goto(
             PADDING.0 + win.x,
@@ -131,6 +131,7 @@ fn generate_focii(
             Action::AddRoute(new_id)
         }, _ => Action::Noop}
     };
+    footer_options.y_id = (FocusType::Button, 0);
     footer_options.y = |out, win, id, state, focus| {
         write!(out, "{}Delete Route", cursor::Goto(
             PADDING.0 + 11 + win.x,
@@ -284,10 +285,7 @@ impl Layer for Routes {
         render_focii(
             out, win, 
             self.state.focus.clone(), 
-            &self.focii, &self.state, !target);
-
-        write_bg(out, Color::Beige); 
-        write_fg(out, Color::Black);
+            &self.focii, &self.state, true, !target);
 
         let anchor_x = win.x + 2 * self.state.routes.len() as u16 + PADDING.0;
 

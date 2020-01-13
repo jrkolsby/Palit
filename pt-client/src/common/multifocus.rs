@@ -73,6 +73,7 @@ pub fn render_focii<T>(
     focus: (usize, usize), 
     focii: &Vec<Vec<MultiFocus<T>>>, 
     state: &T,
+    light: bool,
     disable: bool) {
     let mut fullscreen = false;
 
@@ -96,10 +97,10 @@ pub fn render_focii<T>(
         for j in 1..size.1+1 {
             write!(out, "{}{}", cursor::Goto(1, j), space).unwrap();
         }
-        write_fg(out, Color::Black);
+        write_fg(out, if light { Color::Beige } else { Color::Black });
     } else {
-        write_fg(out, Color::White);
-        write_bg(out, Color::Black);
+        write_fg(out, if light { Color::Black } else { Color::White });
+        write_bg(out, if light { Color::Beige } else { Color::Black });
     }
 
     for (j, col) in focii.iter().enumerate() {
@@ -108,17 +109,17 @@ pub fn render_focii<T>(
             if focus == (i,j) {
                 continue;
             }
-            _focus.render(out, window, &state, false);
+            _focus.render(out, window, &state, light, false);
         }
     }
 
     // Render selected focus last (on top)
-    current_focus.render(out, window, &state, !disable);
+    current_focus.render(out, window, &state, light, !disable);
 
     // Default style
     if !fullscreen {
-        write_fg(out, Color::White); 
-        write_bg(out, Color::Black); 
+        write_fg(out, if light { Color::Black } else { Color::White }); 
+        write_bg(out, if light { Color::Beige } else { Color::Black }); 
     }
 }
 
@@ -191,7 +192,7 @@ pub fn shift_focus<T>(
 
 impl<T> MultiFocus<T> {
     pub fn render(&self, out: &mut Screen, window: Window,
-            state: &T, focused: bool) {
+            state: &T, light: bool, focused: bool) {
 
         let mut fullscreen: bool = false;
         let mut full_red: bool = false;
@@ -221,8 +222,8 @@ impl<T> MultiFocus<T> {
         );
 
         if focused && !fullscreen {
-            write_fg(out, Color::Black);
-            write_bg(out, Color::White);
+            write_fg(out, if light { Color::White } else { Color::Black });
+            write_bg(out, if light { Color::Black } else { Color::White });
             (self.w)(out, window, self.w_id.clone(), state, focused);
         } else if fullscreen {
             write_fg(out, Color::White); 
@@ -322,12 +323,12 @@ impl<T> MultiFocus<T> {
             if self.b_id.0 == FocusType::Void { self.w_id.clone() } else { self.b_id.clone() }
         );
         match action {
-            Action::SelectR => { self.active = Some(Focus::Red) },
-            Action::SelectG => { self.active = Some(Focus::Green) },
-            Action::SelectY => { self.active = Some(Focus::Yellow) },
-            Action::SelectP => { self.active = Some(Focus::Pink) },
-            Action::SelectB => { self.active = Some(Focus::Blue) },
-            Action::Deselect => { self.active = None },
+            Action::SelectR => { if r_id.0 != FocusType::Void { self.active = Some(Focus::Red) }},
+            Action::SelectG => { if g_id.0 != FocusType::Void { self.active = Some(Focus::Green) }},
+            Action::SelectY => { if y_id.0 != FocusType::Void { self.active = Some(Focus::Yellow) }},
+            Action::SelectP => { if p_id.0 != FocusType::Void { self.active = Some(Focus::Pink) }},
+            Action::SelectB => { if b_id.0 != FocusType::Void { self.active = Some(Focus::Blue) }},
+            Action::Deselect => { self.active = None; },
             _ => {},
         };
         match self.active {

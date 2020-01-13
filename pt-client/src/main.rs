@@ -29,7 +29,8 @@ use views::{Layer,
     Piano, 
     Routes, 
     Keyboard, 
-    Arpeggio
+    Arpeggio,
+    Modules,
 };
 use modules::{read_document};
 
@@ -38,6 +39,7 @@ use common::{Screen, Action, Anchor, MARGIN_D0, MARGIN_D1};
 const DEFAULT_ROUTE_ID: u16 = 29200;
 const DEFAULT_HOME_ID: u16 = 29201;
 const DEFAULT_HELP_ID: u16 = 29202;
+const DEFAULT_MODULES_ID: u16 = 29203;
 
 fn render(stdout: &mut Screen, layers: &VecDeque<(u16, Box<Layer>)>) {
     /*
@@ -120,6 +122,9 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
 
             "DESELECT" => Action::Deselect,
 
+            "EFFECT" |
+            "INSTRUMENT" => Action::Instrument,
+
             _ => { Action::Noop },
         };
 
@@ -154,7 +159,7 @@ fn main() -> std::io::Result<()> {
 
     // Allocate 8MB buffer in raw mode
     let mut out = unsafe {
-        BufWriter::with_capacity(20_000, File::from_raw_fd(1)).into_raw_mode().unwrap()
+        BufWriter::with_capacity(200_000, File::from_raw_fd(1)).into_raw_mode().unwrap()
     };
 
     // Configure input polling array
@@ -226,6 +231,15 @@ fn main() -> std::io::Result<()> {
                     )), DEFAULT_HELP_ID); 
                     Action::Noop
                 },
+                Action::Instrument => {
+                    add_layer(&mut layers, Box::new(Modules::new(
+                        MARGIN_D1.0,
+                        MARGIN_D1.1, 
+                        size.0 - (MARGIN_D1.0 * 2), 
+                        size.1 - (MARGIN_D1.1 * 2),
+                    )), DEFAULT_MODULES_ID); 
+                    Action::Noop
+                }
                 a => {
                     let (_, target) = layers.get_mut(target_index).unwrap();
                     target.dispatch(a)
@@ -398,9 +412,9 @@ fn main() -> std::io::Result<()> {
                     }
                 }, 
                 Action::OpenProject(title) => {
-                    ipc_sound.write(
-                        format!("OPEN_PROJECT:{} ", title).as_bytes()).unwrap();
+                    ipc_sound.write(format!("OPEN_PROJECT:{} ", title).as_bytes()).unwrap();
                     let doc = read_document(title);
+                    ipc_sound.write(format!("SAMPLE_RATE:{} ", doc.sample_rate).as_bytes()).unwrap();
                     for (id, el) in doc.modules.iter() {
                         match &el.name[..] {
                             "timeline" => add_layer(&mut layers, 
