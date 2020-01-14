@@ -8,6 +8,7 @@ use crate::common::{Param, Offset};
 pub mod timeline;
 pub mod patch;
 
+#[derive(Clone, Debug)]
 pub struct Document {
     pub title: String,
     pub sample_rate: u32,

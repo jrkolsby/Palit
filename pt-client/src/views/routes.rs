@@ -383,7 +383,8 @@ impl Layer for Routes {
                     )
                 },
                 a @ Action::Exit |
-                a @ Action::Up | a @ Action::Down => {
+                a @ Action::Up | 
+                a @ Action::Down => {
                     // About to change modules, reset selects
                     self.state.selected_anchor = None;
                     self.state.selected_route = None;

@@ -31,15 +31,17 @@ use views::{Layer,
     Keyboard, 
     Arpeggio,
     Modules,
+    Project,
 };
-use modules::{read_document};
+use modules::{read_document, Document};
 
-use common::{Screen, Action, Anchor, MARGIN_D0, MARGIN_D1};
+use common::{Screen, Action, Anchor, MARGIN_D0, MARGIN_D1, MARGIN_D2};
 
 const DEFAULT_ROUTE_ID: u16 = 29200;
 const DEFAULT_HOME_ID: u16 = 29201;
 const DEFAULT_HELP_ID: u16 = 29202;
 const DEFAULT_MODULES_ID: u16 = 29203;
+const DEFAULT_PROJECT_ID: u16 = 29204;
 
 fn render(stdout: &mut Screen, layers: &VecDeque<(u16, Box<Layer>)>) {
     /*
@@ -178,6 +180,7 @@ fn main() -> std::io::Result<()> {
     // Configure UI layers
     let mut layers: VecDeque<(u16, Box<Layer>)> = VecDeque::new();
     let mut routes_id: Option<u16> = None;
+    let mut document: Option<Document> = None;
 
     add_layer(&mut layers, Box::new(
         Home::new(1, 1, size.0, size.1)
@@ -414,6 +417,7 @@ fn main() -> std::io::Result<()> {
                 Action::OpenProject(title) => {
                     ipc_sound.write(format!("OPEN_PROJECT:{} ", title).as_bytes()).unwrap();
                     let doc = read_document(title);
+                    document = Some(doc.clone());
                     ipc_sound.write(format!("SAMPLE_RATE:{} ", doc.sample_rate).as_bytes()).unwrap();
                     for (id, el) in doc.modules.iter() {
                         match &el.name[..] {
@@ -451,6 +455,19 @@ fn main() -> std::io::Result<()> {
                             name => { eprintln!("unimplemented module {:?}", name)}
                         }
                     }
+                },
+                // SHOW PROJECT
+                Action::Left => {
+                    let mut project_view = Project::new(
+                        MARGIN_D2.0,
+                        MARGIN_D2.1, 
+                        size.0 - (MARGIN_D2.0 * 2), 
+                        size.1 - (MARGIN_D2.1 * 2),
+                    );
+                    let doc = document.clone().unwrap();
+                    let modules: Vec<String> = doc.modules.iter().map(|(_, e)| e.name.clone() ).collect();
+                    project_view.dispatch(Action::ShowProject(doc.title.clone(), modules));
+                    add_layer(&mut layers, Box::new(project_view), DEFAULT_PROJECT_ID); 
                 },
                 Action::ShowAnchors(anchors) => {
                     if routes_id.is_none() {

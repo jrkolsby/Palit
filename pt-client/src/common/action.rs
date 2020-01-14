@@ -63,11 +63,13 @@ pub enum Action {
     RecordTrack(u16),
     MuteTrack(u16),
     PlayAt(u16),
-    AddNote(u16, u8, f32, u32, u32),
+    // TODO: Track ID
+    AddNote(u16, u8, f32, u32, u32), 
 
     // Default actions
     OpenProject(String),
     CreateProject(String),
+    ShowProject(String, Vec<String>),
     Pepper,
     InputTitle,
     Cancel,

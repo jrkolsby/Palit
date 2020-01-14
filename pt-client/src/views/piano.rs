@@ -268,7 +268,9 @@ impl Layer for Piano {
                             input: true,
                         }])
                 },
-                a @ Action::Up | a @ Action::Down => a,
+                a @ Action::Left |
+                a @ Action::Up | 
+                a @ Action::Down |
                 a @ Action::SetParam(_,_) => a,
                 _ => { Action::Noop }
             }

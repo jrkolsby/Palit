@@ -1,5 +1,5 @@
 use std::io::{Write, Stdout};
-use termion::{color, cursor, terminal_size};
+use termion::{color, cursor, clear};
 
 use crate::common::{Screen, Action, Color, write_bg, write_fg, Window};
 
@@ -84,7 +84,6 @@ pub fn render_focii<T>(
     let current_focus = &focii[focus.1][focus.0];
     if let Some(active) = &current_focus.active {
         // If something is active, fill the screen with that color
-        let size: (u16, u16) = terminal_size().unwrap(); 
         fullscreen = true;
         match active {
             Focus::Red => { write_bg(out, Color::Red) },
@@ -93,11 +92,8 @@ pub fn render_focii<T>(
             Focus::Pink => { write_bg(out, Color::Pink) },
             Focus::Blue => { write_bg(out, Color::Blue) },
         };
-        let space = (0..size.0).map(|_| " ").collect::<String>();
-        for j in 1..size.1+1 {
-            write!(out, "{}{}", cursor::Goto(1, j), space).unwrap();
-        }
-        write_fg(out, if light { Color::Beige } else { Color::Black });
+        write!(out, "{}", clear::All).unwrap();
+        write_fg(out, Color::Black);
     } else {
         write_fg(out, if light { Color::Black } else { Color::White });
         write_bg(out, if light { Color::Beige } else { Color::Black });
@@ -162,10 +158,10 @@ pub fn shift_focus<T>(
                     (focus.0-1, focus.1)
                 // If the user tried to exceed the focus bounds, pass default back up 
                 // to the caller 
-                } else { focus },
+                } else { default = Some(Action::Left); focus },
             Action::Right => if focus.0 < (focus_row.len()-1) {
                     (focus.0+1, focus.1)
-                } else { focus },
+                } else { default = Some(Action::Right); focus },
             Action::Up => if focus.1 > 0 {
                     let row_up = &focii[focus.1-1];
                     if focus.0 >= row_up.len()-1 {

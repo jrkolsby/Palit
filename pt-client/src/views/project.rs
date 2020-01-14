@@ -3,48 +3,32 @@ use termion::cursor;
 
 use crate::common::{Screen, Action, Direction, FocusType, Window, Anchor};
 use crate::common::{MultiFocus, ID, focus_dispatch, render_focii, Color, write_bg, write_fg};
-use crate::common::{get_files, PALIT_MODULES};
 use crate::components::{popup};
 use crate::views::{Layer};
 
 static PADDING: (u16, u16) = (3, 3);
 
-const CORE_MODULES: [&str; 4] = [
-    "timeline",
-    "hammond",
-    "arpeggio",
-    "keyboard",
-];
-
-/*
-struct Module {
-    name: String,
-    src: String,
-    icon: String,
-}
-*/
-
-pub struct Modules {
+pub struct Project {
     window: Window,
-    state: ModulesState,
-    focii: Vec<Vec<MultiFocus<ModulesState>>>,
+    state: ProjectState,
+    focii: Vec<Vec<MultiFocus<ProjectState>>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct ModulesState {
+pub struct ProjectState {
     modules: Vec<String>,
+    title: String,
     focus: (usize, usize),
 }
 
-impl Modules {
+impl Project {
     pub fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
-        let mut core: Vec<String> = CORE_MODULES.iter().map(|a| a.to_string()).collect();
-        let modules = get_files(PALIT_MODULES, core);
-        let initial_state = ModulesState {
+        let initial_state = ProjectState {
             focus: (0,0),
-            modules: modules.unwrap(),
+            title: "".to_string(),
+            modules: vec![],
         };
-        return Modules {
+        return Project {
             window: Window {
                 x, y,
                 w: width,
@@ -56,15 +40,25 @@ impl Modules {
     }
 }
 
-static VOID_RENDER: fn( &mut Screen, Window, ID, &ModulesState, bool) =
+static VOID_RENDER: fn( &mut Screen, Window, ID, &ProjectState, bool) =
     |_, _, _, _, _| {};
 
-fn reduce(state: ModulesState, action: Action) -> ModulesState {
-    return state.clone();
+fn reduce(state: ProjectState, action: Action) -> ProjectState {
+    ProjectState {
+        focus: state.focus,
+        title: match action.clone() {
+            Action::ShowProject(title, _) => title,
+            _ => state.title.clone()
+        },
+        modules: match action {
+            Action::ShowProject(_, modules) => modules,
+            _ => state.modules.clone()
+        },
+    }
 }
 
-fn generate_focii(modules: &Vec<String>) -> Vec<Vec<MultiFocus<ModulesState>>> {
-    let void_focus = MultiFocus::<ModulesState> {
+fn generate_focii(modules: &Vec<String>) -> Vec<Vec<MultiFocus<ProjectState>>> {
+    let void_focus = MultiFocus::<ProjectState> {
         w_id: (FocusType::Void, 0),
         w: VOID_RENDER,
         r_id: (FocusType::Void, 0),
@@ -94,7 +88,7 @@ fn generate_focii(modules: &Vec<String>) -> Vec<Vec<MultiFocus<ModulesState>>> {
 
     for (i, module) in sorted_modules.iter().enumerate() {
         let id = (FocusType::Button, i as u16);
-        let transform: fn(Action, ID, &ModulesState) -> Action = |a, id, state| match a {
+        let transform: fn(Action, ID, &ProjectState) -> Action = |a, id, state| match a {
             Action::SelectR |
             Action::SelectG |
             Action::SelectP |
@@ -102,7 +96,7 @@ fn generate_focii(modules: &Vec<String>) -> Vec<Vec<MultiFocus<ModulesState>>> {
             Action::SelectB => Action::AddModule(state.modules[id.1 as usize].clone()),
             _ => Action::Noop
         };
-        let render: fn(&mut Screen, Window, ID, &ModulesState, bool) = 
+        let render: fn(&mut Screen, Window, ID, &ProjectState, bool) = 
             |mut out, window, id, state, focus| {
                 let module = &state.modules[id.1 as usize];
                 if !focus { write_bg(out, Color::Beige); write_fg(out, Color::Black); }
@@ -127,14 +121,14 @@ fn generate_focii(modules: &Vec<String>) -> Vec<Vec<MultiFocus<ModulesState>>> {
     focii
 }
 
-impl Layer for Modules {
+impl Layer for Project {
     fn render(&self, out: &mut Screen, target: bool) {
         popup::render(out, 
                       self.window.x,
                       self.window.y,
                       self.window.w,
                       self.window.h,
-                      &"Add Module".to_string());
+                      &self.state.title);
         render_focii(out, self.window, 
             self.state.focus.clone(), 
             &self.focii, &self.state, true, !target);
@@ -149,6 +143,12 @@ impl Layer for Modules {
 
         if let Some(_default) = default {
             self.state = reduce(self.state.clone(), _default.clone());
+            match action {
+                Action::ShowProject(_,_) => {
+                    self.focii = generate_focii(&self.state.modules);
+                },
+                _ => {}
+            };
             match _default {
                 Action::Back => Action::Cancel,
                 _ => Action::Noop,
