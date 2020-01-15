@@ -1,4 +1,4 @@
-use crate::common::Anchor;
+use crate::common::{Anchor, Module};
 
 #[derive(Debug, Clone)]
 pub enum Action {
@@ -48,7 +48,6 @@ pub enum Action {
     PatchAnchor(u16),
     PatchRoute(u16),
     AddRoute(u16),
-    AddModule(String),
     DelRoute(u16),
     FadePatch(u16, f32),
     PatchOut(u16, u16, u16),
@@ -67,9 +66,11 @@ pub enum Action {
     AddNote(u16, u8, f32, u32, u32), 
 
     // Default actions
+    AddModule(String),
+    DelModule(u16),
     OpenProject(String),
     CreateProject(String),
-    ShowProject(String, Vec<String>),
+    ShowProject(String, Vec<Module>),
     Pepper,
     InputTitle,
     Cancel,

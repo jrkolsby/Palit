@@ -2,8 +2,8 @@ use std::io::Write;
 use termion::cursor;
 
 use crate::common::{Screen, Action, Direction, FocusType, Window, Anchor};
-use crate::common::{MultiFocus, ID, focus_dispatch, render_focii, Color, write_bg, write_fg};
-use crate::common::{get_files, PALIT_MODULES};
+use crate::common::{MultiFocus, ID, focus_dispatch, render_focii};
+use crate::common::{get_files, PALIT_MODULES, Module};
 use crate::components::{popup};
 use crate::views::{Layer};
 
@@ -105,7 +105,6 @@ fn generate_focii(modules: &Vec<String>) -> Vec<Vec<MultiFocus<ModulesState>>> {
         let render: fn(&mut Screen, Window, ID, &ModulesState, bool) = 
             |mut out, window, id, state, focus| {
                 let module = &state.modules[id.1 as usize];
-                if !focus { write_bg(out, Color::Beige); write_fg(out, Color::Black); }
                 write!(out, "{}{}", cursor::Goto(
                     PADDING.0 + window.x, 
                     PADDING.1 + window.y + id.1 * 2,
@@ -151,6 +150,7 @@ impl Layer for Modules {
             self.state = reduce(self.state.clone(), _default.clone());
             match _default {
                 Action::Back => Action::Cancel,
+                a @ Action::AddModule(_) => a,
                 _ => Action::Noop,
             }
         } else { Action::Noop }

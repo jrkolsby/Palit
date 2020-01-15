@@ -3,7 +3,7 @@ use std::fs;
 
 use xmltree::Element;
 
-use crate::common::{Param, Offset};
+use crate::common::{Param, Offset, Module};
 
 pub mod timeline;
 pub mod patch;

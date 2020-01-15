@@ -26,8 +26,8 @@ static ASSET_PREFIX: &str = "storage/";
 pub struct TimelineState {
     // Requires XML write/read
     pub tempo: u16,
-    pub temp_tempo: Option<u16>,
     pub zoom: usize,
+    pub temp_tempo: Option<u16>,
     pub temp_zoom: Option<usize>,
     pub meter_beat: usize,
     pub meter_note: usize,
@@ -105,8 +105,8 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
             active: None,
         },
         MultiFocus::<TimelineState> {
-            r_id: (FocusType::Button, 0),
-            r: |out, window, id, state, focus| {
+            g_id: (FocusType::Button, 0),
+            g: |out, window, id, state, focus| {
                 let offset_out = char_offset(
                     state.loop_out,
                     state.sample_rate,
@@ -120,7 +120,7 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                     ).unwrap()
                 }
             },
-            r_t: |a, id, state| {
+            g_t: |a, id, state| {
                 let o1 = offset_char(1, state.sample_rate, state.tempo, state.zoom);
                 match a { 
                     Action::Left => Action::SetLoop(state.loop_in, state.loop_out - o1), 
@@ -129,8 +129,8 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                 }
             },
 
-            g_id: (FocusType::Button, 1),
-            g: |out, window, id, state, focus| {
+            p_id: (FocusType::Button, 1),
+            p: |out, window, id, state, focus| {
                 let offset_in = char_offset(
                     state.loop_in,
                     state.sample_rate,
@@ -144,7 +144,7 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                     ).unwrap()
                 }
             },
-            g_t: |a, id, state| {
+            p_t: |a, id, state| {
                 let o1 = offset_char(1, state.sample_rate, state.tempo, state.zoom);
                 match a { 
                     Action::Left => Action::SetLoop(state.loop_in - o1, state.loop_out), 
@@ -153,12 +153,12 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                 }
             },
             
-            y_id: (FocusType::Param, 0),
-            y: |out, window, id, state, focus| {
+            r_id: (FocusType::Param, 0),
+            r: |out, window, id, state, focus| {
                 let tempo = if let Some(t) = state.temp_tempo { t } else { state.tempo };
                 tempo::render(out, window.x+window.w-3, window.y, tempo, state.tick);
             },
-            y_t: |a, id, state| {
+            r_t: |a, id, state| {
                 let tempo = if let Some(t) = state.temp_tempo { t } else { state.tempo };
                 match a {
                     Action::Up => Action::SetTempo(tempo + 1),
@@ -167,12 +167,12 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                 }
             },
 
-            p_id: (FocusType::Param, 0),
-            p: |out, window, id, state, focus|
+            y_id: (FocusType::Param, 0),
+            y: |out, window, id, state, focus|
                 write!(out, "{} {} ", cursor::Goto(
                     window.x+window.w-14, 2
                 ), state.meter_beat).unwrap(),
-            p_t: |a, id, state| match a {
+            y_t: |a, id, state| match a {
                 Action::Up => Action::SetMeter(state.meter_beat + 1, state.meter_note),
                 Action::Down => Action::SetMeter(state.meter_beat - 1, state.meter_note),
                 _ => Action::Noop,
@@ -212,21 +212,33 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                 b_id: VOID_ID.clone(),
 
                 r: |mut out, win, id, state, focus|
-                    button::render(out, win.x+TRACKS_X, win.y+TIMELINE_Y+2*id.1, 3, "R"),
+                    write!(out, "{}{}", cursor::Goto(
+                        win.x + TRACKS_X, 
+                        win.y + 1 + TIMELINE_Y + 2 * id.1),
+                        if state.tracks.get(&id.1).unwrap().record { "\\_" } else { "_/" }
+                    ).unwrap(),
                 r_t: |action, id, _| match action {
                     Action::SelectR => Action::RecordTrack(id.1),
                     _ => Action::Noop,
                 },
 
                 g: |mut out, win, id, state, focus|
-                    button::render(out, win.x+TRACKS_X+4, win.y+TIMELINE_Y+(2*id.1), 3, "M"),
+                    write!(out, "{}{}", cursor::Goto(
+                        win.x + TRACKS_X + 3, 
+                        win.y + 1 + TIMELINE_Y + 2 * id.1),
+                        if state.tracks.get(&id.1).unwrap().mute { "\\_" } else { "_/" }
+                    ).unwrap(),
                 g_t: |action, id, _| match action {
                     Action::SelectG => Action::MuteTrack(id.1),
                     _ => Action::Noop,
                 },
 
                 b: |mut out, win, id, state, focus|
-                    button::render(out, win.x+TRACKS_X+8, win.y+TIMELINE_Y+(2*id.1), 3, "S"),
+                    write!(out, "{}{}", cursor::Goto(
+                        win.x + TRACKS_X + 6, 
+                        win.y + 1 + TIMELINE_Y + 2 * id.1),
+                        if state.tracks.get(&id.1).unwrap().solo { "\\_" } else { "_/" }
+                    ).unwrap(),
                 b_t: |action, id, _| match action {
                     Action::SelectB => Action::SoloTrack(id.1),
                     _ => Action::Noop,
@@ -303,7 +315,25 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             _ => state.loop_out,
         },
         sample_rate: state.sample_rate,
-        tracks: state.tracks.clone(),
+        tracks: {
+            let mut new_tracks = state.tracks.clone();
+            match action.clone() {
+                Action::SoloTrack(id) => {
+                    let track = new_tracks.get_mut(&id).unwrap();
+                    track.solo = !track.solo;
+                },
+                Action::RecordTrack(id) => {
+                    let track = new_tracks.get_mut(&id).unwrap();
+                    track.record = !track.record;
+                },
+                Action::MuteTrack(id) => {
+                    let track = new_tracks.get_mut(&id).unwrap();
+                    track.mute = !track.mute;
+                },
+                _ => {}
+            };
+            new_tracks
+        },
         assets: match action.clone() {
             Action::Deselect /* |
             Action::Zoom(z) */ => {

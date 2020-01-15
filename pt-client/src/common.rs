@@ -98,3 +98,9 @@ pub struct Anchor {
     pub name: String,
     pub input: bool,
 }
+
+#[derive(Clone, Debug)]
+pub struct Module {
+    pub id: u16,
+    pub name: String,
+}

@@ -72,15 +72,15 @@ impl Piano {
         let (_, params) = param_map(doc);
 
         let initial_eq = [
-            *params.get("16").unwrap(),
-            *params.get("5.3").unwrap(),
-            *params.get("8").unwrap(),
-            *params.get("4").unwrap(),
-            *params.get("2.6").unwrap(),
-            *params.get("2").unwrap(),
-            *params.get("1.6").unwrap(),
-            *params.get("1.3").unwrap(),
-            *params.get("1").unwrap(),
+            *params.get("16").unwrap_or(&10),
+            *params.get("5.3").unwrap_or(&10),
+            *params.get("8").unwrap_or(&10),
+            *params.get("4").unwrap_or(&10),
+            *params.get("2.6").unwrap_or(&10),
+            *params.get("2").unwrap_or(&10),
+            *params.get("1.6").unwrap_or(&10),
+            *params.get("1.3").unwrap_or(&10),
+            *params.get("1").unwrap_or(&10),
         ];
 
         // Initialize State
