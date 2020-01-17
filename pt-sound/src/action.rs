@@ -16,8 +16,8 @@ pub enum Action {
     // Node ID, I/O ID, Route ID
     PatchIn(u16, usize, u16),
     PatchOut(u16, usize, u16),
-    DeleteRoute(u16),
-    DeletePatch(u16, usize, bool),
+    DelRoute(u16),
+    DelPatch(u16, usize, bool),
     AddRoute(u16),
 
     // Default actions

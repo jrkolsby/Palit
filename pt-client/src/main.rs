@@ -470,13 +470,15 @@ fn main() -> std::io::Result<()> {
                         size.0 - (MARGIN_D2.0 * 2), 
                         size.1 - (MARGIN_D2.1 * 2),
                     );
-                    let doc = document.clone().unwrap();
-                    let modules: Vec<Module> = doc.modules.iter().map(|(id, el)| Module {
-                        id: id.clone(),
-                        name: el.name.clone(),
-                    }).collect();
-                    project_view.dispatch(Action::ShowProject( doc.title.clone(), modules));
-                    add_layer(&mut layers, Box::new(project_view), DEFAULT_PROJECT_ID); 
+                    if let Some(doc) = document {
+                        let modules: Vec<Module> = doc.modules.iter().map(|(id, el)| Module {
+                            id: id.clone(),
+                            name: el.name.clone(),
+                        }).collect();
+                        project_view.dispatch(Action::ShowProject( doc.title.clone(), modules));
+                        add_layer(&mut layers, Box::new(project_view), DEFAULT_PROJECT_ID); 
+                        document = Some(doc);
+                    }
                 },
                 Action::ShowAnchors(anchors) => {
                     let mut routes_index: Option<usize> = None;
@@ -509,7 +511,6 @@ fn main() -> std::io::Result<()> {
                         name: a.name.clone(),
                         input: a.input
                     }).collect();
-
                     // Restore route view
                     route_view.dispatch(Action::ShowAnchors(anchors_fill));
                     add_layer(&mut layers, route_view, DEFAULT_ROUTE_ID);
@@ -522,13 +523,20 @@ fn main() -> std::io::Result<()> {
                     // Make empty element with tag and id
                     let mut new_el = Element::new(&name);
                     new_el.attributes.insert("id".to_string(), new_id.to_string());
-
-                    add_module(&mut layers, &name, new_id, size, new_el);
-                }
+                    add_module(&mut layers, &name, new_id, size, new_el.clone());
+                    if let Some(mut doc) = document {
+                        doc.modules.insert(new_id, new_el);
+                        document = Some(doc);
+                    }
+                },
                 Action::DelModule(id) => {
                     ipc_sound.write(format!("DEL_MODULE:{} ", id).as_bytes()).unwrap();
                     layers.retain(|(i, _)| *i != id);
-                }
+                    if let Some(mut doc) = document {
+                        doc.modules.retain(|i, _| *i != id);
+                        document = Some(doc);
+                    }
+                },
                 /*
                 Action::Pepper => {
                     add_layer(&mut layers, Box::new(Help::new(10, 10, 44, 15)), 0); 

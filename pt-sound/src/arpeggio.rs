@@ -62,7 +62,6 @@ pub fn dispatch(store: &mut Store, action: Action) {
             distribute_notes(store.notes.borrow_mut(), store.bar);
         },
         Action::NoteOff(note) => {
-            println!("arp off {}", note);
             store.notes.retain(|n| n.note != note);
             if store.notes.len() > 0 {
                 distribute_notes(store.notes.borrow_mut(), store.bar);

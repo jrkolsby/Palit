@@ -39,7 +39,6 @@ pub fn init() -> Store {
 }
 
 pub fn dispatch(store: &mut Store, action: Action) {
-    eprintln!("{:?}", action);
     match action {
         Action::NoteOnAt(_, note, vol) |
         Action::NoteOn(note, vol) => {

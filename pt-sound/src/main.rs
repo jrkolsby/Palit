@@ -260,7 +260,7 @@ fn main() -> Result<(), Box<error::Error>> {
                     };
                 }
             },
-            Action::DeletePatch(n_id, a_id, input) => {
+            Action::DelPatch(n_id, a_id, input) => {
                 match &patch[*operators.get(&n_id).unwrap()] {
                     Module::Operator(_, anchors) => {
                         let id = anchors[a_id].clone();
@@ -300,13 +300,20 @@ fn main() -> Result<(), Box<error::Error>> {
                 eprintln!("Currently {} Edges", patch.connection_count());
             }
             Action::DelModule(id) => {
-                // Delete all outgoing edges from an operator and itself
-                let operator = operators.get(&id).unwrap();
-                let mut module_cluster = patch.outputs(*operator);
+                // Because removing a node from the graph will cause indicies to
+                // ... shift, we're just going to lazily remove all edges on the
+                // ... node cluster but leave the nodes there.
+                let operator = operators.remove(&id).unwrap();
+                let mut module_cluster = patch.outputs(operator);
                 while let Some(output_idx) = module_cluster.next_node(&patch) {
                     patch.remove_all_output_connections(output_idx);
                     patch.remove_all_input_connections(output_idx);
                 }
+            }
+            Action::DelRoute(id) => {
+                let route = routes.remove(&id).unwrap();
+                patch.remove_all_output_connections(route);
+                patch.remove_all_input_connections(route);
             }
             _ => { eprintln!("unimplemented action {:?}", a); }
         }

@@ -411,7 +411,6 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
         }
         if let Some(client_a) = client_d {
             for a in client_a.iter() {
-                eprintln!("{:?}", a);
                 let message = match a {
                     Action::Tick(offset) => Some(format!("TICK:{} ", offset)),
                     Action::NoteOn(n,v) => Some(format!("NOTE_ON:{}:{} ", n, v)),
@@ -483,10 +482,10 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "PATCH_IN" => Action::PatchIn(argv[1].parse::<u16>().unwrap(),
                                           argv[2].parse::<usize>().unwrap(),
                                           argv[3].parse::<u16>().unwrap()),
-            "DEL_PATCH" => Action::DeletePatch(argv[1].parse::<u16>().unwrap(),
+            "DEL_PATCH" => Action::DelPatch(argv[1].parse::<u16>().unwrap(),
                                                argv[2].parse::<usize>().unwrap(),
                                                argv[3].parse::<u8>().unwrap() == 1),
-            "DEL_ROUTE" => Action::DeleteRoute(argv[1].parse::<u16>().unwrap()),
+            "DEL_ROUTE" => Action::DelRoute(argv[1].parse::<u16>().unwrap()),
             "ADD_ROUTE" => Action::AddRoute(argv[1].parse::<u16>().unwrap()),
             "SET_PARAM" => Action::SetParam(argv[1].parse::<u16>().unwrap(),
                                             argv[2].to_string(),
