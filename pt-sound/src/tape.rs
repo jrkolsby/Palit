@@ -270,13 +270,13 @@ pub fn read(doc: &mut Element) -> Option<Store> {
     let (mut doc, mut params) = param_map(doc);
     let (mut doc, mut marks) = mark_map(doc);
 
-    store.bpm = (*params.get("bpm").unwrap()).try_into().unwrap();
-    store.duration = (*marks.get("seq_out").unwrap() - 
-                   *marks.get("seq_in").unwrap()).try_into().unwrap();
-    store.meter_beat = (*params.get("meter_beat").unwrap()).try_into().unwrap();
-    store.meter_note = (*params.get("meter_note").unwrap()).try_into().unwrap();
-    store.loop_in = (*marks.get("loop_in").unwrap()).try_into().unwrap();
-    store.loop_out = (*marks.get("loop_out").unwrap()).try_into().unwrap();
+    store.bpm = (*params.get("bpm").unwrap_or(&127)).try_into().unwrap();
+    store.duration = (*marks.get("seq_out").unwrap_or(&48000) - 
+                   *marks.get("seq_in").unwrap_or(&0)).try_into().unwrap();
+    store.meter_beat = (*params.get("meter_beat").unwrap_or(&4)).try_into().unwrap();
+    store.meter_note = (*params.get("meter_note").unwrap_or(&4)).try_into().unwrap();
+    store.loop_in = (*marks.get("loop_in").unwrap_or(&0)).try_into().unwrap();
+    store.loop_out = (*marks.get("loop_out").unwrap_or(&0)).try_into().unwrap();
     store.beat = calculate_beat(store.sample_rate, store.bpm);
 
     for (name, value) in params.drain() {

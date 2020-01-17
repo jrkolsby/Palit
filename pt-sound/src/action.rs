@@ -11,6 +11,7 @@ pub enum Action {
     Volume(bool), 
 
     AddModule(u16, String),
+    DelModule(u16),
 
     // Node ID, I/O ID, Route ID
     PatchIn(u16, usize, u16),

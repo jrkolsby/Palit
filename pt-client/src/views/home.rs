@@ -123,16 +123,6 @@ impl Layer for Home {
                     Action::OpenProject(self.state.projects[self.state.scroll_x * NUM_PROJECTS + 3].clone())
                 } else { Action::Noop }
             },
-            Action::Route => {
-                Action::ShowAnchors(vec![
-                    Anchor {
-                        index: 0, 
-                        module_id: 0,
-                        name: "Radio".to_string(),
-                        input: false
-                    }
-                ])
-            },
             a @ Action::Up |
             a @ Action::Down => a,
             _ => Action::Noop,

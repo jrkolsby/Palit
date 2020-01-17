@@ -141,7 +141,7 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
     events
 }
 fn add_layer(a: &mut VecDeque<(u16, Box<Layer>)>, b: Box<Layer>, id: u16) {
-    a.push_back((id, b));
+    a.push_back((id, b)); // End of layers is front of the screen
 }
 
 fn add_module(
@@ -149,8 +149,7 @@ fn add_module(
     name: &str, 
     id: u16, 
     size: (u16, u16), 
-    el: Element,
-    mut routes_id: Option<u16>) {
+    el: Element) {
     match name {
         "timeline" => add_layer(a, 
             Box::new(Timeline::new(1, 1, size.0, size.1, (el).to_owned())), id),
@@ -161,27 +160,23 @@ fn add_module(
         "arpeggio" => add_layer(a,
             Box::new(Arpeggio::new(1, 1, size.0, size.1, (el).to_owned())), id),
         "patch" => { 
-            if let Some(r_id) = routes_id {
-                let mut routes_index: Option<usize> = None;
-                for (i, (_id, layer)) in a.iter_mut().enumerate() {
-                    if *_id == r_id {
-                        routes_index = Some(i);
-                        break;
-                    }
-                }
-                if let Some(j) = routes_index {
-                    a.remove(j);
+            let mut routes_index: Option<usize> = None;
+            for (i, (_id, layer)) in a.iter_mut().enumerate() {
+                if *_id == DEFAULT_ROUTE_ID {
+                    routes_index = Some(i);
+                    break;
                 }
             }
-            routes_id = Some(id);
-            add_layer(a, Box::new(
-                Routes::new(
-                    MARGIN_D0.0,
-                    MARGIN_D0.1,
-                    size.0 - (MARGIN_D0.0 * 2),
-                    size.1 - (MARGIN_D0.1 * 2), 
-                Some((el).to_owned()))
-            ), id);
+            if routes_index.is_none() {
+                add_layer(a, Box::new(
+                    Routes::new(
+                        MARGIN_D0.0,
+                        MARGIN_D0.1,
+                        size.0 - (MARGIN_D0.0 * 2),
+                        size.1 - (MARGIN_D0.1 * 2), 
+                    Some((el).to_owned()))
+                ), DEFAULT_ROUTE_ID);
+            }
         },
         name => { eprintln!("unimplemented module {:?}", name)}
     }
@@ -224,7 +219,6 @@ fn main() -> std::io::Result<()> {
 
     // Configure UI layers
     let mut layers: VecDeque<(u16, Box<Layer>)> = VecDeque::new();
-    let mut routes_id: Option<u16> = None;
     let mut document: Option<Document> = None;
 
     add_layer(&mut layers, Box::new(
@@ -387,9 +381,9 @@ fn main() -> std::io::Result<()> {
                     let mut pin_routes: bool = false;
 
                     for (i, (id, _)) in layers.iter_mut().enumerate() {
-                        if routes_id.is_some() && routes_id.unwrap() == *id {
+                        if *id == DEFAULT_ROUTE_ID {
                             routes_i = Some(i);
-                            if routes_id.unwrap() == target_id {
+                            if target_id == DEFAULT_ROUTE_ID {
                                 pin_routes = true;
                             }
                         }
@@ -464,7 +458,7 @@ fn main() -> std::io::Result<()> {
                     let mut doc = read_document(title);
                     ipc_sound.write(format!("SAMPLE_RATE:{} ", doc.sample_rate).as_bytes()).unwrap();
                     for (id, el) in doc.modules.iter() {
-                        add_module(&mut layers, &el.name, *id, size, el.to_owned(), routes_id);
+                        add_module(&mut layers, &el.name, *id, size, el.to_owned());
                     }
                     document = Some(doc.clone());
                 },
@@ -485,8 +479,14 @@ fn main() -> std::io::Result<()> {
                     add_layer(&mut layers, Box::new(project_view), DEFAULT_PROJECT_ID); 
                 },
                 Action::ShowAnchors(anchors) => {
-                    if routes_id.is_none() {
-                        routes_id = Some(DEFAULT_ROUTE_ID);
+                    let mut routes_index: Option<usize> = None;
+                    for (i, (id, layer)) in layers.iter_mut().enumerate() {
+                        if *id == DEFAULT_ROUTE_ID {
+                            routes_index = Some(i);
+                        }
+                    }
+
+                    if routes_index.is_none() {
                         add_layer(&mut layers, Box::new(
                             Routes::new(
                                 MARGIN_D0.0,
@@ -496,42 +496,37 @@ fn main() -> std::io::Result<()> {
                                 None
                             )
                         ), DEFAULT_ROUTE_ID);
-                    }
-                    let r_id = routes_id.unwrap();
-
-                    let mut routes_index: Option<usize> = None;
-
-                    for (i, (id, layer)) in layers.iter_mut().enumerate() {
-                        if *id == r_id {
-                            routes_index = Some(i);
-                        }
+                        routes_index = Some(layers.len()-1);
                     }
 
-                    if let Some(j) = routes_index {
-                        let (_, mut route_view) = layers.remove(j).unwrap();
+                    let (_, mut route_view) = layers.remove(routes_index.unwrap()).unwrap();
 
-                        let (mod_id, _) = layers.get(layers.len()-1).unwrap();
+                    let (mod_id, _) = layers.get(layers.len()-1).unwrap();
 
-                        let anchors_fill = anchors.iter().map(|a| Anchor {
-                            index: a.index,
-                            module_id: *mod_id,
-                            name: a.name.clone(),
-                            input: a.input
-                        }).collect();
+                    let anchors_fill = anchors.iter().map(|a| Anchor {
+                        index: a.index,
+                        module_id: *mod_id,
+                        name: a.name.clone(),
+                        input: a.input
+                    }).collect();
 
-                        // Restore route view
-                        route_view.dispatch(Action::ShowAnchors(anchors_fill));
-                        add_layer(&mut layers, route_view, r_id);
-                    }
+                    // Restore route view
+                    route_view.dispatch(Action::ShowAnchors(anchors_fill));
+                    add_layer(&mut layers, route_view, DEFAULT_ROUTE_ID);
                 },
                 Action::AddModule(name) => {
+                    // Get next sequential ID
                     let mut new_id = layers.iter().fold(0, |max, (id,_)| 
                         if *id > max { *id } else { max }) + 1;
+                    ipc_sound.write(format!("ADD_MODULE:{}:{} ", new_id, name).as_bytes()).unwrap();
+                    // Make empty element with tag and id
                     let mut new_el = Element::new(&name);
                     new_el.attributes.insert("id".to_string(), new_id.to_string());
-                    add_module(&mut layers, &name, new_id, size, new_el, routes_id);
+
+                    add_module(&mut layers, &name, new_id, size, new_el);
                 }
                 Action::DelModule(id) => {
+                    ipc_sound.write(format!("DEL_MODULE:{} ", id).as_bytes()).unwrap();
                     layers.retain(|(i, _)| *i != id);
                 }
                 /*
