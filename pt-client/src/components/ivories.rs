@@ -1,5 +1,5 @@
-use termion::{color, cursor};
-use std::io::{Write, Stdout};
+use termion::cursor;
+use std::io::Write;
 use crate::common::{Screen, Action, Window};
 use itertools::Itertools;
 
@@ -12,7 +12,7 @@ const ASSET: &str = r#"
 ████
 "#;
 
-const C_POSITION: u16 = 13;
+const C_POSITION: i16 = 13;
 
 pub fn render(out: &mut Screen, 
     window: Window,
@@ -46,9 +46,10 @@ pub fn render(out: &mut Screen,
                 (0..window.w-5).map(|_| "▀").collect::<String>()
             }
         };
-        let y_pos = window.y + window.h - (
-            (key / 2) - 30 + C_POSITION
+        let y_pos_signed: i16 = (window.y + window.h) as i16 - (
+            (key as i16 / 2) - 30 + C_POSITION
         );
+        let y_pos = if y_pos_signed > 0 { y_pos_signed as u16 } else { 0 };
 
         write!(out, "{}{}", cursor::Goto(
             window.x + 5,

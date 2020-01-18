@@ -1,5 +1,5 @@
 use termion::{color, cursor};
-use std::io::{Write, Stdout};
+use std::io::Write;
 use crate::common::{Action, Screen};
 
 const ASSET: &str = r#"

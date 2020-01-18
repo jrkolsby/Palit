@@ -1,5 +1,5 @@
-use termion::{color, cursor};
-use std::io::{Write, Stdout};
+use termion::cursor;
+use std::io::Write;
 use crate::common::Screen;
 
 const CASETTE: &str = r#"
@@ -20,9 +20,8 @@ const CASETTE: &str = r#"
 
 pub fn render(out: &mut Screen, x: u16, y: u16) {
     for (i, line) in CASETTE.lines().enumerate() {
-        write!(out, "{}{}{}",
+        write!(out, "{}{}",
             cursor::Goto(x, (i as u16)+y+1),
-            color::Fg(color::Black),
             line).unwrap();
     };
 }

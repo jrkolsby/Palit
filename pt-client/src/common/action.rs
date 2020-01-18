@@ -1,4 +1,4 @@
-use crate::common::Anchor;
+use crate::common::{Anchor, Module};
 
 #[derive(Debug, Clone)]
 pub enum Action {
@@ -62,13 +62,18 @@ pub enum Action {
     RecordTrack(u16),
     MuteTrack(u16),
     PlayAt(u16),
-    AddNote(u16, u8, f32, u32, u32),
+    // TODO: Module ID, Track ID
+    AddNote(u16, u8, f32, u32, u32), 
 
-    // Default actions
+    AddModule(String),
+    TryoutModule(u16),
+    DelModule(u16),
     OpenProject(String),
     CreateProject(String),
+    ShowProject(String, Vec<Module>),
     Pepper,
     InputTitle,
+    Cancel,
     Noop,
 
     Error(String),

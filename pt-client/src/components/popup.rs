@@ -1,4 +1,4 @@
-use std::io::{Write, Stdout};
+use std::io::Write;
 use termion::{color, cursor};
 use crate::common::{Window, Screen};
 use crate::components::border;

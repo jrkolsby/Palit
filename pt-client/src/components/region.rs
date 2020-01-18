@@ -1,5 +1,5 @@
-use std::io::{Write, Stdout};
-use termion::{cursor};
+use std::io::Write;
+use termion::cursor;
 use crate::common::{Screen, MultiFocus, FocusType, Action, ID, Window};
 use crate::common::{char_offset, offset_char};
 use crate::components::{waveform};

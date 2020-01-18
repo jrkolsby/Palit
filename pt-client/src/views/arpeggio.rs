@@ -73,7 +73,9 @@ impl Layer for Arpeggio {
                 name: "Arp In".to_string(),
                 input: true,
             }]),
-            a @ Action::Up | a @ Action::Down => a,
+            a @ Action::Left |
+            a @ Action::Up | 
+            a @ Action::Down => a,
             _ => Action::Noop
         }
     }

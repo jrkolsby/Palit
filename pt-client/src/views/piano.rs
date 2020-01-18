@@ -69,20 +69,18 @@ const SIZE: (u16, u16) = (70, 30);
 impl Piano {
     pub fn new(x: u16, y: u16, width: u16, height: u16, doc: Element) -> Self {
 
-        let mut path: String = "/usr/local/palit/".to_string();
-
         let (_, params) = param_map(doc);
 
         let initial_eq = [
-            *params.get("16").unwrap(),
-            *params.get("5.3").unwrap(),
-            *params.get("8").unwrap(),
-            *params.get("4").unwrap(),
-            *params.get("2.6").unwrap(),
-            *params.get("2").unwrap(),
-            *params.get("1.6").unwrap(),
-            *params.get("1.3").unwrap(),
-            *params.get("1").unwrap(),
+            *params.get("16").unwrap_or(&10),
+            *params.get("5.3").unwrap_or(&10),
+            *params.get("8").unwrap_or(&10),
+            *params.get("4").unwrap_or(&10),
+            *params.get("2.6").unwrap_or(&10),
+            *params.get("2").unwrap_or(&10),
+            *params.get("1.6").unwrap_or(&10),
+            *params.get("1.3").unwrap_or(&10),
+            *params.get("1").unwrap_or(&10),
         ];
 
         // Initialize State
@@ -239,7 +237,7 @@ impl Layer for Piano {
 
         render_focii(out, win, 
             self.state.focus.clone(), 
-            &self.focii, &self.state, !target);
+            &self.focii, &self.state, false, !target);
     }
 
     fn dispatch(&mut self, action: Action) -> Action {
@@ -270,7 +268,9 @@ impl Layer for Piano {
                             input: true,
                         }])
                 },
-                a @ Action::Up | a @ Action::Down => a,
+                a @ Action::Left |
+                a @ Action::Up | 
+                a @ Action::Down |
                 a @ Action::SetParam(_,_) => a,
                 _ => { Action::Noop }
             }

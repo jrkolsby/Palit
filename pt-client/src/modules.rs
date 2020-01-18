@@ -3,11 +3,12 @@ use std::fs;
 
 use xmltree::Element;
 
-use crate::common::{Param, Offset};
+use crate::common::{Param, Offset, Module};
 
 pub mod timeline;
 pub mod patch;
 
+#[derive(Clone, Debug)]
 pub struct Document {
     pub title: String,
     pub sample_rate: u32,

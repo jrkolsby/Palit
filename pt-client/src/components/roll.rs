@@ -1,10 +1,10 @@
-use termion::{color, cursor};
-use std::io::{Write, Stdout};
+use termion::cursor;
+use std::io::Write;
 use crate::common::{Screen, Action, Window, Note};
 use crate::common::{char_offset};
 use itertools::Itertools;
 
-const C_POSITION: u16 = 13;
+const C_POSITION: i16 = 20;
 
 pub fn render(out: &mut Screen, 
     window: Window,
@@ -40,11 +40,12 @@ pub fn render(out: &mut Screen,
         // Note begins after the window
         if x_in > window.w { continue; }
 
-        let y_pos = window.y + window.h - (
-            (note.note as u16 - 60) / 2 + C_POSITION
+        let y_pos: i16 = (window.y + window.h) as i16 - (
+            (note.note as i16 / 2) - 30 + C_POSITION
         );
+
         let y_size: usize = if y_pos < 0 { 0 } 
-            else if y_pos >= (canvas.len() as u16) { canvas.len() - 1 }
+            else if y_pos >= (canvas.len() as i16) { canvas.len() - 1 }
             else { y_pos as usize };
 
         if note.note % 2 == 0 {

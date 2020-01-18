@@ -1,6 +1,6 @@
-use termion::{cursor};
+use termion::cursor;
 use std::io::prelude::*;
-use std::io::{Write, Stdout};
+use std::io::Write;
 use crate::common::Screen;
 
 pub fn angle_to_char(angle: f32, mirror: bool) -> char {

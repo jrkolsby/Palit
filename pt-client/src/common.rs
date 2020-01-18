@@ -7,6 +7,7 @@ mod action;
 mod color;
 mod multifocus;
 mod layout;
+mod files;
 
 pub use pcm::file_to_pairs;
 pub use pcm::generate_waveforms;
@@ -36,6 +37,10 @@ pub use layout::TIMELINE_Y;
 pub use layout::MARGIN_D0;
 pub use layout::MARGIN_D1;
 pub use layout::MARGIN_D2;
+
+pub use files::get_files;
+pub use files::PALIT_PROJECTS;
+pub use files::PALIT_MODULES;
 
 pub type Screen = RawTerminal<BufWriter<File>>;
 
@@ -92,4 +97,10 @@ pub struct Anchor {
     pub module_id: u16,
     pub name: String,
     pub input: bool,
+}
+
+#[derive(Clone, Debug)]
+pub struct Module {
+    pub id: u16,
+    pub name: String,
 }

@@ -45,7 +45,7 @@ pub type Offset = u32;
 pub type Key = u8;
 pub type Param = i16;
 
-const CHANNELS: usize = 2;
+pub const CHANNELS: usize = 2;
 const FRAMES: u32 = 128;
 const SAMPLE_HZ: f64 = 44_100.0;
 const DEBUG_KEY_PERIOD: u16 = 24100;
@@ -263,13 +263,14 @@ impl Module {
                 return (Some(carry), None, None)
             },
             Module::Octave(ref mut queue, ref mut dn) => {
-                eprintln!("{}", dn);
                 let mut carry = Vec::new();
                 while let Some(note) = queue.pop() {
+                    let shift: i8 = (12 * (*dn as i8 - 3)); // C3 is middle C (60)
                     carry.push(match note {
-                        // C3 is middle C (60)
-                        Action::NoteOn(n, v) => Action::NoteOn(n + (12 * (*dn-3)), v),
-                        Action::NoteOff(n) => Action::NoteOff(n + (12 * (*dn-3))),
+                        Action::NoteOn(n, v) => Action::NoteOn(
+                            if shift > n as i8 { 0 } else { (n as i8 + shift) as u8 }, v),
+                        Action::NoteOff(n) => Action::NoteOff(
+                            if shift > n as i8 { 0 } else { (n as i8 + shift) as u8 }),
                         _ => Action::Noop,
                     });
                 }
@@ -410,7 +411,6 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
         }
         if let Some(client_a) = client_d {
             for a in client_a.iter() {
-                eprintln!("{:?}", a);
                 let message = match a {
                     Action::Tick(offset) => Some(format!("TICK:{} ", offset)),
                     Action::NoteOn(n,v) => Some(format!("NOTE_ON:{}:{} ", n, v)),
@@ -482,10 +482,10 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "PATCH_IN" => Action::PatchIn(argv[1].parse::<u16>().unwrap(),
                                           argv[2].parse::<usize>().unwrap(),
                                           argv[3].parse::<u16>().unwrap()),
-            "DEL_PATCH" => Action::DeletePatch(argv[1].parse::<u16>().unwrap(),
+            "DEL_PATCH" => Action::DelPatch(argv[1].parse::<u16>().unwrap(),
                                                argv[2].parse::<usize>().unwrap(),
                                                argv[3].parse::<u8>().unwrap() == 1),
-            "DEL_ROUTE" => Action::DeleteRoute(argv[1].parse::<u16>().unwrap()),
+            "DEL_ROUTE" => Action::DelRoute(argv[1].parse::<u16>().unwrap()),
             "ADD_ROUTE" => Action::AddRoute(argv[1].parse::<u16>().unwrap()),
             "SET_PARAM" => Action::SetParam(argv[1].parse::<u16>().unwrap(),
                                             argv[2].to_string(),
@@ -500,6 +500,9 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "SET_LOOP" => Action::SetLoop(argv[1].parse::<u16>().unwrap(),
                                           argv[2].parse::<u32>().unwrap(),
                                           argv[3].parse::<u32>().unwrap()),
+            "ADD_MODULE" => Action::AddModule(argv[1].parse::<u16>().unwrap(),
+                                              argv[2].to_string()),
+            "DEL_MODULE" => Action::DelModule(argv[1].parse::<u16>().unwrap()),
             _ => Action::Noop,
         };
 

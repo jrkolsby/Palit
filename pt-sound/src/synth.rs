@@ -39,7 +39,6 @@ pub fn init() -> Store {
 }
 
 pub fn dispatch(store: &mut Store, action: Action) {
-    eprintln!("{:?}", action);
     match action {
         Action::NoteOnAt(_, note, vol) |
         Action::NoteOn(note, vol) => {
@@ -95,15 +94,15 @@ pub fn read(doc: &mut Element) -> Option<Store> {
     let (_, params) = param_map(doc);
     let mut store = init();
     store.bar_values = [
-        *params.get("16").unwrap() as f64 / 255.,
-        *params.get("5.3").unwrap() as f64 / 255.,
-        *params.get("8").unwrap() as f64 / 255.,
-        *params.get("4").unwrap() as f64 / 255.,
-        *params.get("2.6").unwrap() as f64 / 255.,
-        *params.get("2").unwrap() as f64 / 255.,
-        *params.get("1.6").unwrap() as f64 / 255.,
-        *params.get("1.3").unwrap() as f64 / 255.,
-        *params.get("1").unwrap() as f64 / 255.
+        *params.get("16").unwrap_or(&10) as f64 / 255.,
+        *params.get("5.3").unwrap_or(&10) as f64 / 255.,
+        *params.get("8").unwrap_or(&10) as f64 / 255.,
+        *params.get("4").unwrap_or(&10) as f64 / 255.,
+        *params.get("2.6").unwrap_or(&10) as f64 / 255.,
+        *params.get("2").unwrap_or(&10) as f64 / 255.,
+        *params.get("1.6").unwrap_or(&10) as f64 / 255.,
+        *params.get("1.3").unwrap_or(&10) as f64 / 255.,
+        *params.get("1").unwrap_or(&10) as f64 / 255.
     ];
     Some(store)
 }

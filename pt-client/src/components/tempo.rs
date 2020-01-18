@@ -1,5 +1,5 @@
-use termion::{cursor};
-use std::io::{Write, Stdout};
+use termion::cursor;
+use std::io::Write;
 use crate::common::{Screen, Color, write_bg, write_fg};
 
 const WIDTH: u16 = 7;

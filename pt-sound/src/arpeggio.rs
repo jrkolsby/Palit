@@ -7,7 +7,10 @@ use crate::action::Action;
 
 pub struct Store {
     timer: Offset,
-    length: Offset,
+    length: u8,
+    bpm: u16,
+    sample_rate: Offset,
+    bar: Offset,
     notes: Vec<Note>,
     queue: Vec<Action>,
 }
@@ -15,11 +18,17 @@ pub struct Store {
 pub fn init() -> Store {
     Store {
         timer: 0,
-        length: 24000, // samples per bar/rate
-
+        length: 4, // beats per loop
+        bpm: 127,
+        sample_rate: 48000,
+        bar: calculate_beat(48000, 127, 4),
         notes: vec![],
         queue: vec![],
     }
+}
+
+fn calculate_beat(sample_rate: Offset, bpm: u16, length: u8) -> Offset {
+    (sample_rate * 60 / bpm as Offset) * length as Offset
 }
 
 fn distribute_notes(notes: &mut Vec<Note>, length: Offset) {
@@ -50,13 +59,12 @@ pub fn dispatch(store: &mut Store, action: Action) {
                 note, 
                 vel,
             });
-            distribute_notes(store.notes.borrow_mut(), store.length);
+            distribute_notes(store.notes.borrow_mut(), store.bar);
         },
         Action::NoteOff(note) => {
-            println!("arp off {}", note);
             store.notes.retain(|n| n.note != note);
             if store.notes.len() > 0 {
-                distribute_notes(store.notes.borrow_mut(), store.length);
+                distribute_notes(store.notes.borrow_mut(), store.bar);
             }
             store.queue.push(Action::NoteOff(note));
         },
@@ -67,10 +75,8 @@ pub fn dispatch(store: &mut Store, action: Action) {
 pub fn read(doc: &mut Element) -> Option<Store> {
     let (mut doc, params) = param_map(doc);
     let mut store: Store = init();
-    store.length = match params.get("length") {
-        Some(a) => (*a * 1000) as Offset,
-        None => return None,
-    };
+    store.length = *params.get("length").unwrap_or(&4) as u8;
+    store.bar = calculate_beat(store.sample_rate, store.bpm, store.length);
     Some(store)
 }
 
@@ -84,7 +90,7 @@ pub fn compute(store: &mut Store) {
         }
     }
     // LOOP
-    store.timer = if store.timer == store.length { 0 } 
+    store.timer = if store.timer == store.bar { 0 } 
         else { store.timer + 1 }
 }
 

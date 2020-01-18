@@ -16,6 +16,8 @@ use wavefile::{WaveFile, WaveFileIterator};
 
 use dsp::{NodeIndex, Frame, FromSample, Graph, Node, Sample, Walker};
 
+use xmltree::Element;
+
 mod core;
 mod midi;
 mod synth;
@@ -25,11 +27,129 @@ mod chord;
 mod arpeggio;
 mod document;
 
-use crate::core::{event_loop, Module, Frequency, Key};
+use crate::core::{event_loop, Module, Frequency, Key, Output, CHANNELS};
 use crate::document::{Document, read_document, param_map};
 use crate::action::Action;
 
 const MASTER_ROUTE: u16 = 1;
+
+fn add_module(
+    id: u16,
+    el: &mut Element,
+    patch: &mut Graph<[Output; CHANNELS], Module>, 
+    routes: &mut HashMap<u16, NodeIndex>, 
+    operators: &mut HashMap<u16, NodeIndex>) {
+        match &el.name[..] {
+            "timeline" => {
+                let mut anchors: Vec<NodeIndex> = vec![];
+                // Mutate el by removing track elements until
+                // none are left
+                while let Some(store) = tape::read(el) {
+                    let tape = patch.add_node(Module::Tape(store));
+                    anchors.push(tape); // INPUT
+                    anchors.push(tape); // OUTPUT
+                }
+                let operator = patch.add_node(Module::Operator(vec![], 
+                    anchors.clone(), 
+                ));
+                // Because each track is stored as two anchors,
+                // ... we need to make sure there is only one edge
+                // ... to each track, otherwise actions will be 
+                // ... dispatched two times. :^)
+                for anchor in anchors.iter() {
+                    if patch.find_connection(operator, *anchor).is_none() {
+                        patch.add_connection(operator, *anchor);
+                    }
+                }
+                operators.insert(id, operator);
+            },
+            "hammond" => {
+                let store = match synth::read(el) {
+                    Some(a) => a,
+                    None => panic!("Invalid module {}", id)
+                };
+                let instrument = patch.add_node(Module::Synth(store));
+                let operator = patch.add_node(Module::Operator(vec![], 
+                    vec![instrument, instrument])
+                );
+                patch.add_connection(operator, instrument);
+                operators.insert(id, operator);
+            },
+            "arpeggio" => {
+                let store = match arpeggio::read(el) {
+                    Some(a) => a,
+                    None => panic!("Invalid module {}", id)
+                };
+                let inst = patch.add_node(Module::Arpeggio(store));
+                let operator = patch.add_node(Module::Operator(vec![], 
+                    vec![inst, inst])
+                );
+                patch.add_connection(operator, inst);
+                operators.insert(id, operator);
+            },
+            "chord" => {
+                let store = chord::read(el).unwrap();
+                let inst = patch.add_node(Module::Chord(store));
+                let operator = patch.add_node(Module::Operator(vec![], 
+                    vec![inst, inst])
+                );
+                patch.add_connection(operator, inst);
+                operators.insert(id, operator);
+            },
+            "keyboard" => {
+                let (_, params) = param_map(el);
+                let shift = *params.get("octave").unwrap_or(&3) as Key;
+                let octave = patch.add_node(Module::Octave(vec![], shift));
+                //let shift = patch.add_node(Module::Octave(vec![], 4));
+                let operator = patch.add_node(Module::Operator(vec![], 
+                    vec![octave, octave])
+                );
+                patch.add_connection(operator, octave);
+                operators.insert(id, operator);
+            },
+            // This module should always be last in doc.modules or else 
+            // operators and routes maps won't be completely filled
+            "patch" => {
+                while let Some(mut route_el) = el.take_child("route") {
+                    let r_id = route_el.attributes.get("id").unwrap();
+                    let _r_id = r_id.parse::<u16>().unwrap();
+                    let route = patch.add_node(Module::Passthru(vec![]));
+                    routes.insert(_r_id, route);
+                    while let Some(input) = route_el.take_child("input") {
+                        let m_id = input.attributes.get("module").unwrap();
+                        let _m_id = m_id.parse::<u16>().unwrap();
+
+                        let io_id = input.attributes.get("index").unwrap();
+                        let _io_id = io_id.parse::<usize>().unwrap();
+                        
+                        let op_id = operators.get(&_m_id).unwrap();
+
+                        let in_id = match &patch[*op_id] {
+                            Module::Operator(_, anchors) => anchors[_io_id],
+                            _ => panic!("No such input {}", io_id)
+                        };
+                        patch.add_connection(route, in_id);
+                    }
+                    while let Some(output) = route_el.take_child("output") {
+                        let m_id = output.attributes.get("module").unwrap();
+                        let _m_id = m_id.parse::<u16>().unwrap();
+                        
+                        let io_id = output.attributes.get("index").unwrap();
+                        let _io_id = io_id.parse::<usize>().unwrap();
+
+                        let op_id = operators.get(&_m_id).unwrap();
+
+                        let out_id = match &patch[*op_id] {
+                            Module::Operator(_, anchors) => anchors[_io_id],
+                            _ => panic!("No such output {}", io_id)
+                        };
+                        patch.add_connection(out_id ,route);
+                    }
+                }
+            }
+            name @ _ => { eprintln!("Unimplemented module {:?}", name)}
+        }
+    }
 
 fn main() -> Result<(), Box<error::Error>> {
 
@@ -65,13 +185,6 @@ fn main() -> Result<(), Box<error::Error>> {
         );
     }
 
-    let mut inputs = patch.inputs(master);
-    while let Some(input_idx) = inputs.next_node(&patch) {
-        if let Module::Oscillator(_, ref mut pitch, _) = patch[input_idx] {
-            // Pitch down our oscillators for fun.
-            *pitch -= 0.1;
-        }
-    }
     */
 
     let mut operators: HashMap<u16, NodeIndex> = HashMap::new();
@@ -127,7 +240,9 @@ fn main() -> Result<(), Box<error::Error>> {
                 if let Some(route) = routes.get(&r_id) {
                     match &patch[*operators.get(&n_id).unwrap()] {
                         Module::Operator(_, anchors) => {
-                            patch.add_connection(*route, anchors[a_id]);
+                            if let Err(e) = patch.add_connection(*route, anchors[a_id]) {
+                                println!("CYCLE");
+                            }
                         }
                         _ => {}
                     };
@@ -137,13 +252,15 @@ fn main() -> Result<(), Box<error::Error>> {
                 if let Some(route) = routes.get(&r_id) {
                     match &patch[*operators.get(&n_id).unwrap()] {
                         Module::Operator(_, anchors) => {
-                            patch.add_connection(anchors[a_id], *route);
+                            if let Err(e) = patch.add_connection(anchors[a_id], *route) {
+                                println!("CYCLE");
+                            }
                         }
                         _ => {}
                     };
                 }
             },
-            Action::DeletePatch(n_id, a_id, input) => {
+            Action::DelPatch(n_id, a_id, input) => {
                 match &patch[*operators.get(&n_id).unwrap()] {
                     Module::Operator(_, anchors) => {
                         let id = anchors[a_id].clone();
@@ -167,116 +284,7 @@ fn main() -> Result<(), Box<error::Error>> {
                 routes = HashMap::new();
                 let mut doc = read_document(name);
                 for (id, el) in doc.modules.iter_mut() {
-                    match &el.name[..] {
-                        "timeline" => {
-                            let mut anchors: Vec<NodeIndex> = vec![];
-                            // Mutate el by removing track elements until
-                            // none are left
-                            while let Some(store) = tape::read(el) {
-                                let tape = patch.add_node(Module::Tape(store));
-                                anchors.push(tape); // INPUT
-                                anchors.push(tape); // OUTPUT
-                            }
-                            let operator = patch.add_node(Module::Operator(vec![], 
-                                anchors.clone(), 
-                            ));
-                            // Because each track is stored as two anchors,
-                            // ... we need to make sure there is only one edge
-                            // ... to each track, otherwise actions will be 
-                            // ... dispatched two times. :^)
-                            for anchor in anchors.iter() {
-                                if patch.find_connection(operator, *anchor).is_none() {
-                                    patch.add_connection(operator, *anchor);
-                                }
-                            }
-                            operators.insert(*id, operator);
-                        },
-                        "hammond" => {
-                            let store = match synth::read(el) {
-                                Some(a) => a,
-                                None => panic!("Invalid module {}", id)
-                            };
-                            let instrument = patch.add_node(Module::Synth(store));
-                            let operator = patch.add_node(Module::Operator(vec![], 
-                                vec![instrument, instrument])
-                            );
-                            patch.add_connection(operator, instrument);
-                            operators.insert(*id, operator);
-                        },
-                        "arpeggio" => {
-                            let store = match arpeggio::read(el) {
-                                Some(a) => a,
-                                None => panic!("Invalid module {}", id)
-                            };
-                            let inst = patch.add_node(Module::Arpeggio(store));
-                            let operator = patch.add_node(Module::Operator(vec![], 
-                                vec![inst, inst])
-                            );
-                            patch.add_connection(operator, inst);
-                            operators.insert(*id, operator);
-                        },
-                        "chord" => {
-                            let store = chord::read(el).unwrap();
-                            let inst = patch.add_node(Module::Chord(store));
-                            let operator = patch.add_node(Module::Operator(vec![], 
-                                vec![inst, inst])
-                            );
-                            patch.add_connection(operator, inst);
-                            operators.insert(*id, operator);
-                        },
-                        "keyboard" => {
-                            let (_, params) = param_map(el);
-                            let shift = *params.get("octave").unwrap_or(&3) as Key;
-                            let octave = patch.add_node(Module::Octave(vec![], shift));
-                            //let shift = patch.add_node(Module::Octave(vec![], 4));
-                            let operator = patch.add_node(Module::Operator(vec![], 
-                                vec![octave, octave])
-                            );
-                            patch.add_connection(operator, octave);
-                            operators.insert(*id, operator);
-                        },
-                        // This module should always be last in doc.modules or else 
-                        // operators and routes maps won't be completely filled
-                        "patch" => {
-                            while let Some(mut route_el) = el.take_child("route") {
-                                let r_id = route_el.attributes.get("id").unwrap();
-                                let _r_id = r_id.parse::<u16>().unwrap();
-                                let route = patch.add_node(Module::Passthru(vec![]));
-                                routes.insert(_r_id, route);
-                                while let Some(input) = route_el.take_child("input") {
-                                    let m_id = input.attributes.get("module").unwrap();
-                                    let _m_id = m_id.parse::<u16>().unwrap();
-
-                                    let io_id = input.attributes.get("index").unwrap();
-                                    let _io_id = io_id.parse::<usize>().unwrap();
-                                    
-                                    let op_id = operators.get(&_m_id).unwrap();
-
-                                    let in_id = match &patch[*op_id] {
-                                        Module::Operator(_, anchors) => anchors[_io_id],
-                                        _ => panic!("No such input {}", io_id)
-                                    };
-                                    patch.add_connection(route, in_id);
-                                }
-                                while let Some(output) = route_el.take_child("output") {
-                                    let m_id = output.attributes.get("module").unwrap();
-                                    let _m_id = m_id.parse::<u16>().unwrap();
-                                    
-                                    let io_id = output.attributes.get("index").unwrap();
-                                    let _io_id = io_id.parse::<usize>().unwrap();
-
-                                    let op_id = operators.get(&_m_id).unwrap();
-
-                                    let out_id = match &patch[*op_id] {
-                                        Module::Operator(_, anchors) => anchors[_io_id],
-                                        _ => panic!("No such output {}", io_id)
-                                    };
-                                    patch.add_connection(out_id ,route);
-                                }
-                            }
-                        }
-                        name @ _ => { eprintln!("Unimplemented module {:?}", name)}
-                    }
+                    add_module(*id, el, patch, &mut routes, &mut operators);
                 }
                 let root = patch.add_node(Module::Master);
                 patch.set_master(Some(root));
@@ -284,6 +292,29 @@ fn main() -> Result<(), Box<error::Error>> {
                 eprintln!("Loaded {} Nodes", patch.node_count());
                 eprintln!("Loaded {} Edges", patch.connection_count());
             },
+            Action::AddModule(id, name) => {
+                let mut new_el = Element::new(&name);
+                new_el.attributes.insert("id".to_string(), id.to_string());
+                add_module(id, &mut new_el, patch, &mut routes, &mut operators);
+                eprintln!("Currently {} Nodes", patch.node_count());
+                eprintln!("Currently {} Edges", patch.connection_count());
+            }
+            Action::DelModule(id) => {
+                // Because removing a node from the graph will cause indicies to
+                // ... shift, we're just going to lazily remove all edges on the
+                // ... node cluster but leave the nodes there.
+                let operator = operators.remove(&id).unwrap();
+                let mut module_cluster = patch.outputs(operator);
+                while let Some(output_idx) = module_cluster.next_node(&patch) {
+                    patch.remove_all_output_connections(output_idx);
+                    patch.remove_all_input_connections(output_idx);
+                }
+            }
+            Action::DelRoute(id) => {
+                let route = routes.remove(&id).unwrap();
+                patch.remove_all_output_connections(route);
+                patch.remove_all_input_connections(route);
+            }
             _ => { eprintln!("unimplemented action {:?}", a); }
         }
     })

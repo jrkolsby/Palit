@@ -1,6 +1,5 @@
-use std::io::{Write, Stdout};
-
-use termion::{color, cursor};
+use std::io::Write;
+use termion::cursor;
 use xmltree::Element;
 
 use crate::common::{Screen, Action, Window, Anchor};
@@ -98,7 +97,9 @@ impl Layer for Keyboard {
                 name: "Keys".to_string(),
                 input: false,
             }]),
-            a @ Action::Up | a @ Action::Down => a,
+            a @ Action::Left |
+            a @ Action::Up | 
+            a @ Action::Down => a,
             _ => Action::Noop
         }
     }
