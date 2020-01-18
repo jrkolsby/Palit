@@ -189,6 +189,13 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
                 new_routes.remove(&r_id);
                 new_routes
             },
+            Action::DelModule(m_id) => {
+                let mut new_routes = state.routes.clone();
+                for route in new_routes.iter_mut() {
+                    route.1.patch.retain(|anchor| anchor.module_id != m_id);
+                }
+                new_routes
+            },
             _ => state.routes.clone()
         },
         focus: state.focus,

@@ -33,6 +33,7 @@ pub struct Modules {
 #[derive(Clone, Debug)]
 pub struct ModulesState {
     modules: Vec<String>,
+    current: Option<usize>,
     focus: (usize, usize),
 }
 
@@ -42,6 +43,7 @@ impl Modules {
         let modules = get_files(PALIT_MODULES, core);
         let initial_state = ModulesState {
             focus: (0,0),
+            current: None,
             modules: modules.unwrap(),
         };
         return Modules {
@@ -60,7 +62,15 @@ static VOID_RENDER: fn( &mut Screen, Window, ID, &ModulesState, bool) =
     |_, _, _, _, _| {};
 
 fn reduce(state: ModulesState, action: Action) -> ModulesState {
-    return state.clone();
+    ModulesState {
+        modules: state.modules.clone(),
+        current: match action {
+            Action::TryoutModule(id) => Some(id as usize),
+            Action::Deselect => None,
+            _ => state.current,
+        },
+        focus: state.focus,
+    }
 }
 
 fn generate_focii(modules: &Vec<String>) -> Vec<Vec<MultiFocus<ModulesState>>> {
@@ -99,8 +109,8 @@ fn generate_focii(modules: &Vec<String>) -> Vec<Vec<MultiFocus<ModulesState>>> {
             Action::SelectG |
             Action::SelectP |
             Action::SelectY |
-            Action::SelectB => Action::AddModule(state.modules[id.1 as usize].clone()),
-            _ => Action::Noop
+            Action::SelectB => Action::TryoutModule(id.1),
+            _ => a
         };
         let render: fn(&mut Screen, Window, ID, &ModulesState, bool) = 
             |mut out, window, id, state, focus| {
@@ -147,10 +157,13 @@ impl Layer for Modules {
         self.state.focus = focus;
 
         if let Some(_default) = default {
+            let current = self.state.current;
             self.state = reduce(self.state.clone(), _default.clone());
             match _default {
+                Action::Deselect => if let Some(i) = current {
+                    Action::AddModule(self.state.modules[i].clone())
+                } else { Action::Cancel },
                 Action::Back => Action::Cancel,
-                a @ Action::AddModule(_) => a,
                 _ => Action::Noop,
             }
         } else { Action::Noop }

@@ -528,6 +528,9 @@ fn main() -> std::io::Result<()> {
                         doc.modules.insert(new_id, new_el);
                         document = Some(doc);
                     }
+                    // Make sure modules view is still in front so it can Cancel
+                    layers.swap(layers.len()-1, layers.len()-2);
+                    events.push(Action::Back);
                 },
                 Action::DelModule(id) => {
                     ipc_sound.write(format!("DEL_MODULE:{} ", id).as_bytes()).unwrap();
@@ -535,6 +538,15 @@ fn main() -> std::io::Result<()> {
                     if let Some(mut doc) = document {
                         doc.modules.retain(|i, _| *i != id);
                         document = Some(doc);
+                    }
+                    let mut routes_index: Option<usize> = None;
+                    for (i, (l_id, _)) in layers.iter_mut().enumerate() {
+                        if *l_id == DEFAULT_ROUTE_ID {
+                            routes_index = Some(i);
+                        }
+                    }
+                    if let Some(r_id) = routes_index {
+                        layers[r_id].1.dispatch(Action::DelModule(id));
                     }
                 },
                 /*
