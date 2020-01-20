@@ -153,6 +153,8 @@ pub fn dispatch(store: &mut Store, a: Action) {
                         .with_capacity(120)
                         .build());
                 }
+                store.rec_region = Some(vec![]);
+                store.rec_duration = Some(0);
             }
         },
         Action::MuteAt(_, t_id) => { 
