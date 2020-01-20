@@ -67,7 +67,7 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 - [ ] INF-5: Unicode Support in linux TTY with KMSCON
 
-- [ ] UI-17: Add, remove module 
+- [X] UI-17: Add, remove module 
 - [ ] UI-22: Snap to grid
 
 - [X] SOUND-13: Timeline looping

@@ -175,18 +175,6 @@ fn main() -> Result<(), Box<error::Error>> {
     // Construct our dsp graph.
     let mut graph = Graph::new();
 
-    // Pasting some useful stuff heref
-
-    /*
-    if let Err(err) = graph.add_connection(master, oscillator_a) {
-        println!(
-            "Testing for cycle error: {:?}",
-            std::error::Error::description(&err)
-        );
-    }
-
-    */
-
     let mut operators: HashMap<u16, NodeIndex> = HashMap::new();
     let mut routes: HashMap<u16, NodeIndex> = HashMap::new();
 

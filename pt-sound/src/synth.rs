@@ -5,7 +5,7 @@ use wavefile::{WaveFile, WaveFileIterator};
 use xmltree::Element;
 
 use crate::document::{param_map};
-use crate::core::{SF, SigGen, Output};
+use crate::core::{SF, SigGen, Output, SAMPLE_HZ};
 use crate::action::Action;
 
 // Standard Hammond drawbar.
@@ -32,7 +32,7 @@ pub fn init() -> Store {
     Store {
         queue: vec![],
         sigs: iter::repeat(None).take(256).collect(),
-        sample_rate: signal::rate(f64::from(44_100)),
+        sample_rate: signal::rate(f64::from(SAMPLE_HZ)),
         stored_sample: None,
         bar_values: [0.25, 0.25, 0.25, 0.75, 0.5, 0., 0., 0., 0.],
     }

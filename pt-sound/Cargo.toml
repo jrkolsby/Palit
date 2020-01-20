@@ -14,6 +14,7 @@ libc = "0.2.62"
 dsp-chain = "0.13.1"
 portaudio = "0.6.4"
 xmltree = "0.8.0"
+bufferpool = "0.1.7"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 alsa = "0.2"

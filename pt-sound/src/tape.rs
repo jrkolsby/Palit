@@ -2,22 +2,23 @@ use std::fs::File;
 use std::io::Write;
 use std::borrow::Borrow;
 use std::convert::TryInto;
-use std::collections::HashMap;
+use std::collections::{HashMap, LinkedList};
 
-use sample::{signal, Signal, Sample};
+use sample::{signal, Signal, Sample, Frame};
 use xmltree::Element;
 use wavefile::{WaveFile, WaveFileIterator};
+use bufferpool::{BufferPool, BufferPoolBuilder, BufferPoolReference};
 
-use crate::core::{SF, SigGen, Output, Note, Key, Offset};
+use crate::core::{SF, SigGen, Output, Note, Key, Offset, SAMPLE_HZ};
 use crate::action::Action;
 use crate::document::{param_map, param_add, mark_map, mark_add};
 
 pub struct Region {
     pub buffer: Vec<Output>,
-    pub offset: u32,
-    pub duration: u32,
-    pub asset_in: u32,
-    pub asset_out: u32,
+    pub offset: Offset,
+    pub duration: Offset,
+    pub asset_in: Offset,
+    pub asset_out: Offset,
     pub gain: f32,
     pub asset_id: u16,
 }
@@ -42,6 +43,10 @@ pub struct Store {
     pub note_queue: Vec<Note>,
     pub sample_rate: u32,
     pub beat: u32,
+    pub pool: Option<BufferPool<Output>>,
+    pub rec_region: Option<Vec<BufferPoolReference<Output>>>,
+    pub rec_offset: Option<Offset>,
+    pub rec_duration: Option<Offset>,
 }
 
 fn calculate_beat(sample_rate: u32, bpm: u16) -> u32 {
@@ -67,8 +72,13 @@ pub fn init() -> Store {
         track_id: 0,
         out_queue: vec![],
         note_queue: vec![],
-        sample_rate: 44180,
+        sample_rate: SAMPLE_HZ as u32,
         beat: 0,
+        // Make SURE not to clone these when implementing undo/redo
+        pool: None,
+        rec_region: None,
+        rec_offset: None,
+        rec_duration: None,
     }
 }
 
@@ -122,6 +132,9 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::Play(_) => { 
             store.velocity = 1.0; 
             store.scrub = None;
+            if store.recording {
+                store.rec_offset = Some(store.playhead);
+            }
         },
         Action::Stop(_) => { 
             store.velocity = 0.0; 
@@ -133,6 +146,13 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::RecordAt(_, t_id) => { 
             if store.track_id == t_id {
                 store.recording = !store.recording;
+                if store.pool.is_none() {
+                    // Prepare 2 MINUTE buffer
+                    store.pool = Some(BufferPoolBuilder::new()
+                        .with_buffer_size(store.sample_rate as usize)
+                        .with_capacity(120)
+                        .build());
+                }
             }
         },
         Action::MuteAt(_, t_id) => { 

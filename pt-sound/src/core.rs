@@ -47,10 +47,11 @@ pub type Param = i16;
 
 pub const CHANNELS: usize = 2;
 const FRAMES: u32 = 128;
-const SAMPLE_HZ: f64 = 44_100.0;
+pub const SAMPLE_HZ: f64 = 48_000.0;
 const DEBUG_KEY_PERIOD: u16 = 24100;
 const SCRUB_MAX: f64 = 4.0;
 const SCRUB_ACC: f64 = 0.01;
+const BUFF_SIZE: Offset = 44_100;
 
 #[derive(Debug, Clone)]
 pub struct Note {
@@ -330,6 +331,27 @@ impl Node<[Output; CHANNELS]> for Module {
                 }
                 if interp_factor == 0.0 { return; }
                 if interp_factor == 1.0 {
+                    if store.recording {
+                        let (this_pool, this_buf, this_duration) = (
+                            &mut store.pool.as_mut().unwrap(),
+                            &mut store.rec_region.as_mut().unwrap(), 
+                            &mut store.rec_duration.unwrap()
+                        );
+                        let buf_size = this_pool.get_buffer_size() as u32;
+                        if *this_duration % buf_size == 0 {
+                            // Our last buffer is full, get a new one
+                            this_buf.push(this_pool.get_space().unwrap())
+                        }
+                        let buf_offset = *this_duration - (buf_size * this_buf.len() as u32);
+                        // Should always be between 0 and SAMPLE_HZ
+                        eprintln!("{}", buf_offset);
+                        let mut rec_iter = this_buf.last_mut().unwrap().as_mut().iter_mut().skip(buf_offset as usize);
+                        for frame in buffer.iter() {
+                            // FIXME: Recording needs to be sterereo
+                            *rec_iter.next().unwrap() = frame[0];
+                        }
+                        *this_duration += buffer.len() as Offset;
+                    } 
                     dsp::slice::map_in_place(buffer, |_| {
                         Frame::from_fn(|_| tape::compute(store))
                     });
@@ -341,7 +363,6 @@ impl Node<[Output; CHANNELS]> for Module {
                         Frame::from_fn(|_| resampled.next()[0])
                     });
                 }
-
 
                 /*
                 let frames = ring_buffer::Fixed::from(vec![[0.0]; 10]);
