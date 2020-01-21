@@ -321,7 +321,7 @@ impl Node<[Output; CHANNELS]> for Module {
             },
             Module::Tape(ref mut store) => {
                 // Exponential velocity scrub (tape inertia)
-                let interp_factor = store.velocity.abs();
+                let playback_rate = store.velocity.abs();
                 if let Some(dir) = store.scrub {
                     let expo_vel = store.velocity + if dir { SCRUB_ACC } 
                         else { -SCRUB_ACC };
@@ -329,8 +329,9 @@ impl Node<[Output; CHANNELS]> for Module {
                         else if expo_vel < -SCRUB_MAX { -SCRUB_MAX } 
                         else { expo_vel }
                 }
-                if interp_factor == 0.0 { return; }
-                if interp_factor == 1.0 {
+                if playback_rate == 0.0 { 
+                    dsp::slice::map_in_place(buffer, |a| { if store.monitor { a } else { [0.0, 0.0] } });
+                } else if playback_rate == 1.0 {
                     if store.recording {
                         let (this_pool, this_buf, this_duration) = (
                             store.pool.as_mut().unwrap(),
@@ -354,15 +355,16 @@ impl Node<[Output; CHANNELS]> for Module {
                         *this_duration += buffer.len() as Offset;
                         eprintln!("END {}", this_duration);
                     } 
-                    dsp::slice::map_in_place(buffer, |_| {
-                        Frame::from_fn(|_| tape::compute(store))
+                    dsp::slice::map_in_place(buffer, |a| {
+                        Frame::from_fn(|_| tape::compute(store) + if store.monitor { a[0] } else { 0.0 }) 
                     });
                 } else {
+                    let thru = store.monitor;
                     let mut source = signal::gen_mut(|| [tape::compute(store)] );
                     let interp = Linear::from_source(&mut source);
-                    let mut resampled = source.scale_hz(interp, interp_factor);
-                    dsp::slice::map_in_place(buffer, |_| {
-                        Frame::from_fn(|_| resampled.next()[0])
+                    let mut resampled = source.scale_hz(interp, playback_rate);
+                    dsp::slice::map_in_place(buffer, |a| {
+                        Frame::from_fn(|_| resampled.next()[0] + if thru { a[0] } else { 0.0 })
                     });
                 }
 

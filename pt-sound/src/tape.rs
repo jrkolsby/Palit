@@ -134,9 +134,37 @@ pub fn dispatch(store: &mut Store, a: Action) {
             store.scrub = None;
             if store.recording {
                 store.rec_offset = Some(store.playhead);
+                store.rec_region = Some(vec![]);
+                store.rec_duration = Some(0);
             }
         },
         Action::Stop(_) => { 
+            if let Some(region) = store.rec_region.as_mut() {
+                let buf_len = store.pool.as_mut().unwrap().get_buffer_size();
+                let total_len = buf_len * region.len();
+                eprintln!("{}", total_len);
+                let mut region_buf = vec![0.0; total_len];
+                let region_index = 0;
+                for buf in region.iter_mut() {
+                    for frame in buf.as_mut().iter_mut() {
+                        region_buf[region_index] = *frame;
+                    }
+                }
+                let mut new_id = store.regions.iter().fold(0, |max, r| 
+                    if r.asset_id > max { r.asset_id } else { max }) + 1;
+                store.regions.push(Region {
+                    buffer: region_buf,
+                    offset: store.rec_offset.unwrap(),
+                    duration: store.rec_duration.unwrap(),
+                    asset_in: 0,
+                    asset_out: store.rec_duration.unwrap(),
+                    gain: 1.0,
+                    asset_id: new_id,
+                });
+            }
+            store.rec_region = None;
+            store.rec_offset = None;
+            store.rec_duration = None;
             store.velocity = 0.0; 
             store.scrub = None;
             if store.loop_on {
@@ -147,10 +175,9 @@ pub fn dispatch(store: &mut Store, a: Action) {
             if store.track_id == t_id {
                 store.recording = !store.recording;
                 if store.pool.is_none() {
-                    // Prepare 2 MINUTE buffer
                     store.pool = Some(BufferPoolBuilder::new()
                         .with_buffer_size(store.sample_rate as usize)
-                        .with_capacity(120)
+                        .with_capacity(120) // Prepare 2 MINUTE buffer
                         .build());
                 }
                 store.rec_region = Some(vec![]);
