@@ -338,22 +338,30 @@ impl Node<[Output; CHANNELS]> for Module {
                             store.rec_region.as_mut().unwrap(), 
                             store.rec_duration.as_mut().unwrap()
                         );
-                        let buf_size = this_pool.get_buffer_size() as u32;
+                        let buf_size = SAMPLE_HZ as u32;
+                        let mut out_of_space = false;
                         if *this_duration % buf_size == 0 {
                             // Our last buffer is full, get a new one
-                            this_buf.push(this_pool.get_space().unwrap())
+                            if let Some(new_buf) = this_pool.try_pull() {
+                                this_buf.push(new_buf.to_vec());
+                            } else {
+                                // Out of space! Stop record
+                                out_of_space = true;
+                            }
                         }
-                        eprintln!("{} {} {}", this_duration, buf_size, this_buf.len());
-                        let buf_offset = *this_duration - (buf_size * (this_buf.len() as u32 - 1));
-                        // Should always be between 0 and SAMPLE_HZ
-                        eprintln!("{}", buf_offset);
-                        let mut rec_iter = this_buf.last_mut().unwrap().as_mut().iter_mut().skip(buf_offset as usize);
-                        for frame in buffer.iter() {
-                            // FIXME: Recording needs to be sterereo
-                            *rec_iter.next().unwrap() = frame[0];
+                        if !out_of_space {
+                            eprintln!("{} {} {} {}", this_duration, buf_size, buffer.len(), this_buf.len());
+                            let buf_offset: usize = (*this_duration - (buf_size * (this_buf.len() as u32 - 1))) as usize;
+                            // Should always be between 0 and SAMPLE_HZ
+                            eprintln!("BUF {}", buf_offset);
+                            let mut last_buf = this_buf.last_mut().unwrap();
+                            *this_duration += buffer.len() as Offset;
+                            eprintln!("{}", this_duration);
+                            for frame in buffer.iter() {
+                                // FIXME: Recording needs to be sterereo
+                                last_buf.push(frame[0]);
+                            }
                         }
-                        *this_duration += buffer.len() as Offset;
-                        eprintln!("END {}", this_duration);
                     } 
                     dsp::slice::map_in_place(buffer, |a| {
                         Frame::from_fn(|_| tape::compute(store) + if store.monitor { a[0] } else { 0.0 }) 

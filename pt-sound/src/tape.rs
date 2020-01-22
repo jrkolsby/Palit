@@ -7,7 +7,7 @@ use std::collections::{HashMap, LinkedList};
 use sample::{signal, Signal, Sample, Frame};
 use xmltree::Element;
 use wavefile::{WaveFile, WaveFileIterator};
-use bufferpool::{BufferPool, BufferPoolBuilder, BufferPoolReference};
+use object_pool::Pool;
 
 use crate::core::{SF, SigGen, Output, Note, Key, Offset, SAMPLE_HZ};
 use crate::action::Action;
@@ -43,8 +43,8 @@ pub struct Store {
     pub note_queue: Vec<Note>,
     pub sample_rate: u32,
     pub beat: u32,
-    pub pool: Option<BufferPool<Output>>,
-    pub rec_region: Option<Vec<BufferPoolReference<Output>>>,
+    pub pool: Option<Pool<'static, Vec<Output>>>,
+    pub rec_region: Option<Vec<Vec<Output>>>,
     pub rec_offset: Option<Offset>,
     pub rec_duration: Option<Offset>,
 }
@@ -139,29 +139,6 @@ pub fn dispatch(store: &mut Store, a: Action) {
             }
         },
         Action::Stop(_) => { 
-            if let Some(region) = store.rec_region.as_mut() {
-                let buf_len = store.pool.as_mut().unwrap().get_buffer_size();
-                let total_len = buf_len * region.len();
-                eprintln!("{}", total_len);
-                let mut region_buf = vec![0.0; total_len];
-                let region_index = 0;
-                for buf in region.iter_mut() {
-                    for frame in buf.as_mut().iter_mut() {
-                        region_buf[region_index] = *frame;
-                    }
-                }
-                let mut new_id = store.regions.iter().fold(0, |max, r| 
-                    if r.asset_id > max { r.asset_id } else { max }) + 1;
-                store.regions.push(Region {
-                    buffer: region_buf,
-                    offset: store.rec_offset.unwrap(),
-                    duration: store.rec_duration.unwrap(),
-                    asset_in: 0,
-                    asset_out: store.rec_duration.unwrap(),
-                    gain: 1.0,
-                    asset_id: new_id,
-                });
-            }
             store.rec_region = None;
             store.rec_offset = None;
             store.rec_duration = None;
@@ -175,10 +152,8 @@ pub fn dispatch(store: &mut Store, a: Action) {
             if store.track_id == t_id {
                 store.recording = !store.recording;
                 if store.pool.is_none() {
-                    store.pool = Some(BufferPoolBuilder::new()
-                        .with_buffer_size(store.sample_rate as usize)
-                        .with_capacity(120) // Prepare 2 MINUTE buffer
-                        .build());
+                    // Prepare 2 minute pool
+                    store.pool = Some(Pool::new(120, || Vec::with_capacity(48000)));
                 }
                 store.rec_region = Some(vec![]);
                 store.rec_duration = Some(0);
