@@ -14,7 +14,7 @@ use alsa::{seq, pcm, PollDescriptors};
 #[cfg(target_os = "linux")]
 use alsa::pcm::State;
 
-use dsp::{sample::ToFrameSliceMut, NodeIndex, Frame, FromSample};
+use dsp::{sample::ToFrameSliceMut, NodeIndex, FromSample, Frame};
 use dsp::{Outputs, Graph, Node, Sample, Walker};
 use dsp::daggy::petgraph::Bfs;
 
@@ -46,12 +46,12 @@ pub type Key = u8;
 pub type Param = i16;
 
 pub const CHANNELS: usize = 2;
-const FRAMES: u32 = 128;
 pub const SAMPLE_HZ: f64 = 48_000.0;
+pub const BUF_SIZE: usize = 24_000;
+const FRAMES: u32 = 128;
 const DEBUG_KEY_PERIOD: u16 = 24100;
 const SCRUB_MAX: f64 = 4.0;
 const SCRUB_ACC: f64 = 0.01;
-const BUFF_SIZE: Offset = 44_100;
 
 #[derive(Debug, Clone)]
 pub struct Note {
@@ -333,33 +333,27 @@ impl Node<[Output; CHANNELS]> for Module {
                     dsp::slice::map_in_place(buffer, |a| { if store.monitor { a } else { [0.0, 0.0] } });
                 } else if playback_rate == 1.0 {
                     if store.recording {
-                        let (this_pool, this_buf, this_duration) = (
+                        let (this_pool, this_region) = (
                             store.pool.as_mut().unwrap(),
-                            store.rec_region.as_mut().unwrap(), 
-                            store.rec_duration.as_mut().unwrap()
+                            store.temp_region.as_mut().unwrap(), 
                         );
-                        let buf_size = SAMPLE_HZ as u32;
                         let mut out_of_space = false;
-                        if *this_duration % buf_size == 0 {
+                        if this_region.duration % BUF_SIZE as u32 == 0 {
                             // Our last buffer is full, get a new one
                             if let Some(new_buf) = this_pool.try_pull() {
-                                this_buf.push(new_buf.to_vec());
+                                eprintln!("new buf!");
+                                this_region.buffer.push(new_buf.to_vec());
                             } else {
                                 // Out of space! Stop record
+                                eprintln!("out of space!");
                                 out_of_space = true;
                             }
                         }
                         if !out_of_space {
-                            eprintln!("{} {} {} {}", this_duration, buf_size, buffer.len(), this_buf.len());
-                            let buf_offset: usize = (*this_duration - (buf_size * (this_buf.len() as u32 - 1))) as usize;
-                            // Should always be between 0 and SAMPLE_HZ
-                            eprintln!("BUF {}", buf_offset);
-                            let mut last_buf = this_buf.last_mut().unwrap();
-                            *this_duration += buffer.len() as Offset;
-                            eprintln!("{}", this_duration);
+                            this_region.duration += buffer.len() as Offset;
                             for frame in buffer.iter() {
                                 // FIXME: Recording needs to be sterereo
-                                last_buf.push(frame[0]);
+                                this_region.buffer.last_mut().unwrap().push(frame[0]);
                             }
                         }
                     } 

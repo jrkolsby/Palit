@@ -9,12 +9,13 @@ use xmltree::Element;
 use wavefile::{WaveFile, WaveFileIterator};
 use object_pool::Pool;
 
-use crate::core::{SF, SigGen, Output, Note, Key, Offset, SAMPLE_HZ};
+use crate::core::{SAMPLE_HZ, BUF_SIZE};
+use crate::core::{SF, SigGen, Output, Note, Key, Offset};
 use crate::action::Action;
 use crate::document::{param_map, param_add, mark_map, mark_add};
 
 pub struct Region {
-    pub buffer: Vec<Output>,
+    pub buffer: Vec<Vec<Output>>,
     pub offset: Offset,
     pub duration: Offset,
     pub asset_in: Offset,
@@ -44,9 +45,7 @@ pub struct Store {
     pub sample_rate: u32,
     pub beat: u32,
     pub pool: Option<Pool<'static, Vec<Output>>>,
-    pub rec_region: Option<Vec<Vec<Output>>>,
-    pub rec_offset: Option<Offset>,
-    pub rec_duration: Option<Offset>,
+    pub temp_region: Option<Region>,
 }
 
 fn calculate_beat(sample_rate: u32, bpm: u16) -> u32 {
@@ -76,9 +75,7 @@ pub fn init() -> Store {
         beat: 0,
         // Make SURE not to clone these when implementing undo/redo
         pool: None,
-        rec_region: None,
-        rec_offset: None,
-        rec_duration: None,
+        temp_region: None,
     }
 }
 
@@ -133,17 +130,36 @@ pub fn dispatch(store: &mut Store, a: Action) {
             store.velocity = 1.0; 
             store.scrub = None;
             if store.recording {
-                store.rec_offset = Some(store.playhead);
-                store.rec_region = Some(vec![]);
-                store.rec_duration = Some(0);
+                let mut new_id = store.regions.iter().fold(0, |max, r| 
+                    if r.asset_id > max {r.asset_id} else {max}) + 1;
+                store.temp_region = Some(Region {
+                    offset: store.playhead,
+                    buffer: vec![],
+                    duration: 0,
+                    asset_in: 0,
+                    asset_out: 0,
+                    gain: 1.0,
+                    asset_id: new_id,
+                })
             }
         },
         Action::Stop(_) => { 
-            store.rec_region = None;
-            store.rec_offset = None;
-            store.rec_duration = None;
             store.velocity = 0.0; 
             store.scrub = None;
+            if let Some(region) = &store.temp_region {
+                let duration = store.playhead - region.offset.clone();
+                store.regions.push(Region {
+                    buffer: region.buffer.to_owned(),
+                    offset: region.offset,
+                    duration: duration.clone(),
+                    asset_in: 0,
+                    asset_out: duration,
+                    gain: region.gain,
+                    asset_id: region.asset_id,
+                });
+                store.temp_region = None;
+
+            }
             if store.loop_on {
                 store.playhead = store.loop_in;
             }
@@ -151,12 +167,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::RecordAt(_, t_id) => { 
             if store.track_id == t_id {
                 store.recording = !store.recording;
-                if store.pool.is_none() {
-                    // Prepare 2 minute pool
-                    store.pool = Some(Pool::new(120, || Vec::with_capacity(48000)));
-                }
-                store.rec_region = Some(vec![]);
-                store.rec_duration = Some(0);
+                store.pool = Some(Pool::new(5, || Vec::with_capacity(BUF_SIZE)));
             }
         },
         Action::MuteAt(_, t_id) => { 
@@ -223,8 +234,9 @@ pub fn compute(store: &mut Store) -> Output {
     for region in store.regions.iter_mut() {
         if store.playhead >= region.offset && 
             store.playhead - region.offset < region.duration {
-            let index = (store.playhead - region.offset) as usize;
-            let x: f32 = region.buffer[index];
+            let offset = (store.playhead - region.offset) as usize;
+            let index = offset / BUF_SIZE;
+            let x: f32 = region.buffer[index][offset - (BUF_SIZE * index)];
             z += x * region.gain;
         }
     }
@@ -334,17 +346,23 @@ pub fn read(doc: &mut Element) -> Option<Store> {
             let _a_in: u32 = a_in.parse().unwrap();
             let _a_out: u32 = a_out.parse().unwrap();
 
-            let mut buffer: Vec<f32> = vec![];
-
+            let mut buffer = vec![];
             for (id, asset) in assets.iter() {
                 if (_a_id == *id) {
                     let src: &str = asset.attributes.get("src").unwrap();
                     let duration: &str = asset.attributes.get("size").unwrap();
+                    let _duration: usize = duration.parse().unwrap();
 
+                    let inner_size = BUF_SIZE as usize;
+                    buffer = Vec::with_capacity(_duration / inner_size);
                     let mut wav_f = WaveFile::open(src).unwrap();
-                    let mut wav_iter = wav_f.iter();
 
-                    buffer = wav_iter.map(|f| f[0] as f32 * 0.000001).collect();
+                    for (i, frame) in wav_f.iter().enumerate() {
+                        if i % inner_size == 0 {
+                            buffer.push(vec![])
+                        }
+                        buffer.last_mut().unwrap().push(frame[0] as f32 * 0.000001);
+                    }
                 }
             }
 
