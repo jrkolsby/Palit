@@ -50,7 +50,7 @@ fn add_module(
                     anchors.push(tape); // OUTPUT
                 }
                 let operator = patch.add_node(Module::Operator(vec![], 
-                    anchors.clone(), 
+                    anchors.clone(), id.clone()
                 ));
                 // Because each track is stored as two anchors,
                 // ... we need to make sure there is only one edge
@@ -70,8 +70,8 @@ fn add_module(
                 };
                 let instrument = patch.add_node(Module::Synth(store));
                 let operator = patch.add_node(Module::Operator(vec![], 
-                    vec![instrument, instrument])
-                );
+                    vec![instrument, instrument], id.clone()
+                ));
                 patch.add_connection(operator, instrument);
                 operators.insert(id, operator);
             },
@@ -82,8 +82,8 @@ fn add_module(
                 };
                 let inst = patch.add_node(Module::Arpeggio(store));
                 let operator = patch.add_node(Module::Operator(vec![], 
-                    vec![inst, inst])
-                );
+                    vec![inst, inst], id.clone()
+                ));
                 patch.add_connection(operator, inst);
                 operators.insert(id, operator);
             },
@@ -91,8 +91,8 @@ fn add_module(
                 let store = chord::read(el).unwrap();
                 let inst = patch.add_node(Module::Chord(store));
                 let operator = patch.add_node(Module::Operator(vec![], 
-                    vec![inst, inst])
-                );
+                    vec![inst, inst], id.clone()
+                ));
                 patch.add_connection(operator, inst);
                 operators.insert(id, operator);
             },
@@ -102,8 +102,8 @@ fn add_module(
                 let octave = patch.add_node(Module::Octave(vec![], shift));
                 //let shift = patch.add_node(Module::Octave(vec![], 4));
                 let operator = patch.add_node(Module::Operator(vec![], 
-                    vec![octave, octave])
-                );
+                    vec![octave, octave], id.clone()
+                ));
                 patch.add_connection(operator, octave);
                 operators.insert(id, operator);
             },
@@ -125,7 +125,7 @@ fn add_module(
                         let op_id = operators.get(&_m_id).unwrap();
 
                         let in_id = match &patch[*op_id] {
-                            Module::Operator(_, anchors) => anchors[_io_id],
+                            Module::Operator(_, anchors, _) => anchors[_io_id],
                             _ => panic!("No such input {}", io_id)
                         };
                         patch.add_connection(route, in_id);
@@ -140,7 +140,7 @@ fn add_module(
                         let op_id = operators.get(&_m_id).unwrap();
 
                         let out_id = match &patch[*op_id] {
-                            Module::Operator(_, anchors) => anchors[_io_id],
+                            Module::Operator(_, anchors, _) => anchors[_io_id],
                             _ => panic!("No such output {}", io_id)
                         };
                         patch.add_connection(out_id ,route);
@@ -227,7 +227,7 @@ fn main() -> Result<(), Box<error::Error>> {
             Action::PatchIn(n_id, a_id, r_id) => {
                 if let Some(route) = routes.get(&r_id) {
                     match &patch[*operators.get(&n_id).unwrap()] {
-                        Module::Operator(_, anchors) => {
+                        Module::Operator(_, anchors, _) => {
                             if let Err(e) = patch.add_connection(*route, anchors[a_id]) {
                                 println!("CYCLE");
                             }
@@ -239,7 +239,7 @@ fn main() -> Result<(), Box<error::Error>> {
             Action::PatchOut(n_id, a_id, r_id) => {
                 if let Some(route) = routes.get(&r_id) {
                     match &patch[*operators.get(&n_id).unwrap()] {
-                        Module::Operator(_, anchors) => {
+                        Module::Operator(_, anchors, _) => {
                             if let Err(e) = patch.add_connection(anchors[a_id], *route) {
                                 println!("CYCLE");
                             }
@@ -250,7 +250,7 @@ fn main() -> Result<(), Box<error::Error>> {
             },
             Action::DelPatch(n_id, a_id, input) => {
                 match &patch[*operators.get(&n_id).unwrap()] {
-                    Module::Operator(_, anchors) => {
+                    Module::Operator(_, anchors, _) => {
                         let id = anchors[a_id].clone();
                         for (_, route) in routes.iter() {
                             let edge = if input {

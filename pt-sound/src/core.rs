@@ -222,7 +222,7 @@ pub enum Module {
     // and every second or so will send all corresponding NoteOff actions.
     // Useful for debugging on OSX where keyup events aren't accessed.
     DebugKeys(Vec<Action>, Vec<Action>, u16),
-    Operator(Vec<Action>, Vec<(NodeIndex)>),
+    Operator(Vec<Action>, Vec<(NodeIndex)>, u16),  // Queue, Anchors, Module ID
     Synth(synth::Store),
     Tape(tape::Store),
     Chord(chord::Store),
@@ -233,7 +233,7 @@ impl Module {
     pub fn dispatch(&mut self, a: Action) {
         match *self {
             Module::Master => {}
-            Module::Operator(ref mut queue, _,) |
+            Module::Operator(ref mut queue, _, _) |
             Module::Passthru(ref mut queue) => { queue.push(a.clone()) }
             Module::DebugKeys(ref mut onqueue, _, _) => { onqueue.push(a.clone()); }
             Module::Synth(ref mut store) => synth::dispatch(store, a.clone()),
@@ -257,7 +257,7 @@ impl Module {
         ) {
 
         match *self {
-            Module::Operator(ref mut queue, _,) |
+            Module::Operator(ref mut queue, _, _) |
             Module::Passthru(ref mut queue) => {
                 let carry = queue.clone();
                 queue.clear();
@@ -341,16 +341,15 @@ impl Node<[Output; CHANNELS]> for Module {
                         if this_region.duration % BUF_SIZE as u32 == 0 {
                             // Our last buffer is full, get a new one
                             if let Some(new_buf) = this_pool.try_pull() {
-                                eprintln!("new buf!");
                                 this_region.buffer.push(new_buf.to_vec());
                             } else {
                                 // Out of space! Stop record
-                                eprintln!("out of space!");
-                                out_of_space = true;
+                                //out_of_space = true;
                             }
                         }
                         if !out_of_space {
                             this_region.duration += buffer.len() as Offset;
+                            eprintln!("{}", this_region.duration);
                             for frame in buffer.iter() {
                                 // FIXME: Recording needs to be sterereo
                                 this_region.buffer.last_mut().unwrap().push(frame[0]);

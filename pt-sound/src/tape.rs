@@ -147,18 +147,18 @@ pub fn dispatch(store: &mut Store, a: Action) {
             store.velocity = 0.0; 
             store.scrub = None;
             if let Some(region) = &store.temp_region {
-                let duration = store.playhead - region.offset.clone();
+                eprintln!("REGI {}", region.duration.clone());
+                eprintln!("HEAD {}", store.playhead);
                 store.regions.push(Region {
                     buffer: region.buffer.to_owned(),
                     offset: region.offset,
-                    duration: duration.clone(),
+                    duration: region.duration.clone(),
                     asset_in: 0,
-                    asset_out: duration,
+                    asset_out: region.duration,
                     gain: region.gain,
                     asset_id: region.asset_id,
                 });
                 store.temp_region = None;
-
             }
             if store.loop_on {
                 store.playhead = store.loop_in;
@@ -167,7 +167,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::RecordAt(_, t_id) => { 
             if store.track_id == t_id {
                 store.recording = !store.recording;
-                store.pool = Some(Pool::new(5, || Vec::with_capacity(BUF_SIZE)));
+                store.pool = Some(Pool::new(10, || Vec::with_capacity(BUF_SIZE)));
             }
         },
         Action::MuteAt(_, t_id) => { 
@@ -231,6 +231,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
 pub fn compute(store: &mut Store) -> Output {
     let mut z: f32 = 0.0;
     if store.velocity == 0.0 { return z; }
+    eprintln!("{}", store.playhead);
     for region in store.regions.iter_mut() {
         if store.playhead >= region.offset && 
             store.playhead - region.offset < region.duration {
