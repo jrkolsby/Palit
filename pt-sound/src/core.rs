@@ -316,9 +316,7 @@ impl Node<[Output; CHANNELS]> for Module {
                 });
             },
             Module::Synth(ref mut store) => {
-                dsp::slice::map_in_place(buffer, |_| {
-                    Frame::from_fn(|_| synth::compute(store))
-                });
+                dsp::slice::map_in_place(buffer, |_| synth::compute(store));
             },
             Module::Tape(ref mut store) => {
                 // Exponential velocity scrub (tape inertia)
@@ -352,20 +350,28 @@ impl Node<[Output; CHANNELS]> for Module {
                                     //out_of_space = true;
                                 }
                             }
-                            this_region.buffer.last_mut().unwrap()[index] = frame[0];
+                            this_region.buffer.last_mut().unwrap()[index] = *frame;
                             this_region.duration += 1;
                         }
                     } 
                     dsp::slice::map_in_place(buffer, |a| {
-                        Frame::from_fn(|_| tape::compute(store) + if store.monitor { a[0] } else { 0.0 }) 
+                        let frame = tape::compute(store);
+                        [
+                            frame[0] + if store.monitor { a[0] } else { 0.0 },
+                            frame[1] + if store.monitor { a[1] } else { 0.0 }
+                        ] 
                     });
                 } else {
                     let thru = store.monitor;
-                    let mut source = signal::gen_mut(|| [tape::compute(store)] );
+                    let mut source = signal::gen_mut(|| tape::compute(store) );
                     let interp = Linear::from_source(&mut source);
                     let mut resampled = source.scale_hz(interp, playback_rate);
                     dsp::slice::map_in_place(buffer, |a| {
-                        Frame::from_fn(|_| resampled.next()[0] + if thru { a[0] } else { 0.0 })
+                        let frame = resampled.next();
+                        [
+                            frame[0] + if thru { a[0] } else { 0.0 },
+                            frame[1] + if thru { a[1] } else { 0.0 }
+                        ] 
                     });
                 }
 

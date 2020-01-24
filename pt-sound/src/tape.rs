@@ -9,13 +9,13 @@ use xmltree::Element;
 use wavefile::{WaveFile, WaveFileIterator};
 use object_pool::Pool;
 
-use crate::core::{SAMPLE_HZ, BUF_SIZE};
+use crate::core::{SAMPLE_HZ, BUF_SIZE, CHANNELS};
 use crate::core::{SF, SigGen, Output, Note, Key, Offset};
 use crate::action::Action;
 use crate::document::{param_map, param_add, mark_map, mark_add};
 
 pub struct Region {
-    pub buffer: Vec<Vec<Output>>,
+    pub buffer: Vec<Vec<[Output; CHANNELS]>>,
     pub offset: Offset,
     pub duration: Offset,
     pub asset_in: Offset,
@@ -44,7 +44,7 @@ pub struct Store {
     pub note_queue: Vec<Note>,
     pub sample_rate: u32,
     pub beat: u32,
-    pub pool: Option<Pool<'static, Vec<Output>>>,
+    pub pool: Option<Pool<'static, Vec<[Output; CHANNELS]>>>,
     pub temp_region: Option<Region>,
 }
 
@@ -167,7 +167,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::RecordAt(_, t_id) => { 
             if store.track_id == t_id {
                 store.recording = !store.recording;
-                store.pool = Some(Pool::new(10, || vec![0.0; BUF_SIZE]));
+                store.pool = Some(Pool::new(10, || vec![[0.0; CHANNELS]; BUF_SIZE]));
             }
         },
         Action::MuteAt(_, t_id) => { 
@@ -228,16 +228,16 @@ pub fn dispatch(store: &mut Store, a: Action) {
     }
 }
 
-pub fn compute(store: &mut Store) -> Output {
-    let mut z: f32 = 0.0;
+pub fn compute(store: &mut Store) -> [Output; CHANNELS] {
+    let mut z: [Output; CHANNELS] = [0.0, 0.0];
     if store.velocity == 0.0 { return z; }
     for region in store.regions.iter_mut() {
         if store.playhead >= region.offset && 
             store.playhead - region.offset < region.duration {
             let offset = (store.playhead - region.offset) as usize;
             let index = offset / BUF_SIZE;
-            let x: f32 = region.buffer[index][offset - (BUF_SIZE * index)];
-            z += x * region.gain;
+            let x = region.buffer[index][offset - (BUF_SIZE * index)];
+            z = [x[0] * region.gain, x[1] * region.gain];
         }
     }
     for note in store.notes.iter_mut() {
@@ -248,7 +248,11 @@ pub fn compute(store: &mut Store) -> Output {
             store.out_queue.push(Action::NoteOff(note.note));
         }
     }
-    let z = z.min(0.999).max(-0.999);
+    // Prevent speaker damage
+    z = [
+        z[0].min(0.999).max(-0.999),
+        z[1].min(0.999).max(-0.999),
+    ];
 
     if store.velocity < 0.0 && store.playhead == 0 { 
         store.scrub = None;
@@ -361,7 +365,11 @@ pub fn read(doc: &mut Element) -> Option<Store> {
                         if i % inner_size == 0 {
                             buffer.push(vec![])
                         }
-                        buffer.last_mut().unwrap().push(frame[0] as f32 * 0.000001);
+                        let mut converted = frame.iter().map(|a| *a as f32 * 0.0000001);
+                        buffer.last_mut().unwrap().push([
+                            converted.next().unwrap(), 
+                            converted.next().unwrap()
+                        ]);
                     }
                 }
             }
