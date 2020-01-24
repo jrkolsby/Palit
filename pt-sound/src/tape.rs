@@ -167,7 +167,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::RecordAt(_, t_id) => { 
             if store.track_id == t_id {
                 store.recording = !store.recording;
-                store.pool = Some(Pool::new(10, || Vec::with_capacity(BUF_SIZE)));
+                store.pool = Some(Pool::new(10, || vec![0.0; BUF_SIZE]));
             }
         },
         Action::MuteAt(_, t_id) => { 
@@ -231,7 +231,6 @@ pub fn dispatch(store: &mut Store, a: Action) {
 pub fn compute(store: &mut Store) -> Output {
     let mut z: f32 = 0.0;
     if store.velocity == 0.0 { return z; }
-    eprintln!("{}", store.playhead);
     for region in store.regions.iter_mut() {
         if store.playhead >= region.offset && 
             store.playhead - region.offset < region.duration {

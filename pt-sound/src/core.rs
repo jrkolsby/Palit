@@ -48,6 +48,7 @@ pub type Param = i16;
 pub const CHANNELS: usize = 2;
 pub const SAMPLE_HZ: f64 = 48_000.0;
 pub const BUF_SIZE: usize = 24_000;
+
 const FRAMES: u32 = 128;
 const DEBUG_KEY_PERIOD: u16 = 24100;
 const SCRUB_MAX: f64 = 4.0;
@@ -337,23 +338,22 @@ impl Node<[Output; CHANNELS]> for Module {
                             store.pool.as_mut().unwrap(),
                             store.temp_region.as_mut().unwrap(), 
                         );
-                        let mut out_of_space = false;
-                        if this_region.duration % BUF_SIZE as u32 == 0 {
-                            // Our last buffer is full, get a new one
-                            if let Some(new_buf) = this_pool.try_pull() {
-                                this_region.buffer.push(new_buf.to_vec());
-                            } else {
-                                // Out of space! Stop record
-                                //out_of_space = true;
+                        for (i, frame) in buffer.iter().enumerate() {
+                            let index = this_region.duration as usize % BUF_SIZE;
+                            if index == 0 {
+                                if let Some(new_buf) = this_pool.try_pull() {
+                                    eprintln!("NEW BUF");
+                                    this_region.buffer.push(new_buf.to_vec());
+                                } else {
+                                    // Out of space! Stop record
+                                    eprintln!("DONE");
+                                    store.recording = false;
+                                    break;
+                                    //out_of_space = true;
+                                }
                             }
-                        }
-                        if !out_of_space {
-                            this_region.duration += buffer.len() as Offset;
-                            eprintln!("{}", this_region.duration);
-                            for frame in buffer.iter() {
-                                // FIXME: Recording needs to be sterereo
-                                this_region.buffer.last_mut().unwrap().push(frame[0]);
-                            }
+                            this_region.buffer.last_mut().unwrap()[index] = frame[0];
+                            this_region.duration += 1;
                         }
                     } 
                     dsp::slice::map_in_place(buffer, |a| {
