@@ -8,6 +8,7 @@ use sample::{signal, Signal, Sample, Frame};
 use xmltree::Element;
 use wavefile::{WaveFile, WaveFileIterator};
 use object_pool::Pool;
+use chrono::prelude::*;
 
 use crate::core::{SAMPLE_HZ, BUF_SIZE, CHANNELS};
 use crate::core::{SF, SigGen, Output, Note, Key, Offset};
@@ -89,6 +90,7 @@ pub fn dispatch_requested(store: &mut Store) -> (
 
         for a in store.out_queue.iter() {
             match a {
+                Action::AddRegion(_, _, _, _, _, _) |
                 Action::AddNote(_, _) |
                 Action::Tick(_) => client_actions.push(a.clone()),
                 _ => output_actions.push(a.clone())
@@ -125,6 +127,18 @@ pub fn dispatch(store: &mut Store, a: Action) {
         },
         Action::Scrub(_, dir) => {
             store.scrub = Some(dir);
+            if let Some(region) = &store.temp_region {
+                store.regions.push(Region {
+                    buffer: region.buffer.to_owned(),
+                    offset: region.offset,
+                    duration: region.duration.clone(),
+                    asset_in: 0,
+                    asset_out: region.duration,
+                    gain: region.gain,
+                    asset_id: region.asset_id,
+                });
+                store.temp_region = None;
+            }
         },
         Action::Play(_) => { 
             store.velocity = 1.0; 
@@ -140,15 +154,17 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     asset_out: 0,
                     gain: 1.0,
                     asset_id: new_id,
-                })
+                });
+                store.out_queue.push(Action::AddRegion(
+                    0, store.track_id, new_id, store.playhead, 0, 
+                    format!("/usr/local/palit/{:?}_{}", chrono::offset::Local::now(), store.track_id)
+                ));
             }
         },
         Action::Stop(_) => { 
             store.velocity = 0.0; 
             store.scrub = None;
             if let Some(region) = &store.temp_region {
-                eprintln!("REGI {}", region.duration.clone());
-                eprintln!("HEAD {}", store.playhead);
                 store.regions.push(Region {
                     buffer: region.buffer.to_owned(),
                     offset: region.offset,
@@ -365,7 +381,7 @@ pub fn read(doc: &mut Element) -> Option<Store> {
                         if i % inner_size == 0 {
                             buffer.push(vec![])
                         }
-                        let mut converted = frame.iter().map(|a| *a as f32 * 0.0000001);
+                        let mut converted = frame.iter().map(|a| *a as f32 * 0.000001);
                         buffer.last_mut().unwrap().push([
                             converted.next().unwrap(), 
                             converted.next().unwrap()

@@ -2,6 +2,7 @@ extern crate dsp;
 extern crate libc;
 extern crate sample;
 extern crate wavefile;
+extern crate chrono;
 
 use std::{iter, error};
 use std::fs::{OpenOptions, File};

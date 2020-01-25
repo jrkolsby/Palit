@@ -53,7 +53,8 @@ pub enum Action {
 
     // Module ID, region ID, new track, new offset
     MoveRegion(u16, u16, u16, u16), 
-    AddRegion(u16, u16),
+    // Module ID, Track ID, Region ID, offset, duration, wav_dest
+    AddRegion(u16, u16, u16, Offset, Offset, String),
 
     Exit,
     Noop,

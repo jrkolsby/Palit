@@ -340,14 +340,11 @@ impl Node<[Output; CHANNELS]> for Module {
                             let index = this_region.duration as usize % BUF_SIZE;
                             if index == 0 {
                                 if let Some(new_buf) = this_pool.try_pull() {
-                                    eprintln!("NEW BUF");
                                     this_region.buffer.push(new_buf.to_vec());
                                 } else {
                                     // Out of space! Stop record
-                                    eprintln!("DONE");
                                     store.recording = false;
                                     break;
-                                    //out_of_space = true;
                                 }
                             }
                             this_region.buffer.last_mut().unwrap()[index] = *frame;
@@ -445,11 +442,15 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
             for a in client_a.iter() {
                 let message = match a {
                     Action::Tick(offset) => Some(format!("TICK:{} ", offset)),
-                    Action::NoteOn(n,v) => Some(format!("NOTE_ON:{}:{} ", n, v)),
-                    Action::NoteOff(n) => Some(format!("NOTE_OFF:{} ", n)),
+                    Action::NoteOn(key, vel) => Some(format!("NOTE_ON:{}:{} ", key, vel)),
+                    Action::NoteOff(key) => Some(format!("NOTE_OFF:{} ", key)),
                     Action::AddNote(id, n) => Some(format!("NOTE_ADD:{}:{}:{}:{}:{} ",
                         id, n.note, n.vel, n.t_in, n.t_out
                     )),
+                    Action::AddRegion(n_id, t_id, id, offset, duration, source) => 
+                        Some(format!("REGION_ADD:{}:{}:{}:{}:{}:{} ",
+                            n_id, t_id, id, offset, duration, source
+                        )),
                     _ => None
                 };
                 if let Some(text) = message {

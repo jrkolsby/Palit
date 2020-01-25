@@ -215,7 +215,7 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                     write!(out, "{}{}", cursor::Goto(
                         win.x + TRACKS_X, 
                         win.y + 1 + TIMELINE_Y + 2 * id.1),
-                        if state.tracks.get(&id.1).unwrap().record { "\\_" } else { "_/" }
+                        if state.tracks.get(&id.1).unwrap().record { "R" } else { "r" }
                     ).unwrap(),
                 r_t: |action, id, _| match action {
                     Action::SelectR => Action::RecordTrack(id.1),
@@ -226,7 +226,7 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                     write!(out, "{}{}", cursor::Goto(
                         win.x + TRACKS_X + 3, 
                         win.y + 1 + TIMELINE_Y + 2 * id.1),
-                        if state.tracks.get(&id.1).unwrap().mute { "\\_" } else { "_/" }
+                        if state.tracks.get(&id.1).unwrap().mute { "M" } else { "m" }
                     ).unwrap(),
                 g_t: |action, id, _| match action {
                     Action::SelectG => Action::MuteTrack(id.1),
@@ -237,7 +237,7 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                     write!(out, "{}{}", cursor::Goto(
                         win.x + TRACKS_X + 6, 
                         win.y + 1 + TIMELINE_Y + 2 * id.1),
-                        if state.tracks.get(&id.1).unwrap().solo { "\\_" } else { "_/" }
+                        if state.tracks.get(&id.1).unwrap().solo { "S" } else { "s" }
                     ).unwrap(),
                 b_t: |action, id, _| match action {
                     Action::SelectB => Action::SoloTrack(id.1),
@@ -259,6 +259,7 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
     region_vec.sort_by(|(_, a), (_, b)| a.offset.cmp(&b.offset));
 
     for (region_id, region) in region_vec.iter() {
+        eprintln!("{}, {:?}", region_id, region);
         focii[region.track as usize].push(
             region::new(**region_id)
         )
@@ -269,6 +270,8 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
 
 fn reduce(state: TimelineState, action: Action) -> TimelineState {
     let o1 = offset_char(1, state.sample_rate, state.tempo, state.zoom);
+    let mut new_asset = state.assets.iter().fold(0, |max, (id, _)| 
+        if id > &max {*id} else {max}) + 1;
     TimelineState {
         tempo: match action.clone() {
             Action::Deselect => if let Some(t) = state.temp_tempo { t }
@@ -335,8 +338,18 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             new_tracks
         },
         assets: match action.clone() {
-            Action::Deselect /* |
-            Action::Zoom(z) */ => {
+            Action::AddRegion(_, _, _, _, duration, src) => {
+                let mut new_assets = state.assets.clone();
+                new_assets.insert(new_asset, Asset {
+                    src,
+                    duration,
+                    channels: 2,
+                    waveform: vec![(4,4), (4,4), (4,4), (4,4), (4,4)],
+                });
+                new_assets
+            },
+            //Action::Zoom |
+            Action::Deselect  => {
                 let zoom = if let Some(z) = state.temp_zoom { z } else { state.zoom };
                 let tempo = if let Some(t) = state.temp_tempo { t } else { state.tempo };
                 if zoom != state.zoom || tempo != state.tempo {
@@ -350,6 +363,17 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             _ => state.assets.to_owned()
         },
         regions: match action.clone() {
+            Action::AddRegion(_, t_id, r_id, offset, duration, src) => {
+                let mut new_regions = state.regions.clone();
+                new_regions.insert(r_id, Region {
+                    asset_id: new_asset,
+                    asset_in: 0,
+                    asset_out: duration,
+                    offset: offset,
+                    track: t_id,
+                });
+                new_regions
+            },
             Action::MoveRegion(id, t_id, offset) => {
                 let mut new_regions = state.regions.clone();
                 let r = new_regions.get_mut(&id).unwrap();
@@ -484,10 +508,15 @@ impl Layer for Timeline {
         let _action = multi_focus.transform(action.clone(), &mut self.state);
 
         self.state = reduce(self.state.clone(), _action.clone());
-        
+
         // Actions which affect focii
         let (focus, default) = match _action.clone() {
             // Move focus to intersecting region on Tick
+            Action::AddRegion(_, _, _, _, _, _) => {
+                self.focii = generate_focii(&self.state.tracks, &self.state.regions);
+                eprintln!("GEN");
+                (self.state.focus, None)
+            },
             Action::Tick(time) => match multi_focus.w_id.0 {
                 FocusType::Region => {
                     // Find selected region within selected track

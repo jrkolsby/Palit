@@ -62,8 +62,11 @@ pub enum Action {
     RecordTrack(u16),
     MuteTrack(u16),
     PlayAt(u16),
+
     // TODO: Module ID, Track ID
     AddNote(u16, u8, f32, u32, u32), 
+    // Module ID, Track ID, Region ID, offset, duration, src
+    AddRegion(u16, u16, u16, u32, u32, String),
 
     AddModule(String),
     TryoutModule(u16),
