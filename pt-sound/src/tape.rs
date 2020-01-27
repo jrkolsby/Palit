@@ -437,7 +437,9 @@ pub fn read(doc: &mut Element) -> Option<Store> {
                     let mut wav_f = hound::WavReader::open(src).unwrap();
                     let spec = wav_f.spec();
                     let channels = spec.channels as usize;
-                    let is_float = spec.sample_format == hound::SampleFormat::Float;
+                    let bitrate = spec.bits_per_sample;
+
+                    eprintln!("{}", bitrate);
 
                     let mut push_sample = |i, sample| {
                         if i % (BUF_SIZE * channels) == 0 {
@@ -450,13 +452,13 @@ pub fn read(doc: &mut Element) -> Option<Store> {
                         buffer.last_mut().unwrap().last_mut().unwrap()[frame_index] = sample
                     };
 
-                    if is_float {
+                    if spec.sample_format == hound::SampleFormat::Float {
                         for (i, sample) in wav_f.samples::<f32>().enumerate() {
                             push_sample(i, sample.unwrap());
                         }
                     } else {
                         for (i, sample) in wav_f.samples::<i32>().enumerate() {
-                            push_sample(i, sample.unwrap() as f32 * 0.000001);
+                            push_sample(i, sample.unwrap() as f32 / 2_f32.powf(bitrate as f32));
                         }
                     }
                 }
