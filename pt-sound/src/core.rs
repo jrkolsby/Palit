@@ -1,11 +1,13 @@
 extern crate sample;
 extern crate portaudio;
+extern crate hound;
 
 use std::{iter, error};
 use std::ffi::CString;
 use std::fs::File;
 use std::io::prelude::*;
 use std::thread;
+use std::sync::Arc;
 
 #[cfg(target_os = "linux")]
 extern crate alsa;
@@ -332,13 +334,15 @@ impl Node<[Output; CHANNELS]> for Module {
                     dsp::slice::map_in_place(buffer, |a| { if store.monitor { a } else { [0.0, 0.0] } });
                 } else if playback_rate == 1.0 {
                     if store.recording {
-                        let (this_pool, this_region) = (
+                        let (this_pool, arc_region) = (
                             store.pool.as_mut().unwrap(),
-                            store.temp_region.as_mut().unwrap(), 
+                            store.rec_region.as_mut().unwrap(), 
                         );
+                        let this_region = Arc::get_mut(arc_region).unwrap();
                         for (i, frame) in buffer.iter().enumerate() {
                             let index = this_region.duration as usize % BUF_SIZE;
                             if index == 0 {
+
                                 if let Some(new_buf) = this_pool.try_pull() {
                                     this_region.buffer.push(new_buf.to_vec());
                                 } else {

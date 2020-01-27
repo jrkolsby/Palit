@@ -1,7 +1,6 @@
 use std::{iter};
 
 use sample::{signal, Signal, Sample};
-use wavefile::{WaveFile, WaveFileIterator};
 use xmltree::Element;
 
 use crate::document::{param_map};

@@ -1,10 +1,9 @@
-extern crate wavefile;
 extern crate xmltree;
 
 use std::fs::{self, OpenOptions};
 use std::collections::HashMap;
 
-use wavefile::WaveFile;
+use hound;
 use itertools::Itertools;
 use xmltree::Element;
 
@@ -47,7 +46,7 @@ pub fn offset_char(beats: u16, rate: u32, bpm: u16, zoom: usize) -> u32 {
     beats as u32 * samples_per_beat
 }
 
-pub fn file_to_pairs(file: WaveFile, width: usize, samples_per_tick: u16) -> Vec<(u8, u8)> {
+pub fn file_to_pairs(file: WavReader<f64>, width: usize, samples_per_tick: u16) -> Vec<(u8, u8)> {
 
     let chunk_size = (file.len()) / (width*2);
     let chunks = &file.iter().chunks(chunk_size);
@@ -78,7 +77,7 @@ pub fn file_to_pairs(file: WaveFile, width: usize, samples_per_tick: u16) -> Vec
 pub fn generate_waveforms(assets: &mut HashMap<u16, Asset>, 
         rate: u32, tempo: u16, zoom: usize) {
     for (_, asset) in assets.iter_mut() {
-        let asset_file = WaveFile::open(asset.src.clone()).unwrap();
+        let asset_file = hound::WavReader::open(asset.src.clone()).unwrap();
 
         let num_pairs = char_offset(
             asset.duration, rate, tempo, zoom) as usize;

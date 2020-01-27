@@ -1,5 +1,3 @@
-extern crate wavefile;
-
 use xmltree::Element;
 
 use termion::cursor;

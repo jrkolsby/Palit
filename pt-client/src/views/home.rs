@@ -70,7 +70,7 @@ impl Home {
 impl Layer for Home {
     fn render(&self, out: &mut Screen, target: bool) {
 
-        bigtext::render(out, self.x, self.y, "  EcoPus".to_string());
+        bigtext::render(out, self.x, self.y, "Palit Studio".to_string());
         button::render(out, self.x + 6, self.y + 6, 17, "New Project");
 
         // Project Listing

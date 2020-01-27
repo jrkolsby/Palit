@@ -3,10 +3,13 @@ use std::io::Write;
 use std::borrow::Borrow;
 use std::convert::TryInto;
 use std::collections::{HashMap, LinkedList};
+use std::thread;
+use std::time;
+use std::sync::{Arc, atomic::Ordering, atomic::AtomicU32};
 
 use sample::{signal, Signal, Sample, Frame};
 use xmltree::Element;
-use wavefile::{WaveFile, WaveFileIterator};
+use hound;
 use object_pool::Pool;
 use chrono::prelude::*;
 
@@ -23,6 +26,7 @@ pub struct Region {
     pub asset_out: Offset,
     pub gain: f32,
     pub asset_id: u16,
+    pub asset_src: String,
 }
 
 pub struct Store {
@@ -46,7 +50,9 @@ pub struct Store {
     pub sample_rate: u32,
     pub beat: u32,
     pub pool: Option<Pool<'static, Vec<[Output; CHANNELS]>>>,
-    pub temp_region: Option<Region>,
+    pub rec_region: Option<Arc<Region>>,
+    pub writer: Option<thread::JoinHandle<()>>,
+    pub written: Arc<AtomicU32>, 
 }
 
 fn calculate_beat(sample_rate: u32, bpm: u16) -> u32 {
@@ -76,36 +82,49 @@ pub fn init() -> Store {
         beat: 0,
         // Make SURE not to clone these when implementing undo/redo
         pool: None,
-        temp_region: None,
+        rec_region: None,
+        writer: None,
+        written: Arc::new(AtomicU32::new(0)),
     }
 }
 
 pub fn dispatch_requested(store: &mut Store) -> (
         Option<Vec<Action>>,
         Option<Vec<Action>>,
-        Option<Vec<Action>>
-    ) {
-        let mut client_actions = vec![];
-        let mut output_actions = vec![];
+        Option<Vec<Action>>) {
+    let mut client_actions = vec![];
+    let mut output_actions = vec![];
 
-        for a in store.out_queue.iter() {
-            match a {
-                Action::AddRegion(_, _, _, _, _, _) |
-                Action::AddNote(_, _) |
-                Action::Tick(_) => client_actions.push(a.clone()),
-                _ => output_actions.push(a.clone())
+    /*
+    if store.write_temp && let Some(temp) = store.rec_region {
+        // Write previous buffer to wave file and pull new one
+        let wav_buffer = Arc::new(temp.buffer.last().to_owned());
+        let wav_dest = this_region.asset_src.clone();
+        thread::spawn(move || {
+            let mut writer = hound::WavWriter::append(wav_dest).unwrap();
+            for wav_frame in wav_buffer.iter() {
+                writer.write_sample(wav_frame[0][0]);
             }
+        });
+    }
+    */
+
+    for a in store.out_queue.iter() {
+        match a {
+            Action::AddRegion(_, _, _, _, _, _) |
+            Action::AddNote(_, _) |
+            Action::Tick(_) => client_actions.push(a.clone()),
+            _ => output_actions.push(a.clone())
         }
+    }
 
-        store.out_queue.clear();
+    store.out_queue.clear();
 
-        (if output_actions.len() > 0 {
-            Some(output_actions)
-        } else {None}, 
-            None, 
-        if client_actions.len() > 0 {
-            Some(client_actions)
-        } else { None })
+    (
+        if output_actions.len() > 0 { Some(output_actions) } else { None }, 
+        None, 
+        if client_actions.len() > 0 { Some(client_actions) } else { None }
+    )
 }
 
 pub fn dispatch(store: &mut Store, a: Action) {
@@ -127,7 +146,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
         },
         Action::Scrub(_, dir) => {
             store.scrub = Some(dir);
-            if let Some(region) = &store.temp_region {
+            if let Some(region) = &store.rec_region {
                 store.regions.push(Region {
                     buffer: region.buffer.to_owned(),
                     offset: region.offset,
@@ -136,8 +155,9 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     asset_out: region.duration,
                     gain: region.gain,
                     asset_id: region.asset_id,
+                    asset_src: region.asset_src.to_owned(),
                 });
-                store.temp_region = None;
+                store.rec_region = None;
             }
         },
         Action::Play(_) => { 
@@ -146,7 +166,9 @@ pub fn dispatch(store: &mut Store, a: Action) {
             if store.recording {
                 let mut new_id = store.regions.iter().fold(0, |max, r| 
                     if r.asset_id > max {r.asset_id} else {max}) + 1;
-                store.temp_region = Some(Region {
+                let new_src = format!("/usr/local/palit/{:?}_{}", 
+                    chrono::offset::Local::now(), store.track_id);
+                store.rec_region = Some(Arc::new(Region {
                     offset: store.playhead,
                     buffer: vec![],
                     duration: 0,
@@ -154,27 +176,28 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     asset_out: 0,
                     gain: 1.0,
                     asset_id: new_id,
-                });
+                    asset_src: new_src.clone(),
+                }));
                 store.out_queue.push(Action::AddRegion(
-                    0, store.track_id, new_id, store.playhead, 0, 
-                    format!("/usr/local/palit/{:?}_{}", chrono::offset::Local::now(), store.track_id)
+                    0, store.track_id, new_id, store.playhead, 0, new_src,
                 ));
             }
         },
         Action::Stop(_) => { 
             store.velocity = 0.0; 
             store.scrub = None;
-            if let Some(region) = &store.temp_region {
+            if let Some(region) = &store.rec_region {
                 store.regions.push(Region {
                     buffer: region.buffer.to_owned(),
                     offset: region.offset,
                     duration: region.duration.clone(),
                     asset_in: 0,
                     asset_out: region.duration,
+                    asset_src: region.asset_src.to_owned(),
                     gain: region.gain,
                     asset_id: region.asset_id,
                 });
-                store.temp_region = None;
+                store.rec_region = None;
             }
             if store.loop_on {
                 store.playhead = store.loop_in;
@@ -182,8 +205,42 @@ pub fn dispatch(store: &mut Store, a: Action) {
         },
         Action::RecordAt(_, t_id) => { 
             if store.track_id == t_id {
-                store.recording = !store.recording;
-                store.pool = Some(Pool::new(10, || vec![[0.0; CHANNELS]; BUF_SIZE]));
+                if !store.recording {
+                    store.recording = true;
+                    if store.pool.is_none() {
+                        store.pool = Some(Pool::new(10, || vec![[0.0; CHANNELS]; BUF_SIZE]));
+                    }
+
+                    if store.writer.is_none() {
+                        // https://stackoverflow.com/questions/42043823/design-help-threading-within-a-struct
+                        // Doesn't actually clone, just increments the reference counter
+                        let source_region = store.rec_region.clone();
+                        let source_count = store.written.clone();
+                        store.writer = Some(thread::spawn(move || {
+                            // Forever
+                            loop {
+                                if let Some(source) = source_region.to_owned() {
+                                    let mut writer = hound::WavWriter::append(source.asset_src.clone()).unwrap();
+                                    let count = source_count.load(Ordering::SeqCst);
+                                    while count < source.duration {
+                                        for wav_frame in source.buffer.last().iter() {
+                                            writer.write_sample(wav_frame[0][0]);
+                                            source_count.store(count + 1, Ordering::SeqCst);
+                                        }
+                                    }
+                                } else {
+                                    // Wait for user to record a new region
+                                    thread::sleep(time::Duration::from_millis(10));
+                                }
+                            }
+                        }));
+                    }
+                } else {
+                    store.recording = false;
+                    store.pool = None;
+                    store.writer = None;
+                    store.written.store(0, Ordering::SeqCst);
+                }
             }
         },
         Action::MuteAt(_, t_id) => { 
@@ -367,18 +424,20 @@ pub fn read(doc: &mut Element) -> Option<Store> {
             let _a_out: u32 = a_out.parse().unwrap();
 
             let mut buffer = vec![];
+            let mut _src: Option<String> = None;
             for (id, asset) in assets.iter() {
                 if (_a_id == *id) {
                     let src: &str = asset.attributes.get("src").unwrap();
+                    _src = Some(src.to_string());
                     let duration: &str = asset.attributes.get("size").unwrap();
                     let _duration: usize = duration.parse().unwrap();
 
-                    let inner_size = BUF_SIZE as usize;
-                    buffer = Vec::with_capacity(_duration / inner_size);
-                    let mut wav_f = WaveFile::open(src).unwrap();
+                    buffer = Vec::with_capacity(_duration / BUF_SIZE);
+                    
+                    let mut wav_f = hound::WavReader::open(src).unwrap();
 
-                    for (i, frame) in wav_f.iter().enumerate() {
-                        if i % inner_size == 0 {
+                    for (i, frame) in wav_f.samples::<f32>().enumerate() {
+                        if i % BUF_SIZE == 0 {
                             buffer.push(vec![])
                         }
                         let mut converted = frame.iter().map(|a| *a as f32 * 0.000001);
@@ -397,6 +456,7 @@ pub fn read(doc: &mut Element) -> Option<Store> {
                 asset_id: _a_id,
                 asset_in: _a_in,
                 asset_out: _a_out,
+                asset_src: _src.unwrap(),
                 buffer,
             });
         }
