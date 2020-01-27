@@ -435,16 +435,29 @@ pub fn read(doc: &mut Element) -> Option<Store> {
                     buffer = Vec::with_capacity(_duration / BUF_SIZE);
                     
                     let mut wav_f = hound::WavReader::open(src).unwrap();
+                    let spec = wav_f.spec();
+                    let channels = spec.channels as usize;
+                    let is_float = spec.sample_format == hound::SampleFormat::Float;
 
-                    for (i, frame) in wav_f.samples::<f32>().enumerate() {
-                        if i % BUF_SIZE == 0 {
+                    let mut push_sample = |i, sample| {
+                        if i % (BUF_SIZE * channels) == 0 {
                             buffer.push(vec![])
                         }
-                        let mut converted = frame.iter().map(|a| *a as f32 * 0.000001);
-                        buffer.last_mut().unwrap().push([
-                            converted.next().unwrap(), 
-                            converted.next().unwrap()
-                        ]);
+                        let frame_index = i % channels;
+                        if frame_index == 0 {
+                            buffer.last_mut().unwrap().push([0.0; CHANNELS]);
+                        }
+                        buffer.last_mut().unwrap().last_mut().unwrap()[frame_index] = sample
+                    };
+
+                    if is_float {
+                        for (i, sample) in wav_f.samples::<f32>().enumerate() {
+                            push_sample(i, sample.unwrap());
+                        }
+                    } else {
+                        for (i, sample) in wav_f.samples::<i32>().enumerate() {
+                            push_sample(i, sample.unwrap() as f32 * 0.000001);
+                        }
                     }
                 }
             }

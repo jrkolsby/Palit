@@ -2,9 +2,10 @@ extern crate xmltree;
 
 use std::fs::{self, OpenOptions};
 use std::collections::HashMap;
+use std::io::BufReader;
 
 use hound;
-use itertools::Itertools;
+use itertools::{self, Itertools};
 use xmltree::Element;
 
 use crate::common::{Color, Rate};
@@ -46,10 +47,10 @@ pub fn offset_char(beats: u16, rate: u32, bpm: u16, zoom: usize) -> u32 {
     beats as u32 * samples_per_beat
 }
 
-pub fn file_to_pairs(file: WavReader<f64>, width: usize, samples_per_tick: u16) -> Vec<(u8, u8)> {
+pub fn file_to_pairs(mut file: hound::WavReader<BufReader<std::fs::File>>, width: usize, samples_per_tick: u16) -> Vec<(u8, u8)> {
 
-    let chunk_size = (file.len()) / (width*2);
-    let chunks = &file.iter().chunks(chunk_size);
+    let chunk_size = file.len() as usize / (width*2);
+    let chunks: &itertools::IntoChunks<hound::WavSamples<'_, std::io::BufReader<std::fs::File>, i32>> = &file.samples().chunks(chunk_size);
 
     let values = chunks.into_iter().map( |chunk| {
         let max = chunk.into_iter().map( |frame| {
