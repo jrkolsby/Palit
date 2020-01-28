@@ -205,7 +205,7 @@ pub fn event_loop<F: 'static>(
 
     // Wait for our stream to finish.
     while let true = stream.is_active()? {
-        std::thread::sleep(::std::time::Duration::from_millis(16));
+        std::thread::sleep(std::time::Duration::from_millis(16));
     }
 
     Ok(())
@@ -334,25 +334,28 @@ impl Node<[Output; CHANNELS]> for Module {
                     dsp::slice::map_in_place(buffer, |a| { if store.monitor { a } else { [0.0, 0.0] } });
                 } else if playback_rate == 1.0 {
                     if store.recording {
-                        let (this_pool, arc_region) = (
+                        let (this_pool, result_region) = (
                             store.pool.as_mut().unwrap(),
-                            store.rec_region.as_mut().unwrap(), 
+                            Arc::try_unwrap(store.rec_region.clone())
                         );
-                        let this_region = Arc::get_mut(arc_region).unwrap();
-                        for (i, frame) in buffer.iter().enumerate() {
-                            let index = this_region.duration as usize % BUF_SIZE;
-                            if index == 0 {
+                        if let Ok(option_region) = result_region {
+                            if let Some(mut this_region) = option_region {
+                                for (i, frame) in buffer.iter().enumerate() {
+                                    let index = this_region.duration as usize % BUF_SIZE;
+                                    if index == 0 {
 
-                                if let Some(new_buf) = this_pool.try_pull() {
-                                    this_region.buffer.push(new_buf.to_vec());
-                                } else {
-                                    // Out of space! Stop record
-                                    store.recording = false;
-                                    break;
+                                        if let Some(new_buf) = this_pool.try_pull() {
+                                            this_region.buffer.push(new_buf.to_vec());
+                                        } else {
+                                            // Out of space! Stop record
+                                            store.recording = false;
+                                            break;
+                                        }
+                                    }
+                                    this_region.buffer.last_mut().unwrap()[index] = *frame;
+                                    this_region.duration += 1;
                                 }
                             }
-                            this_region.buffer.last_mut().unwrap()[index] = *frame;
-                            this_region.duration += 1;
                         }
                     } 
                     dsp::slice::map_in_place(buffer, |a| {
