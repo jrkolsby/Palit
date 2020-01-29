@@ -512,7 +512,6 @@ impl Layer for Timeline {
             // Move focus to intersecting region on Tick
             Action::AddRegion(_, _, _, _, _, _) => {
                 self.focii = generate_focii(&self.state.tracks, &self.state.regions);
-                eprintln!("GEN");
                 (self.state.focus, None)
             },
             Action::Tick(time) => match multi_focus.w_id.0 {

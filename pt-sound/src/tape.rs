@@ -6,7 +6,7 @@ use std::collections::{HashMap, LinkedList};
 use std::thread;
 use std::time;
 use std::sync::{Arc, RwLock, atomic::Ordering, atomic::AtomicU32};
-use std::ops::Deref;
+use std::ops::{Deref, DerefMut};
 
 use sample::{signal, Signal, Sample, Frame};
 use xmltree::Element;
@@ -121,20 +121,21 @@ fn write_recording_region(source_region: Arc<RwLock<Option<Region>>>, source_cou
             Ok(mut option_region) => {
                 match option_region.deref() {
                     Some(_region) => {
-                        eprintln!("WRITING TO {}", _region.asset_src);
-                        let mut writer = hound::WavWriter::append(_region.asset_src.clone()).unwrap();
+                        // eprintln!("WRITING TO {}", _region.asset_src);
+                        // let mut writer = hound::WavWriter::append(_region.asset_src.clone()).unwrap();
                         let count = source_count.load(Ordering::SeqCst);
-                        while count < _region.duration {
-                            for wav_frame in _region.buffer.last().iter() {
-                                writer.write_sample(wav_frame[0][0]);
-                                source_count.store(count + 1, Ordering::SeqCst);
-                            }
+                        if count < _region.duration {
+                            eprintln!("{}", _region.duration);
+                            //for wav_frame in _region.buffer.last().iter() {
+                                //writer.write_sample(wav_frame[0][0]);
+                                //source_count.store(count + 1, Ordering::SeqCst);
+                            //}
                         }
-                    }
-                    _ => {}
+                    },
+                    None => { eprintln!("NO REGION"); }
                 }
             },
-            _ =>  {
+            Err(e) =>  {
                 // Wait for user to record a new region
                 thread::sleep(time::Duration::from_millis(10));
             }
@@ -169,10 +170,10 @@ pub fn dispatch(store: &mut Store, a: Action) {
             if store.recording {
                 let mut new_id = store.regions.iter().fold(0, |max, r| 
                     if r.asset_id > max {r.asset_id} else {max}) + 1;
-                let new_src = format!("/usr/local/palit/{:?}_{}", 
+                let new_src = format!("/usr/local/palit/{:?}_{}.wav", 
                     chrono::offset::Local::now(), store.track_id);
-                eprintln!("NEW REGION WITH SOURCE {}", new_src);
-                store.rec_region = Arc::new(RwLock::new(Some(Region {
+                let mut region_guard = store.rec_region.write().unwrap();
+                *region_guard = Some(Region {
                     offset: store.playhead,
                     buffer: vec![],
                     duration: 0,
@@ -181,7 +182,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     gain: 1.0,
                     asset_id: new_id,
                     asset_src: new_src.clone(),
-                })));
+                });
                 store.out_queue.push(Action::AddRegion(
                     0, store.track_id, new_id, store.playhead, 0, new_src,
                 ));
