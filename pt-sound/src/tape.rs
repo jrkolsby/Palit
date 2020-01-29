@@ -14,7 +14,7 @@ use hound;
 use object_pool::Pool;
 use chrono::prelude::*;
 
-use crate::core::{SAMPLE_HZ, BUF_SIZE, CHANNELS};
+use crate::core::{SAMPLE_HZ, BUF_SIZE, CHANNELS, BIT_RATE};
 use crate::core::{SF, SigGen, Output, Note, Key, Offset};
 use crate::action::Action;
 use crate::document::{param_map, param_add, mark_map, mark_add};
@@ -115,22 +115,35 @@ pub fn dispatch_requested(store: &mut Store) -> (
 }
 
 fn write_recording_region(source_region: Arc<RwLock<Option<Region>>>, source_count: Arc<AtomicU32>) {
+    let wav_spec = hound::WavSpec {
+        channels: CHANNELS as u16,
+        sample_rate: SAMPLE_HZ as u32,
+        bits_per_sample: BIT_RATE as u16,
+        sample_format: hound::SampleFormat::Int,
+    };
     loop {
         let region_guard = source_region.read();
         match region_guard {
             Ok(mut option_region) => {
                 match option_region.deref() {
                     Some(_region) => {
-                        // eprintln!("WRITING TO {}", _region.asset_src);
-                        // let mut writer = hound::WavWriter::append(_region.asset_src.clone()).unwrap();
                         let count = source_count.load(Ordering::SeqCst);
+                        let mut writer = if count == 0 {
+                            hound::WavWriter::create(_region.asset_src.clone(), wav_spec).unwrap()
+                        } else {
+                            hound::WavWriter::append(_region.asset_src.clone()).unwrap()
+                        };
                         if count < _region.duration {
-                            eprintln!("{}", _region.duration);
-                            //for wav_frame in _region.buffer.last().iter() {
-                                //writer.write_sample(wav_frame[0][0]);
-                                //source_count.store(count + 1, Ordering::SeqCst);
-                            //}
+                            for buffer_frame in _region.buffer.last().iter() {
+                                for sample in buffer_frame.iter() {
+                                    // WHAT
+                                    writer.write_sample(sample[0]);
+                                    writer.write_sample(sample[1]);
+                                }
+                                source_count.store(count + 1, Ordering::SeqCst);
+                            }
                         }
+                        eprintln!("WROTE {} / {}", count, _region.duration);
                     },
                     None => { eprintln!("NO REGION"); }
                 }
@@ -170,7 +183,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
             if store.recording {
                 let mut new_id = store.regions.iter().fold(0, |max, r| 
                     if r.asset_id > max {r.asset_id} else {max}) + 1;
-                let new_src = format!("/usr/local/palit/{:?}_{}.wav", 
+                let new_src = format!("/usr/local/palit/assets/{:?}_{}.wav", 
                     chrono::offset::Local::now(), store.track_id);
                 let mut region_guard = store.rec_region.write().unwrap();
                 *region_guard = Some(Region {

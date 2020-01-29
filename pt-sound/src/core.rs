@@ -51,6 +51,7 @@ pub type Param = i16;
 pub const CHANNELS: usize = 2;
 pub const SAMPLE_HZ: f64 = 48_000.0;
 pub const BUF_SIZE: usize = 24_000;
+pub const BIT_RATE: usize = 16;
 
 const FRAMES: u32 = 128;
 const DEBUG_KEY_PERIOD: u16 = 24100;
