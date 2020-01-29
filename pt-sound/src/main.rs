@@ -225,7 +225,8 @@ fn main() -> Result<(), Box<error::Error>> {
                 if let Some(route) = routes.get(&r_id) {
                     match &patch[*operators.get(&n_id).unwrap()] {
                         Module::Operator(_, anchors, _) => {
-                            if let Err(e) = patch.add_connection(*route, anchors[a_id]) {
+                            let input = anchors[a_id];
+                            if let Err(e) = &patch.add_connection(*route, input) {
                                 println!("CYCLE");
                             }
                         }
@@ -237,7 +238,8 @@ fn main() -> Result<(), Box<error::Error>> {
                 if let Some(route) = routes.get(&r_id) {
                     match &patch[*operators.get(&n_id).unwrap()] {
                         Module::Operator(_, anchors, _) => {
-                            if let Err(e) = patch.add_connection(anchors[a_id], *route) {
+                            let output = anchors[a_id];
+                            if let Err(e) = &patch.add_connection(output, *route) {
                                 println!("CYCLE");
                             }
                         }

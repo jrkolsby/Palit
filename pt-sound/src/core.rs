@@ -8,6 +8,7 @@ use std::fs::File;
 use std::io::prelude::*;
 use std::thread;
 use std::sync::Arc;
+use std::ops::DerefMut;
 
 #[cfg(target_os = "linux")]
 extern crate alsa;
@@ -334,28 +335,38 @@ impl Node<[Output; CHANNELS]> for Module {
                     dsp::slice::map_in_place(buffer, |a| { if store.monitor { a } else { [0.0, 0.0] } });
                 } else if playback_rate == 1.0 {
                     if store.recording {
-                        let (this_pool, result_region) = (
+                        let (this_pool, this_region) = (
                             store.pool.as_mut().unwrap(),
-                            Arc::try_unwrap(store.rec_region.clone())
+                            store.rec_region.clone()
                         );
-                        if let Ok(option_region) = result_region {
-                            if let Some(mut this_region) = option_region {
-                                for (i, frame) in buffer.iter().enumerate() {
-                                    let index = this_region.duration as usize % BUF_SIZE;
-                                    if index == 0 {
-
-                                        if let Some(new_buf) = this_pool.try_pull() {
-                                            this_region.buffer.push(new_buf.to_vec());
-                                        } else {
-                                            // Out of space! Stop record
-                                            store.recording = false;
-                                            break;
+                        // option_region is of type RwLockGuard<Option<Region>>
+                        let region_guard = this_region.write();
+                        match region_guard {
+                            Ok(mut option_region) => {
+                                // When a RwLockGuard<> contains an optional, you can't do:
+                                // if let Some(x) = guard { ... }
+                                // but you can call methods on its inner object, so instead:
+                                match option_region.deref_mut() {
+                                    Some(_region) => {
+                                        for (i, frame) in buffer.iter().enumerate() {
+                                            let index = _region.duration as usize % BUF_SIZE;
+                                            if index == 0 {
+                                                if let Some(new_buf) = this_pool.try_pull() {
+                                                    _region.buffer.push(new_buf.to_vec());
+                                                } else {
+                                                    // Out of space! Stop record
+                                                    store.recording = false;
+                                                    break;
+                                                }
+                                            }
+                                            _region.buffer.last_mut().unwrap()[index] = *frame;
+                                            _region.duration += 1;
                                         }
-                                    }
-                                    this_region.buffer.last_mut().unwrap()[index] = *frame;
-                                    this_region.duration += 1;
+                                    },
+                                    _ => {}
                                 }
                             }
+                            _ => {}
                         }
                     } 
                     dsp::slice::map_in_place(buffer, |a| {

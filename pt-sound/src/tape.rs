@@ -5,7 +5,8 @@ use std::convert::TryInto;
 use std::collections::{HashMap, LinkedList};
 use std::thread;
 use std::time;
-use std::sync::{Arc, atomic::Ordering, atomic::AtomicU32};
+use std::sync::{Arc, RwLock, atomic::Ordering, atomic::AtomicU32};
+use std::ops::Deref;
 
 use sample::{signal, Signal, Sample, Frame};
 use xmltree::Element;
@@ -50,7 +51,7 @@ pub struct Store {
     pub sample_rate: u32,
     pub beat: u32,
     pub pool: Option<Pool<'static, Vec<[Output; CHANNELS]>>>,
-    pub rec_region: Arc<Option<Region>>,
+    pub rec_region: Arc<RwLock<Option<Region>>>,
     pub writer: Option<thread::JoinHandle<()>>,
     pub written: Arc<AtomicU32>, 
 }
@@ -82,7 +83,7 @@ pub fn init() -> Store {
         beat: 0,
         // Make SURE not to clone these when implementing undo/redo
         pool: None,
-        rec_region: Arc::new(None),
+        rec_region: Arc::new(RwLock::new(None)),
         writer: None,
         written: Arc::new(AtomicU32::new(0)),
     }
@@ -113,23 +114,30 @@ pub fn dispatch_requested(store: &mut Store) -> (
     )
 }
 
-fn write_recording_region(source_region: Arc<Option<Region>>, source_count: Arc<AtomicU32>) {
+fn write_recording_region(source_region: Arc<RwLock<Option<Region>>>, source_count: Arc<AtomicU32>) {
     loop {
-        if let Ok(source) = Arc::try_unwrap(source_region.clone()) {
-            if let Some(region) = source {
-                eprintln!("WRITING SIR!");
-                let mut writer = hound::WavWriter::append(region.asset_src.clone()).unwrap();
-                let count = source_count.load(Ordering::SeqCst);
-                while count < region.duration {
-                    for wav_frame in region.buffer.last().iter() {
-                        writer.write_sample(wav_frame[0][0]);
-                        source_count.store(count + 1, Ordering::SeqCst);
+        let region_guard = source_region.read();
+        match region_guard {
+            Ok(mut option_region) => {
+                match option_region.deref() {
+                    Some(_region) => {
+                        eprintln!("WRITING TO {}", _region.asset_src);
+                        let mut writer = hound::WavWriter::append(_region.asset_src.clone()).unwrap();
+                        let count = source_count.load(Ordering::SeqCst);
+                        while count < _region.duration {
+                            for wav_frame in _region.buffer.last().iter() {
+                                writer.write_sample(wav_frame[0][0]);
+                                source_count.store(count + 1, Ordering::SeqCst);
+                            }
+                        }
                     }
+                    _ => {}
                 }
+            },
+            _ =>  {
+                // Wait for user to record a new region
+                thread::sleep(time::Duration::from_millis(10));
             }
-        } else {
-            // Wait for user to record a new region
-            thread::sleep(time::Duration::from_millis(10));
         }
     }
 }
@@ -153,21 +161,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
         },
         Action::Scrub(_, dir) => {
             store.scrub = Some(dir);
-            if let Ok(region) = Arc::try_unwrap(store.rec_region.clone()) {
-                if let Some(_region) = region {
-                    store.regions.push(Region {
-                        buffer: _region.buffer.to_owned(),
-                        offset: _region.offset,
-                        duration: _region.duration.clone(),
-                        asset_in: 0,
-                        asset_out: _region.duration,
-                        gain: _region.gain,
-                        asset_id: _region.asset_id,
-                        asset_src: _region.asset_src.to_owned(),
-                    });
-                    store.rec_region = Arc::new(None);
-                }
-            }
+            store.recording = false;
         },
         Action::Play(_) => { 
             store.velocity = 1.0; 
@@ -177,7 +171,8 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     if r.asset_id > max {r.asset_id} else {max}) + 1;
                 let new_src = format!("/usr/local/palit/{:?}_{}", 
                     chrono::offset::Local::now(), store.track_id);
-                store.rec_region = Arc::new(Some(Region {
+                eprintln!("NEW REGION WITH SOURCE {}", new_src);
+                store.rec_region = Arc::new(RwLock::new(Some(Region {
                     offset: store.playhead,
                     buffer: vec![],
                     duration: 0,
@@ -186,7 +181,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     gain: 1.0,
                     asset_id: new_id,
                     asset_src: new_src.clone(),
-                }));
+                })));
                 store.out_queue.push(Action::AddRegion(
                     0, store.track_id, new_id, store.playhead, 0, new_src,
                 ));
@@ -195,21 +190,6 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::Stop(_) => { 
             store.velocity = 0.0; 
             store.scrub = None;
-            if let Some(region) = Arc::get_mut(&mut store.rec_region) {
-                if let Some(_region) = region {
-                    store.regions.push(Region {
-                        buffer: _region.buffer.to_owned(),
-                        offset: _region.offset,
-                        duration: _region.duration.clone(),
-                        asset_in: 0,
-                        asset_out: _region.duration,
-                        asset_src: _region.asset_src.to_owned(),
-                        gain: _region.gain,
-                        asset_id: _region.asset_id,
-                    });
-                    store.rec_region = Arc::new(None);
-                }
-            }
             if store.loop_on {
                 store.playhead = store.loop_in;
             }
