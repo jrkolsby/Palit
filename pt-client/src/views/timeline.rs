@@ -257,7 +257,6 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
     region_vec.sort_by(|(_, a), (_, b)| a.offset.cmp(&b.offset));
 
     for (region_id, region) in region_vec.iter() {
-        eprintln!("{}, {:?}", region_id, region);
         focii[region.track as usize].push(
             region::new(**region_id)
         )
@@ -268,8 +267,6 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
 
 fn reduce(state: TimelineState, action: Action) -> TimelineState {
     let o1 = offset_char(1, state.sample_rate, state.tempo, state.zoom);
-    let mut new_asset = state.assets.iter().fold(0, |max, (id, _)| 
-        if id > &max {*id} else {max}) + 1;
     TimelineState {
         tempo: match action.clone() {
             Action::Deselect => if let Some(t) = state.temp_tempo { t }
@@ -336,14 +333,19 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             new_tracks
         },
         assets: match action.clone() {
-            Action::AddRegion(_, _, _, _, duration, src) => {
+            Action::AddRegion(_, _, _, asset_id, _, duration, src) => {
                 let mut new_assets = state.assets.clone();
-                new_assets.insert(new_asset, Asset {
+                new_assets.insert(asset_id, Asset {
                     src,
-                    duration,
+                    duration: duration.clone(),
                     channels: 2,
-                    waveform: vec![(4,4), (4,4), (4,4), (4,4), (4,4)],
+                    waveform: vec![],
                 });
+                // FIXME: Only generate this region
+                if duration > 0 {
+                    eprintln!("{}", duration);
+                    generate_waveforms(&mut new_assets, state.sample_rate, state.tempo, state.zoom);
+                }
                 new_assets
             },
             //Action::Zoom |
@@ -361,10 +363,10 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             _ => state.assets.to_owned()
         },
         regions: match action.clone() {
-            Action::AddRegion(_, t_id, r_id, offset, duration, src) => {
+            Action::AddRegion(_, t_id, r_id, asset_id, offset, duration, src) => {
                 let mut new_regions = state.regions.clone();
                 new_regions.insert(r_id, Region {
-                    asset_id: new_asset,
+                    asset_id,
                     asset_in: 0,
                     asset_out: duration,
                     offset: offset,
@@ -510,7 +512,7 @@ impl Layer for Timeline {
         // Actions which affect focii
         let (focus, default) = match _action.clone() {
             // Move focus to intersecting region on Tick
-            Action::AddRegion(_, _, _, _, _, _) => {
+            Action::AddRegion(_, _, _, _, _, _, _) => {
                 self.focii = generate_focii(&self.state.tracks, &self.state.regions);
                 (self.state.focus, None)
             },

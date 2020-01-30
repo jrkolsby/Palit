@@ -466,9 +466,9 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
                     Action::AddNote(id, n) => Some(format!("NOTE_ADD:{}:{}:{}:{}:{} ",
                         id, n.note, n.vel, n.t_in, n.t_out
                     )),
-                    Action::AddRegion(n_id, t_id, id, offset, duration, source) => 
-                        Some(format!("REGION_ADD:{}:{}:{}:{}:{}:{} ",
-                            n_id, t_id, id, offset, duration, source
+                    Action::AddRegion(n_id, t_id, r_id, a_id, offset, duration, source) => 
+                        Some(format!("REGION_ADD:{}:{}:{}:{}:{}:{}:{} ",
+                            n_id, t_id, r_id, a_id, offset, duration, source
                         )),
                     _ => None
                 };

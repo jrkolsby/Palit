@@ -20,6 +20,7 @@ use crate::action::Action;
 use crate::document::{param_map, param_add, mark_map, mark_add};
 
 pub struct Region {
+    pub id: u16,
     pub buffer: Vec<Vec<[Output; CHANNELS]>>,
     pub offset: Offset,
     pub duration: Offset,
@@ -51,8 +52,8 @@ pub struct Store {
     pub sample_rate: u32,
     pub beat: u32,
     pub pool: Option<Pool<'static, Vec<[Output; CHANNELS]>>>,
-    pub rec_region: Arc<RwLock<Option<Region>>>,
     pub writer: Option<thread::JoinHandle<()>>,
+    pub rec_region: Arc<RwLock<Option<Region>>>,
     pub written: Arc<AtomicU32>, 
 }
 
@@ -83,8 +84,8 @@ pub fn init() -> Store {
         beat: 0,
         // Make SURE not to clone these when implementing undo/redo
         pool: None,
-        rec_region: Arc::new(RwLock::new(None)),
         writer: None,
+        rec_region: Arc::new(RwLock::new(None)),
         written: Arc::new(AtomicU32::new(0)),
     }
 }
@@ -96,9 +97,65 @@ pub fn dispatch_requested(store: &mut Store) -> (
     let mut client_actions = vec![];
     let mut output_actions = vec![];
 
+    // Check if we can join the writer and 
+    // ... finalize our recorded region :D
+    if store.recording  {
+        let region_count = store.written.load(Ordering::SeqCst);
+        let region_guard = store.rec_region.write();
+        match region_guard {
+            Ok(mut option_region) => {
+                match option_region.deref_mut() {
+                    Some(ref mut _region) => {
+                        // We are stopped and the worker is finished writing
+                        if region_count as usize % BUF_SIZE == 0 {
+                            client_actions.push(Action::AddRegion(0,
+                                store.track_id, 
+                                _region.id, 
+                                _region.asset_id,
+                                _region.offset, 
+                                _region.duration, 
+                                _region.asset_src.clone()
+                            ));
+                        }
+                        if store.velocity == 0.0 && region_count == _region.duration {
+                            // Make a new guard to get rid of the region
+                            let src = _region.asset_src.to_owned();
+                            // Ideally we would do this in the worker...
+                            let writer = hound::WavWriter::append(src.clone()).unwrap();
+                            writer.finalize();
+                            client_actions.push(Action::AddRegion(0,
+                                store.track_id, 
+                                _region.id, 
+                                _region.asset_id, 
+                                _region.offset, 
+                                _region.duration, 
+                                _region.asset_src.clone()
+                            ));
+                            store.regions.push(Region {
+                                id: _region.id,
+                                offset: _region.offset,
+                                buffer: _region.buffer.to_owned(),
+                                asset_id: _region.asset_id,
+                                asset_out: _region.asset_out,
+                                asset_in: _region.asset_in,
+                                asset_src: src,
+                                duration: _region.duration,
+                                gain: _region.gain,
+                            });
+                            *option_region = None;
+                            store.written.store(0, Ordering::SeqCst);
+                        }
+                    },
+                    None => {}
+                }
+            },
+            Err(_) => {}
+        }
+    }
+
     for a in store.out_queue.iter() {
         match a {
-            Action::AddRegion(_, _, _, _, _, _) |
+            Action::AddRegion(_, _, _, _, _, _, _) |
             Action::AddNote(_, _) |
             Action::Tick(_) => client_actions.push(a.clone()),
             _ => output_actions.push(a.clone())
@@ -114,6 +171,12 @@ pub fn dispatch_requested(store: &mut Store) -> (
     )
 }
 
+// Indexes via an offset into the two dimensional region buffer 
+fn frame_with_offset(region: &Region, offset: usize) -> [Output; CHANNELS] {
+    let index = offset / BUF_SIZE;
+    return region.buffer[index][offset - (BUF_SIZE * index)];
+}
+
 fn write_recording_region(source_region: Arc<RwLock<Option<Region>>>, source_count: Arc<AtomicU32>) {
     let wav_spec = hound::WavSpec {
         channels: CHANNELS as u16,
@@ -121,37 +184,34 @@ fn write_recording_region(source_region: Arc<RwLock<Option<Region>>>, source_cou
         bits_per_sample: BIT_RATE as u16,
         sample_format: hound::SampleFormat::Int,
     };
+    let mut writer: Option<hound::WavWriter<std::io::BufWriter<File>>> = None;
     loop {
         let region_guard = source_region.read();
         match region_guard {
-            Ok(mut option_region) => {
+            Ok(option_region) => {
                 match option_region.deref() {
                     Some(_region) => {
-                        let count = source_count.load(Ordering::SeqCst);
-                        let mut writer = if count == 0 {
-                            hound::WavWriter::create(_region.asset_src.clone(), wav_spec).unwrap()
-                        } else {
-                            hound::WavWriter::append(_region.asset_src.clone()).unwrap()
-                        };
-                        if count < _region.duration {
-                            for buffer_frame in _region.buffer.last().iter() {
-                                for sample in buffer_frame.iter() {
-                                    // WHAT
-                                    writer.write_sample(sample[0]);
-                                    writer.write_sample(sample[1]);
+                        let mut count = source_count.load(Ordering::SeqCst);
+                        match writer {
+                            None => writer = Some(
+                                hound::WavWriter::create(_region.asset_src.clone(), wav_spec).unwrap()
+                            ),
+                            Some(ref mut _writer) => {
+                                while count < _region.duration {
+                                    let frame = frame_with_offset(&_region, count as usize);
+                                    // Needed to convert to integer wave file
+                                    _writer.write_sample((frame[0] * std::i16::MAX as f32) as i16);
+                                    _writer.write_sample((frame[1] * std::i16::MAX as f32) as i16);
+                                    count += 1;
                                 }
-                                source_count.store(count + 1, Ordering::SeqCst);
+                                source_count.store(count, Ordering::SeqCst);
                             }
                         }
-                        eprintln!("WROTE {} / {}", count, _region.duration);
                     },
-                    None => { eprintln!("NO REGION"); }
+                    None => {}
                 }
             },
-            Err(e) =>  {
-                // Wait for user to record a new region
-                thread::sleep(time::Duration::from_millis(10));
-            }
+            Err(e) => {}
         }
     }
 }
@@ -181,23 +241,32 @@ pub fn dispatch(store: &mut Store, a: Action) {
             store.velocity = 1.0; 
             store.scrub = None;
             if store.recording {
-                let mut new_id = store.regions.iter().fold(0, |max, r| 
+                let mut new_asset_id = store.regions.iter().fold(0, |max, r| 
                     if r.asset_id > max {r.asset_id} else {max}) + 1;
-                let new_src = format!("/usr/local/palit/assets/{:?}_{}.wav", 
-                    chrono::offset::Local::now(), store.track_id);
+                let mut new_region_id = store.regions.iter().fold(0, |max, r| 
+                    if r.id > max {r.id} else {max}) + 1;
+                let timestamp = chrono::offset::Local::now().format("%s").to_string();
+                let new_src = format!("/usr/local/palit/assets/{}_{}.wav", 
+                    timestamp, store.track_id);
                 let mut region_guard = store.rec_region.write().unwrap();
                 *region_guard = Some(Region {
+                    id: new_region_id,
                     offset: store.playhead,
                     buffer: vec![],
                     duration: 0,
                     asset_in: 0,
                     asset_out: 0,
                     gain: 1.0,
-                    asset_id: new_id,
+                    asset_id: new_asset_id,
                     asset_src: new_src.clone(),
                 });
-                store.out_queue.push(Action::AddRegion(
-                    0, store.track_id, new_id, store.playhead, 0, new_src,
+                store.out_queue.push(Action::AddRegion(0,
+                    store.track_id, 
+                    new_region_id, 
+                    new_asset_id,
+                    store.playhead, 
+                    0, 
+                    new_src,
                 ));
             }
         },
@@ -296,8 +365,7 @@ pub fn compute(store: &mut Store) -> [Output; CHANNELS] {
         if store.playhead >= region.offset && 
             store.playhead - region.offset < region.duration {
             let offset = (store.playhead - region.offset) as usize;
-            let index = offset / BUF_SIZE;
-            let x = region.buffer[index][offset - (BUF_SIZE * index)];
+            let x = frame_with_offset(&region, offset);
             z = [x[0] * region.gain, x[1] * region.gain];
         }
     }
@@ -407,6 +475,7 @@ pub fn read(doc: &mut Element) -> Option<Store> {
             let a_in: &str = region.attributes.get("in").unwrap();
             let a_out: &str = region.attributes.get("out").unwrap();
 
+            let _r_id: u16 = r_id.parse().unwrap();
             let _a_id: u16 = a_id.parse().unwrap();
             let _a_in: u32 = a_in.parse().unwrap();
             let _a_out: u32 = a_out.parse().unwrap();
@@ -451,6 +520,7 @@ pub fn read(doc: &mut Element) -> Option<Store> {
             }
 
             store.regions.push(Region {
+                id: _r_id,
                 offset: offset.parse().unwrap(),
                 gain: 1.0,
                 duration: _a_out - _a_in,

@@ -65,8 +65,8 @@ pub enum Action {
 
     // TODO: Module ID, Track ID
     AddNote(u16, u8, f32, u32, u32), 
-    // Module ID, Track ID, Region ID, offset, duration, src
-    AddRegion(u16, u16, u16, u32, u32, String),
+    // Module ID, Track ID, Region ID, Asset ID, offset, duration, src
+    AddRegion(u16, u16, u16, u16, u32, u32, String),
 
     AddModule(String),
     TryoutModule(u16),

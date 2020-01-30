@@ -120,9 +120,10 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "REGION_ADD" => Action::AddRegion(argv[1].parse::<u16>().unwrap(), 
                                       argv[2].parse::<u16>().unwrap(), 
                                       argv[3].parse::<u16>().unwrap(),
-                                      argv[4].parse::<u32>().unwrap(),
+                                      argv[4].parse::<u16>().unwrap(),
                                       argv[5].parse::<u32>().unwrap(),
-                                      argv[6].to_string()),
+                                      argv[6].parse::<u32>().unwrap(),
+                                      argv[7].to_string()),
 
             "UP" => Action::Up,
             "DN" => Action::Down,
