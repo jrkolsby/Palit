@@ -335,27 +335,17 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         assets: match action.clone() {
             Action::AddRegion(_, _, _, asset_id, _, duration, src) => {
                 let mut new_assets = state.assets.clone();
-                let (stem, stem_duration) = if let Some(last_asset) = new_assets.remove(&asset_id) {
-                    (last_asset.waveform, last_asset.duration)
-                } else {
-                    (vec![], 0)
-                };
-                let tail = if duration > 0 {
-                    generate_partial_waveform(
-                        src.clone(), 
-                        duration - stem_duration, 
+                new_assets.insert(asset_id, Asset {
+                    src: src.clone(),
+                    duration: duration.clone(),
+                    channels: 2,
+                    waveform: generate_partial_waveform(
+                        src, 
+                        duration, 
                         state.sample_rate, 
                         state.tempo, 
                         state.zoom
-                    )
-                } else {
-                    vec![]
-                };
-                new_assets.insert(asset_id, Asset {
-                    src,
-                    duration: duration.clone(),
-                    channels: 2,
-                    waveform: [&stem[..], &tail[..]].concat(),
+                    ),
                 });
                 new_assets
             },

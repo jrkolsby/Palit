@@ -151,7 +151,7 @@ pub fn dispatch_requested(store: &mut Store) -> (
                     None => {}
                 }
             },
-            Err(_) => {}
+            Err(_) => { thread::sleep(time::Duration::from_millis(10)); }
         }
     }
 
@@ -285,7 +285,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
                 if !store.recording {
                     store.recording = true;
                     if store.pool.is_none() {
-                        store.pool = Some(Pool::new(10, || vec![[0.0; CHANNELS]; BUF_SIZE]));
+                        store.pool = Some(Pool::new(30, || vec![[0.0; CHANNELS]; BUF_SIZE]));
                     }
 
                     if store.writer.is_none() {

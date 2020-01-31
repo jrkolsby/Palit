@@ -55,9 +55,12 @@ pub fn generate_partial_waveform(mut file: String, tail_len: u32, rate: u32, tem
 }
 
 pub fn generate_waveform(mut file: hound::WavReader<BufReader<std::fs::File>>, width: usize) -> Vec<(u8, u8)> {
+    if width == 0 { return vec![]; }
+
+    let channels = file.spec().channels as usize;
     let chunk_size = match file.duration() as usize / (width * 2) {
         0 => return vec![],
-        n => n
+        n => n * channels
     };
 
     let chunks: &itertools::IntoChunks<hound::WavSamples<'_, std::io::BufReader<std::fs::File>, i32>> = &file.samples().chunks(chunk_size);
@@ -67,7 +70,7 @@ pub fn generate_waveform(mut file: hound::WavReader<BufReader<std::fs::File>>, w
             frame.iter().map(|sample| sample.abs()).max().unwrap()
         }).max().unwrap();
         max
-    }).take(width*2).collect::<Vec<i32>>();
+    }).take(width * 2).collect::<Vec<i32>>();
 
     let global_max = *values.iter().max().unwrap();
     let scale: f64 = 4.0 / global_max as f64;
@@ -76,9 +79,8 @@ pub fn generate_waveform(mut file: hound::WavReader<BufReader<std::fs::File>>, w
     for (i, value) in values.iter().enumerate() {
         if i % 2 > 0 { continue; }
 
-
         let tick: (u8, u8) = (((*value as f64) * scale).round() as u8, 
-                                ((values[i+1] as f64) * scale).round() as u8);
+            ((values[i+1] as f64) * scale).round() as u8);
 
         pairs.push(tick);
     }
