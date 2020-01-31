@@ -40,7 +40,7 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
             } 
 
             // Region split by left edge of timeline
-            let wave_in_i: usize = if region_offset < state.scroll_x {
+            let mut wave_in_i: usize = if region_offset < state.scroll_x {
                 (state.scroll_x - region_offset) as usize
             // Left edge of region appears unclipped
             } else {
@@ -55,10 +55,10 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                 (asset_start_offset + asset_length_offset) as usize
             };
 
-            let max_i = waveform.len();
-            wave_out_i = if wave_out_i >= max_i {
-                if max_i > 0 { max_i - 1 } else { 0 }
-            } else { wave_out_i };
+            // Limit to bounds of waveform (during recording)
+            let max_i = match waveform.len() { 0 => 0, n => n - 1 };
+            wave_out_i = if wave_out_i > max_i { max_i } else { wave_out_i };
+            wave_in_i = if wave_in_i > wave_out_i { wave_out_i } else { wave_in_i };
 
             let wave_slice = &waveform[wave_in_i..wave_out_i];
 
