@@ -47,13 +47,23 @@ pub fn offset_char(beats: u16, rate: u32, bpm: u16, zoom: usize) -> u32 {
     beats as u32 * samples_per_beat
 }
 
-pub fn file_to_pairs(mut file: hound::WavReader<BufReader<std::fs::File>>, width: usize, samples_per_tick: u16) -> Vec<(u8, u8)> {
+pub fn generate_partial_waveform(mut file: String, tail_len: u32, rate: u32, tempo: u16, zoom: usize) -> Vec<(u8, u8)> {
+    let asset_file = hound::WavReader::open(file).unwrap();
+    let num_pairs = char_offset(tail_len, rate, tempo, zoom) as usize;
+    let pairs = generate_waveform(asset_file, num_pairs);
+    return pairs;
+}
 
-    let chunk_size = file.len() as usize / (width*2);
+pub fn generate_waveform(mut file: hound::WavReader<BufReader<std::fs::File>>, width: usize) -> Vec<(u8, u8)> {
+    let chunk_size = match file.duration() as usize / (width * 2) {
+        0 => return vec![],
+        n => n
+    };
+
     let chunks: &itertools::IntoChunks<hound::WavSamples<'_, std::io::BufReader<std::fs::File>, i32>> = &file.samples().chunks(chunk_size);
 
-    let values = chunks.into_iter().map( |chunk| {
-        let max = chunk.into_iter().map( |frame| {
+    let values = chunks.into_iter().map(|chunk| {
+        let max = chunk.into_iter().map(|frame| {
             frame.iter().map(|sample| sample.abs()).max().unwrap()
         }).max().unwrap();
         max
@@ -65,6 +75,7 @@ pub fn file_to_pairs(mut file: hound::WavReader<BufReader<std::fs::File>>, width
     let mut pairs = vec![];
     for (i, value) in values.iter().enumerate() {
         if i % 2 > 0 { continue; }
+
 
         let tick: (u8, u8) = (((*value as f64) * scale).round() as u8, 
                                 ((values[i+1] as f64) * scale).round() as u8);
@@ -83,7 +94,7 @@ pub fn generate_waveforms(assets: &mut HashMap<u16, Asset>,
         let num_pairs = char_offset(
             asset.duration, rate, tempo, zoom) as usize;
 
-        let pairs: Vec<(u8, u8)> = file_to_pairs(asset_file, num_pairs, 4);
+        let pairs: Vec<(u8, u8)> = generate_waveform(asset_file, num_pairs);
 
         asset.waveform = pairs;
     }

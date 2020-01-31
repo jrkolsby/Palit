@@ -7,7 +7,7 @@ use std::collections::HashMap;
 
 use crate::components::{tempo, button, ruler, region, roll};
 use crate::common::{ID, VOID_ID, FocusType};
-use crate::common::{MultiFocus, render_focii, shift_focus };
+use crate::common::{MultiFocus, render_focii, shift_focus, generate_partial_waveform};
 use crate::common::{Screen, Action, Asset, Region, Track, Anchor, Window, Note};
 use crate::common::{char_offset, offset_char, generate_waveforms};
 use crate::modules::timeline;
@@ -335,17 +335,28 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         assets: match action.clone() {
             Action::AddRegion(_, _, _, asset_id, _, duration, src) => {
                 let mut new_assets = state.assets.clone();
+                let (stem, stem_duration) = if let Some(last_asset) = new_assets.remove(&asset_id) {
+                    (last_asset.waveform, last_asset.duration)
+                } else {
+                    (vec![], 0)
+                };
+                let tail = if duration > 0 {
+                    generate_partial_waveform(
+                        src.clone(), 
+                        duration - stem_duration, 
+                        state.sample_rate, 
+                        state.tempo, 
+                        state.zoom
+                    )
+                } else {
+                    vec![]
+                };
                 new_assets.insert(asset_id, Asset {
                     src,
                     duration: duration.clone(),
                     channels: 2,
-                    waveform: vec![],
+                    waveform: [&stem[..], &tail[..]].concat(),
                 });
-                // FIXME: Only generate this region
-                if duration > 0 {
-                    eprintln!("{}", duration);
-                    generate_waveforms(&mut new_assets, state.sample_rate, state.tempo, state.zoom);
-                }
                 new_assets
             },
             //Action::Zoom |

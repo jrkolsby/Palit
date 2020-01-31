@@ -48,12 +48,17 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
             };
 
             // Region split by right edge of timeline
-            let wave_out_i: usize = if state.scroll_x + window.w < region_offset + asset_length_offset {
+            let mut wave_out_i: usize = if state.scroll_x + window.w < region_offset + asset_length_offset {
                 (asset_start_offset + asset_length_offset) as usize - 
                 (region_offset + asset_length_offset - (state.scroll_x + window.w)) as usize
             } else {
                 (asset_start_offset + asset_length_offset) as usize
             };
+
+            let max_i = waveform.len();
+            wave_out_i = if wave_out_i >= max_i {
+                if max_i > 0 { max_i - 1 } else { 0 }
+            } else { wave_out_i };
 
             let wave_slice = &waveform[wave_in_i..wave_out_i];
 

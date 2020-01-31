@@ -8,7 +8,7 @@ demo:
 
 .PHONY : debug
 debug:
-	tmux split-window -v "tail -f /tmp/pt-debug" && tmux split-window -v "cd pt-sound && RUST_BACKTRACE=1 sudo make debug" && tmux split-window -v "cd pt-input && RUST_BACKTRACE=1 cargo run" && cd pt-client/ && RUST_BACKTRACE=1 sudo cargo run 2> /tmp/pt-debug	
+	tmux split-window -v "tail -f /tmp/pt-debug" && tmux split-window -v "cd pt-sound && sudo RUST_BACKTRACE=1 make debug" && tmux split-window -v "cd pt-input && RUST_BACKTRACE=1 cargo run" && cd pt-client/ && sudo RUST_BACKTRACE=1 cargo run 2> /tmp/pt-debug	
 
 .PHONY : prod
 prod: 

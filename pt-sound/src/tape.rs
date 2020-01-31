@@ -121,8 +121,10 @@ pub fn dispatch_requested(store: &mut Store) -> (
                             // Make a new guard to get rid of the region
                             let src = _region.asset_src.to_owned();
                             // Ideally we would do this in the worker...
+                            /*
                             let writer = hound::WavWriter::append(src.clone()).unwrap();
                             writer.finalize();
+                            */
                             client_actions.push(Action::AddRegion(0,
                                 store.track_id, 
                                 _region.id, 
@@ -204,6 +206,7 @@ fn write_recording_region(source_region: Arc<RwLock<Option<Region>>>, source_cou
                                     _writer.write_sample((frame[1] * std::i16::MAX as f32) as i16);
                                     count += 1;
                                 }
+                                _writer.flush();
                                 source_count.store(count, Ordering::SeqCst);
                             }
                         }
