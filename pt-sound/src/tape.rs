@@ -151,7 +151,7 @@ pub fn dispatch_requested(store: &mut Store) -> (
                     None => {}
                 }
             },
-            Err(_) => { thread::sleep(time::Duration::from_millis(10)); }
+            Err(_) => {}
         }
     }
 
@@ -216,6 +216,8 @@ fn write_recording_region(source_region: Arc<RwLock<Option<Region>>>, source_cou
             },
             Err(e) => {}
         }
+        // Don't hog the CPU!
+        thread::sleep(time::Duration::from_millis(3)); 
     }
 }
 
