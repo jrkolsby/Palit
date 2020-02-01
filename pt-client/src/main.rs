@@ -313,20 +313,29 @@ fn main() -> std::io::Result<()> {
                 Action::Stop => {
                     ipc_sound.write(format!("STOP:{} ", target_id).as_bytes()).unwrap();
                 },
-                Action::Record => {
-                    ipc_sound.write(format!("RECORD:{} ", target_id).as_bytes()).unwrap();
-                },
                 Action::Scrub(dir) => {
                     ipc_sound.write(format!("SCRUB:{}:{} ", 
-                        target_id, if dir { "1"} else { "0" }).as_bytes()).unwrap();
+                        target_id, if dir { "1" } else { "0" }).as_bytes()).unwrap();
                 },
-                Action::MuteTrack(track_id) => {
-                    ipc_sound.write(format!("MUTE_AT:{}:{} ", 
-                        target_id, track_id).as_bytes()).unwrap();
+                Action::MuteTrack(t_id, is_on) => {
+                    ipc_sound.write(format!("MUTE_AT:{}:{}:{} ", 
+                        target_id, t_id, if is_on { "1" } else { "0" }).as_bytes()).unwrap();
                 },
-                Action::RecordTrack(track_id) => {
-                    ipc_sound.write(format!("RECORD_AT:{}:{} ", 
-                        target_id, track_id).as_bytes()).unwrap();
+                Action::RecordTrack(t_id, is_on) => {
+                    ipc_sound.write(format!("RECORD_AT:{}:{}:{} ", 
+                        target_id, t_id, match is_on {
+                            1 => "1",
+                            2 => "2",
+                            _ => "0",
+                        }).as_bytes()).unwrap();
+                },
+                Action::SoloTrack(t_id, is_on) => {
+                    ipc_sound.write(format!("SOLO_AT:{}:{}:{} ", 
+                        target_id, t_id, if is_on { "1" } else { "0" }).as_bytes()).unwrap();
+                },
+                Action::MonitorTrack(t_id, is_on) => {
+                    ipc_sound.write(format!("MONITOR_AT:{}:{}:{} ", 
+                        target_id, t_id, if is_on { "1" } else { "0" }).as_bytes()).unwrap();
                 },
                 Action::NoteOn(key, vel) => {
                     ipc_sound.write(format!("NOTE_ON_AT:{}:{}:{} ", 

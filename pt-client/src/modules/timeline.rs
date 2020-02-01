@@ -52,9 +52,10 @@ pub fn read(doc: Element) -> TimelineState {
 
         state.tracks.insert(_t_id, Track {
             id: _t_id,
-            record: false,
+            record: 0,
             mute: false,
             solo: false,
+            monitor: true,
             index: counter,
         });
 

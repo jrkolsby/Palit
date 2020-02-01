@@ -31,7 +31,8 @@ pub struct Region {
 pub struct Track {
     pub mute: bool,
     pub solo: bool,
-    pub record: bool,
+    pub record: u8,
+    pub monitor: bool,
     pub index: u16,
     pub id: u16,
 }
@@ -48,7 +49,10 @@ pub fn offset_char(beats: u16, rate: u32, bpm: u16, zoom: usize) -> u32 {
 }
 
 pub fn generate_partial_waveform(mut file: String, tail_len: u32, rate: u32, tempo: u16, zoom: usize) -> Vec<(u8, u8)> {
-    let asset_file = hound::WavReader::open(file).unwrap();
+    let asset_file = match hound::WavReader::open(file) {
+        Ok(a) => a,
+        Err(_) => return vec![]
+    };
     let num_pairs = char_offset(tail_len, rate, tempo, zoom) as usize;
     let pairs = generate_waveform(asset_file, num_pairs);
     return pairs;

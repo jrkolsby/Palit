@@ -44,8 +44,10 @@ pub struct Store {
     pub notes: Vec<Note>,
     pub velocity: f64,
     pub scrub: Option<bool>,
-    pub recording: bool,
+    pub recording: u8,
     pub monitor: bool,
+    pub mute: bool,
+    pub solo: bool,
     pub track_id: u16,
     pub out_queue: Vec<Action>,
     pub note_queue: Vec<Note>,
@@ -74,7 +76,9 @@ pub fn init() -> Store {
         velocity: 0.0,
         scrub: None,
         monitor: true,
-        recording: false,
+        mute: false,
+        solo: false,
+        recording: 0,
         regions: vec![],
         notes: vec![],
         track_id: 0,
@@ -99,7 +103,7 @@ pub fn dispatch_requested(store: &mut Store) -> (
 
     // Check if we can join the writer and 
     // ... finalize our recorded region :D
-    if store.recording  {
+    if store.recording == 1 {
         let region_count = store.written.load(Ordering::SeqCst);
         let region_guard = store.rec_region.write();
         match region_guard {
@@ -211,7 +215,12 @@ fn write_recording_region(source_region: Arc<RwLock<Option<Region>>>, source_cou
                             }
                         }
                     },
-                    None => {}
+                    None => { 
+                        if let Some(_writer) = writer.take() {
+                            _writer.finalize();
+                            writer = None;
+                        }
+                    }
                 }
             },
             Err(e) => {}
@@ -240,12 +249,11 @@ pub fn dispatch(store: &mut Store, a: Action) {
         },
         Action::Scrub(_, dir) => {
             store.scrub = Some(dir);
-            store.recording = false;
         },
         Action::Play(_) => { 
             store.velocity = 1.0; 
             store.scrub = None;
-            if store.recording {
+            if store.recording == 1 {
                 let mut new_asset_id = store.regions.iter().fold(0, |max, r| 
                     if r.asset_id > max {r.asset_id} else {max}) + 1;
                 let mut new_region_id = store.regions.iter().fold(0, |max, r| 
@@ -282,35 +290,47 @@ pub fn dispatch(store: &mut Store, a: Action) {
                 store.playhead = store.loop_in;
             }
         },
-        Action::RecordAt(_, t_id) => { 
+        Action::RecordAt(_, t_id, mode) => { 
             if store.track_id == t_id {
-                if !store.recording {
-                    store.recording = true;
-                    if store.pool.is_none() {
-                        store.pool = Some(Pool::new(30, || vec![[0.0; CHANNELS]; BUF_SIZE]));
-                    }
-
-                    if store.writer.is_none() {
-                        // https://stackoverflow.com/questions/42043823/design-help-threading-within-a-struct
-                        // Doesn't actually clone, just increments the reference counter
-                        let source_region = store.rec_region.clone();
-                        let source_count = store.written.clone();
-                        store.writer = Some(thread::spawn(|| write_recording_region(source_region, source_count)));
-                    }
-                } else {
-                    store.recording = false;
-                    store.pool = None;
-                    store.writer = None;
-                    store.written.store(0, Ordering::SeqCst);
+                store.recording = mode;
+                match mode {
+                    1 => {
+                        if store.pool.is_none() {
+                            store.pool = Some(Pool::new(30, || vec![[0.0; CHANNELS]; BUF_SIZE]));
+                        }
+                        if store.writer.is_none() {
+                            // https://stackoverflow.com/questions/42043823/design-help-threading-within-a-struct
+                            // Doesn't actually clone, just increments the reference counter
+                            let source_region = store.rec_region.clone();
+                            let source_count = store.written.clone();
+                            store.writer = Some(thread::spawn(|| write_recording_region(source_region, source_count)));
+                        }
+                    },
+                    // Mode 0 (OFF) or 2 (MIDI)
+                    _ => {
+                        store.pool = None;
+                        /*
+                        // take() vs to_owned() ?
+                        if let Some(_writer) = store.writer.take() {
+                            _writer.join();
+                        }
+                        */
+                        store.writer = None;
+                        store.written.store(0, Ordering::SeqCst);
+                    },
                 }
             }
         },
-        Action::MuteAt(_, t_id) => { 
+        Action::MuteAt(_, t_id, is_on) => { 
             if store.track_id == t_id {
-                store.recording = !store.recording;
+                store.mute = is_on;
             }
         },
-        Action::Monitor(_) => { store.monitor = !store.monitor; },
+        Action::MonitorAt(_, t_id, is_on) => { 
+            if store.track_id == t_id {
+                store.monitor = is_on; 
+            }
+        },
         Action::Loop(_, loop_in, loop_out) => { 
             store.loop_in = loop_in; 
             store.loop_out = loop_out; 
@@ -325,7 +345,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
             // Push a new note to the end of store.notes 
             // ... and redistribute the t_in and t_out 
             // ... based on the rate and samples per bar
-            if store.recording && store.velocity > 0.0 {
+            if store.recording == 2 && store.velocity > 0.0 {
                 store.note_queue.push(Note {
                     id: store.notes.len() as u16,
                     t_in: store.playhead,
@@ -340,7 +360,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
         },
         Action::NoteOff(note) => {
             if let Some(on_index) = store.note_queue.iter().position(|n| n.note == note) {
-                if store.recording && store.velocity != 0.0 {
+                if store.recording == 2 && store.velocity != 0.0 {
                     let on_note = store.note_queue.remove(on_index);
                     let recorded_note = Note {
                         id: on_note.id,

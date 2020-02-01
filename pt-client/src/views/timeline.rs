@@ -209,41 +209,84 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                 p_id: VOID_ID.clone(),
                 b_id: VOID_ID.clone(),
 
-                r: |mut out, win, id, state, focus|
-                    write!(out, "{}{}", cursor::Goto(
-                        win.x + TRACKS_X, 
-                        win.y + 1 + TIMELINE_Y + 2 * id.1),
-                        if state.tracks.get(&id.1).unwrap().record { "R" } else { "r" }
-                    ).unwrap(),
-                r_t: |action, id, _| match action {
-                    Action::SelectR => Action::RecordTrack(id.1),
+                r: |mut out, win, id, state, focus| {
+                    let x = win.x + TRACKS_X;
+                    let y = win.y + TIMELINE_Y + 2 * id.1;
+                    write!(out, "{}{}", cursor::Goto(x, y),
+                        match state.tracks.get(&id.1).unwrap().record {
+                            1 => "∿",
+                            2 => "…",
+                            _ => "",
+                        }
+                    ).unwrap();
+                    write!(out, "{}{}", cursor::Goto(x, y + 1),
+                        match state.tracks.get(&id.1).unwrap().record {
+                            0 => "r",
+                            _ => "R"
+                        }
+                    ).unwrap();
+                },
+                r_t: |action, id, state| match action {
+                    Action::SelectR => Action::RecordTrack(
+                        id.1, 
+                        (state.tracks.get(&id.1).unwrap().record + 1) % 3
+                    ),
                     _ => Action::Noop,
                 },
 
-                g: |mut out, win, id, state, focus|
-                    write!(out, "{}{}", cursor::Goto(
-                        win.x + TRACKS_X + 3, 
-                        win.y + 1 + TIMELINE_Y + 2 * id.1),
+                g: |mut out, win, id, state, focus| {
+                    let x = win.x + TRACKS_X + 2;
+                    let y = win.y + TIMELINE_Y + 2 * id.1;
+                    write!(out, "{}{}", cursor::Goto(x, y),
+                        if state.tracks.get(&id.1).unwrap().mute { "." } else { "" }
+                    ).unwrap();
+                    write!(out, "{}{}", cursor::Goto(x, y + 1),
                         if state.tracks.get(&id.1).unwrap().mute { "M" } else { "m" }
-                    ).unwrap(),
-                g_t: |action, id, _| match action {
-                    Action::SelectG => Action::MuteTrack(id.1),
+                    ).unwrap();
+                },
+                g_t: |action, id, state| match action {
+                    Action::SelectG => Action::MuteTrack(
+                        id.1,
+                        !state.tracks.get(&id.1).unwrap().mute
+                    ),
                     _ => Action::Noop,
                 },
 
-                b: |mut out, win, id, state, focus|
-                    write!(out, "{}{}", cursor::Goto(
-                        win.x + TRACKS_X + 6, 
-                        win.y + 1 + TIMELINE_Y + 2 * id.1),
+                b: |mut out, win, id, state, focus| {
+                    let x = win.x + TRACKS_X + 4;
+                    let y = win.y + TIMELINE_Y + 2 * id.1;
+                    write!(out, "{}{}", cursor::Goto(x, y),
+                        if state.tracks.get(&id.1).unwrap().solo { "„" } else { "" }
+                    ).unwrap();
+                    write!(out, "{}{}", cursor::Goto(x, y + 1),
                         if state.tracks.get(&id.1).unwrap().solo { "S" } else { "s" }
-                    ).unwrap(),
-                b_t: |action, id, _| match action {
-                    Action::SelectB => Action::SoloTrack(id.1),
+                    ).unwrap();
+                },
+                b_t: |action, id, state| match action {
+                    Action::SelectB => Action::SoloTrack(
+                        id.1,
+                        !state.tracks.get(&id.1).unwrap().solo
+                    ),
                     _ => Action::Noop,
                 },
 
-                p: VOID_RENDER,
-                p_t: VOID_TRANSFORM,
+                p: |mut out, win, id, state, focus| {
+                    let x = win.x + TRACKS_X + 6;
+                    let y = win.y + TIMELINE_Y + 2 * id.1;
+                    write!(out, "{}{}", cursor::Goto(x, y),
+                        if state.tracks.get(&id.1).unwrap().monitor { "_" } else { "" }
+                    ).unwrap();
+                    write!(out, "{}{}", cursor::Goto(x, y + 1),
+                        if state.tracks.get(&id.1).unwrap().monitor { "I" } else { "i" }
+                    ).unwrap();
+                },
+                p_t: |action, id, state| match action {
+                    Action::SelectB => Action::SoloTrack(
+                        id.1,
+                        !state.tracks.get(&id.1).unwrap().solo
+                    ),
+                    _ => Action::Noop,
+                },
 
                 y: VOID_RENDER,
                 y_t: VOID_TRANSFORM,
@@ -316,18 +359,22 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         tracks: {
             let mut new_tracks = state.tracks.clone();
             match action.clone() {
-                Action::SoloTrack(id) => {
+                Action::SoloTrack(id, is_on) => {
                     let track = new_tracks.get_mut(&id).unwrap();
-                    track.solo = !track.solo;
+                    track.solo = is_on;
                 },
-                Action::RecordTrack(id) => {
+                Action::RecordTrack(id, is_on) => {
                     let track = new_tracks.get_mut(&id).unwrap();
-                    track.record = !track.record;
+                    track.record = is_on;
                 },
-                Action::MuteTrack(id) => {
+                Action::MuteTrack(id, is_on) => {
                     let track = new_tracks.get_mut(&id).unwrap();
-                    track.mute = !track.mute;
+                    track.mute = is_on;
                 },
+                Action::MonitorTrack(id, is_on) => {
+                    let track = new_tracks.get_mut(&id).unwrap();
+                    track.monitor = is_on;
+                }
                 _ => {}
             };
             new_tracks
@@ -335,6 +382,7 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         assets: match action.clone() {
             Action::AddRegion(_, _, _, asset_id, _, duration, src) => {
                 let mut new_assets = state.assets.clone();
+                eprintln!("ADD REGION {}", src);
                 new_assets.insert(asset_id, Asset {
                     src: src.clone(),
                     duration: duration.clone(),
@@ -598,12 +646,12 @@ impl Layer for Timeline {
             a @ Action::LoopMode(_) |
             a @ Action::SetMeter(_,_) |
             a @ Action::SetTempo(_) |
-            a @ Action::RecordTrack(_) |
-            a @ Action::MuteTrack(_) |
-            a @ Action::SoloTrack(_) |
+            a @ Action::RecordTrack(_, _) |
+            a @ Action::MuteTrack(_, _) |
+            a @ Action::SoloTrack(_, _) |
+            a @ Action::MonitorTrack(_, _) |
             a @ Action::Play |
-            a @ Action::Stop |
-            a @ Action::Record => (self.state.focus, Some(a)),
+            a @ Action::Stop  => (self.state.focus, Some(a)),
             _ => (self.state.focus, None)
         };
 

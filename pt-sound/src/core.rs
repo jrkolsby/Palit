@@ -335,7 +335,7 @@ impl Node<[Output; CHANNELS]> for Module {
                 if playback_rate == 0.0 { 
                     dsp::slice::map_in_place(buffer, |a| { if store.monitor { a } else { [0.0, 0.0] } });
                 } else if playback_rate == 1.0 {
-                    if store.recording {
+                    if store.recording == 1 {
                         let (this_pool, this_region) = (
                             store.pool.as_mut().unwrap(),
                             store.rec_region.clone()
@@ -356,7 +356,7 @@ impl Node<[Output; CHANNELS]> for Module {
                                                     _region.buffer.push(new_buf.to_vec());
                                                 } else {
                                                     // Out of space! Stop record
-                                                    store.recording = false;
+                                                    store.recording = 0;
                                                     break;
                                                 }
                                             }
@@ -511,11 +511,18 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "EXIT" => Action::Exit,
             "PLAY" => Action::Play(argv[1].parse::<u16>().unwrap()),
             "STOP" => Action::Stop(argv[1].parse::<u16>().unwrap()),
-            "RECORD" => Action::Record(argv[1].parse::<u16>().unwrap()),
             "RECORD_AT" => Action::RecordAt(argv[1].parse::<u16>().unwrap(),
-                                          argv[2].parse::<u16>().unwrap()),
+                                            argv[2].parse::<u16>().unwrap(),
+                                            argv[3].parse::<u8>().unwrap()),
             "MUTE_AT" => Action::MuteAt(argv[1].parse::<u16>().unwrap(),
-                                        argv[2].parse::<u16>().unwrap()),
+                                        argv[2].parse::<u16>().unwrap(),
+                                        argv[3].parse::<u8>().unwrap() == 1),
+            "MUTE_AT" => Action::SoloAt(argv[1].parse::<u16>().unwrap(),
+                                        argv[2].parse::<u16>().unwrap(),
+                                        argv[3].parse::<u8>().unwrap() == 1),
+            "MUTE_AT" => Action::MonitorAt(argv[1].parse::<u16>().unwrap(),
+                                        argv[2].parse::<u16>().unwrap(),
+                                        argv[3].parse::<u8>().unwrap() == 1),
             "NOTE_ON" => Action::NoteOn(argv[1].parse::<u8>().unwrap(), 
                                         argv[2].parse::<f64>().unwrap()),
             "NOTE_OFF" => Action::NoteOff(argv[1].parse::<u8>().unwrap()),

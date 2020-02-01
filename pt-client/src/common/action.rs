@@ -58,12 +58,16 @@ pub enum Action {
     NoteOff(u16),
     SetParam(String, i16),
     MoveRegion(u16, u16, u32), // module id, region id, offset
-    SoloTrack(u16),
-    RecordTrack(u16),
-    MuteTrack(u16),
     PlayAt(u16),
 
-    // TODO: Module ID, Track ID
+    // Track ID, is_on
+    SoloTrack(u16, bool), 
+    MuteTrack(u16, bool),
+    MonitorTrack(u16, bool),
+    // Track ID, mode (0 off, 1 audio, 2 midi)
+    RecordTrack(u16, u8),
+
+    // Note ID, Key, Velocity, t_on, t_off
     AddNote(u16, u8, f32, u32, u32), 
     // Module ID, Track ID, Region ID, Asset ID, offset, duration, src
     AddRegion(u16, u16, u16, u16, u32, u32, String),

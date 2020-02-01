@@ -188,8 +188,10 @@ fn main() -> Result<(), Box<error::Error>> {
             Action::SetLoop(n_id, _, _) |
             Action::Scrub(n_id, _) |
             Action::Goto(n_id, _) |
-            Action::RecordAt(n_id, _) |
-            Action::MuteAt(n_id, _) |
+            Action::RecordAt(n_id, _, _) |
+            Action::MuteAt(n_id, _, _) |
+            Action::SoloAt(n_id, _, _) |
+            Action::MonitorAt(n_id, _, _) |
             Action::NoteOnAt(n_id, _, _) | 
             Action::NoteOffAt(n_id, _) |
             Action::SetParam(n_id, _, _) |
