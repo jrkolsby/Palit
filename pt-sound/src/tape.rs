@@ -103,7 +103,7 @@ pub fn dispatch_requested(store: &mut Store) -> (
 
     // Check if we can join the writer and 
     // ... finalize our recorded region :D
-    if store.recording == 1 {
+    if store.recording == 2 {
         let region_count = store.written.load(Ordering::SeqCst);
         let region_guard = store.rec_region.write();
         match region_guard {
@@ -253,7 +253,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::Play(_) => { 
             store.velocity = 1.0; 
             store.scrub = None;
-            if store.recording == 1 {
+            if store.recording == 2 {
                 let mut new_asset_id = store.regions.iter().fold(0, |max, r| 
                     if r.asset_id > max {r.asset_id} else {max}) + 1;
                 let mut new_region_id = store.regions.iter().fold(0, |max, r| 
@@ -294,7 +294,8 @@ pub fn dispatch(store: &mut Store, a: Action) {
             if store.track_id == t_id {
                 store.recording = mode;
                 match mode {
-                    1 => {
+                    // Mode 2 (AUDIO)
+                    2 => {
                         if store.pool.is_none() {
                             store.pool = Some(Pool::new(30, || vec![[0.0; CHANNELS]; BUF_SIZE]));
                         }
@@ -306,7 +307,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
                             store.writer = Some(thread::spawn(|| write_recording_region(source_region, source_count)));
                         }
                     },
-                    // Mode 0 (OFF) or 2 (MIDI)
+                    // Mode 0 (OFF) or 1 (MIDI)
                     _ => {
                         store.pool = None;
                         /*
@@ -345,7 +346,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
             // Push a new note to the end of store.notes 
             // ... and redistribute the t_in and t_out 
             // ... based on the rate and samples per bar
-            if store.recording == 2 && store.velocity > 0.0 {
+            if store.recording == 1 && store.velocity > 0.0 {
                 store.note_queue.push(Note {
                     id: store.notes.len() as u16,
                     t_in: store.playhead,
@@ -360,7 +361,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
         },
         Action::NoteOff(note) => {
             if let Some(on_index) = store.note_queue.iter().position(|n| n.note == note) {
-                if store.recording == 2 && store.velocity != 0.0 {
+                if store.recording == 1 && store.velocity != 0.0 {
                     let on_note = store.note_queue.remove(on_index);
                     let recorded_note = Note {
                         id: on_note.id,

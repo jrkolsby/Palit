@@ -64,7 +64,7 @@ pub enum Action {
     SoloTrack(u16, bool), 
     MuteTrack(u16, bool),
     MonitorTrack(u16, bool),
-    // Track ID, mode (0 off, 1 audio, 2 midi)
+    // Track ID, mode (0 off, 1 midi, 2 audio)
     RecordTrack(u16, u8),
 
     // Note ID, Key, Velocity, t_on, t_off

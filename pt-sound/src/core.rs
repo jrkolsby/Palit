@@ -334,8 +334,9 @@ impl Node<[Output; CHANNELS]> for Module {
                 }
                 if playback_rate == 0.0 { 
                     dsp::slice::map_in_place(buffer, |a| { if store.monitor { a } else { [0.0, 0.0] } });
-                } else if playback_rate == 1.0 {
-                    if store.recording == 1 {
+                } else if playback_rate == 1.0 && store.scrub.is_none() {
+                    // Audio Record Mode
+                    if store.recording == 2 {
                         let (this_pool, this_region) = (
                             store.pool.as_mut().unwrap(),
                             store.rec_region.clone()

@@ -17,7 +17,7 @@ pub fn render(out: &mut Screen,
     let mut beat = 0;
     let _zoom = zoom as u16;
     for i in 0..width {
-        if i == playhead-scroll {
+        if i as i16 == playhead as i16 - scroll as i16 {
             for j in 1..height {
                 write!(out, "{}|", cursor::Goto(origin_x+i, origin_y+j)).unwrap();
             }

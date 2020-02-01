@@ -17,7 +17,7 @@ use crate::common::{REGIONS_X, TIMELINE_Y};
 
 static TRACKS_X: u16 = 3;
 static SCROLL_R: u16 = 40;
-static SCROLL_L: u16 = 10;
+static SCROLL_L: u16 = 20;
 static ASSET_PREFIX: &str = "storage/";
 
 #[derive(Clone, Debug)]
@@ -110,10 +110,10 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                     state.sample_rate,
                     state.tempo,
                     state.zoom);
-                let out_x = offset_out - state.scroll_x;
+                let out_x = offset_out as i16 - state.scroll_x as i16;
                 if out_x >= 0 {
                     write!(out, "{}>> ", cursor::Goto(
-                        window.x + REGIONS_X + out_x, 
+                        window.x + REGIONS_X + out_x as u16, 
                         window.y + TIMELINE_Y)
                     ).unwrap()
                 }
@@ -121,7 +121,11 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
             g_t: |a, id, state| {
                 let o1 = offset_char(1, state.sample_rate, state.tempo, state.zoom);
                 match a { 
-                    Action::Left => Action::SetLoop(state.loop_in, state.loop_out - o1), 
+                    Action::Left => Action::SetLoop(
+                        state.loop_in, 
+                        if state.loop_out >= o1 { state.loop_out - o1 }
+                        else { state.loop_out }
+                    ), 
                     Action::Right => Action::SetLoop(state.loop_in, state.loop_out + o1), 
                     _ => Action::Noop 
                 }
@@ -145,7 +149,11 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
             p_t: |a, id, state| {
                 let o1 = offset_char(1, state.sample_rate, state.tempo, state.zoom);
                 match a { 
-                    Action::Left => Action::SetLoop(state.loop_in - o1, state.loop_out), 
+                    Action::Left => Action::SetLoop(
+                        if state.loop_in >= o1 { state.loop_in - o1 } 
+                        else { state.loop_in }, 
+                        state.loop_out
+                    ), 
                     Action::Right => Action::SetLoop(state.loop_in + o1, state.loop_out), 
                     _ => Action::Noop 
                 }
@@ -214,8 +222,8 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                     let y = win.y + TIMELINE_Y + 2 * id.1;
                     write!(out, "{}{}", cursor::Goto(x, y),
                         match state.tracks.get(&id.1).unwrap().record {
-                            1 => "∿",
-                            2 => "…",
+                            1 => "…",
+                            2 => "∿",
                             _ => "",
                         }
                     ).unwrap();
@@ -382,7 +390,6 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         assets: match action.clone() {
             Action::AddRegion(_, _, _, asset_id, _, duration, src) => {
                 let mut new_assets = state.assets.clone();
-                eprintln!("ADD REGION {}", src);
                 new_assets.insert(asset_id, Asset {
                     src: src.clone(),
                     duration: duration.clone(),
@@ -454,21 +461,19 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             Action::Tick(o) => o,
             _ => state.playhead
         },
-        scroll_x: {
-            let playhead_offset = char_offset(
-                state.playhead,
-                state.sample_rate,
-                state.tempo,
-                state.zoom);
+        scroll_x: match action {
+            Action::Tick(o) => {
+                let playhead_offset = char_offset(
+                    o,
+                    state.sample_rate,
+                    state.tempo,
+                    state.zoom);
 
-            if playhead_offset > state.scroll_x + SCROLL_R {
-                state.scroll_x+1 
-            } else if playhead_offset > 0 && state.scroll_x > 0 && 
-                playhead_offset < state.scroll_x + SCROLL_L {
-                state.scroll_x-1
-            } else {
-                state.scroll_x
-            }
+                if playhead_offset > SCROLL_L {
+                    playhead_offset - SCROLL_L
+                } else { 0 }
+            },
+            _ => state.scroll_x
         },
         scroll_y: state.scroll_y,
         focus: state.focus,
