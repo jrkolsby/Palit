@@ -1,11 +1,14 @@
 extern crate sample;
 extern crate portaudio;
+extern crate hound;
 
 use std::{iter, error};
 use std::ffi::CString;
 use std::fs::File;
 use std::io::prelude::*;
 use std::thread;
+use std::sync::Arc;
+use std::ops::DerefMut;
 
 #[cfg(target_os = "linux")]
 extern crate alsa;
@@ -14,7 +17,7 @@ use alsa::{seq, pcm, PollDescriptors};
 #[cfg(target_os = "linux")]
 use alsa::pcm::State;
 
-use dsp::{sample::ToFrameSliceMut, NodeIndex, Frame, FromSample};
+use dsp::{sample::ToFrameSliceMut, NodeIndex, FromSample, Frame};
 use dsp::{Outputs, Graph, Node, Sample, Walker};
 use dsp::daggy::petgraph::Bfs;
 
@@ -46,8 +49,11 @@ pub type Key = u8;
 pub type Param = i16;
 
 pub const CHANNELS: usize = 2;
+pub const SAMPLE_HZ: f64 = 48_000.0;
+pub const BUF_SIZE: usize = 24_000;
+pub const BIT_RATE: usize = 16;
+
 const FRAMES: u32 = 128;
-const SAMPLE_HZ: f64 = 44_100.0;
 const DEBUG_KEY_PERIOD: u16 = 24100;
 const SCRUB_MAX: f64 = 4.0;
 const SCRUB_ACC: f64 = 0.01;
@@ -201,7 +207,7 @@ pub fn event_loop<F: 'static>(
 
     // Wait for our stream to finish.
     while let true = stream.is_active()? {
-        std::thread::sleep(::std::time::Duration::from_millis(16));
+        std::thread::sleep(std::time::Duration::from_millis(16));
     }
 
     Ok(())
@@ -221,7 +227,7 @@ pub enum Module {
     // and every second or so will send all corresponding NoteOff actions.
     // Useful for debugging on OSX where keyup events aren't accessed.
     DebugKeys(Vec<Action>, Vec<Action>, u16),
-    Operator(Vec<Action>, Vec<(NodeIndex)>),
+    Operator(Vec<Action>, Vec<(NodeIndex)>, u16),  // Queue, Anchors, Module ID
     Synth(synth::Store),
     Tape(tape::Store),
     Chord(chord::Store),
@@ -232,7 +238,7 @@ impl Module {
     pub fn dispatch(&mut self, a: Action) {
         match *self {
             Module::Master => {}
-            Module::Operator(ref mut queue, _,) |
+            Module::Operator(ref mut queue, _, _) |
             Module::Passthru(ref mut queue) => { queue.push(a.clone()) }
             Module::DebugKeys(ref mut onqueue, _, _) => { onqueue.push(a.clone()); }
             Module::Synth(ref mut store) => synth::dispatch(store, a.clone()),
@@ -256,7 +262,7 @@ impl Module {
         ) {
 
         match *self {
-            Module::Operator(ref mut queue, _,) |
+            Module::Operator(ref mut queue, _, _) |
             Module::Passthru(ref mut queue) => {
                 let carry = queue.clone();
                 queue.clear();
@@ -314,13 +320,11 @@ impl Node<[Output; CHANNELS]> for Module {
                 });
             },
             Module::Synth(ref mut store) => {
-                dsp::slice::map_in_place(buffer, |_| {
-                    Frame::from_fn(|_| synth::compute(store))
-                });
+                dsp::slice::map_in_place(buffer, |_| synth::compute(store));
             },
             Module::Tape(ref mut store) => {
                 // Exponential velocity scrub (tape inertia)
-                let interp_factor = store.velocity.abs();
+                let playback_rate = store.velocity.abs();
                 if let Some(dir) = store.scrub {
                     let expo_vel = store.velocity + if dir { SCRUB_ACC } 
                         else { -SCRUB_ACC };
@@ -328,20 +332,65 @@ impl Node<[Output; CHANNELS]> for Module {
                         else if expo_vel < -SCRUB_MAX { -SCRUB_MAX } 
                         else { expo_vel }
                 }
-                if interp_factor == 0.0 { return; }
-                if interp_factor == 1.0 {
-                    dsp::slice::map_in_place(buffer, |_| {
-                        Frame::from_fn(|_| tape::compute(store))
+                if playback_rate == 0.0 { 
+                    dsp::slice::map_in_place(buffer, |a| { if store.monitor { a } else { [0.0, 0.0] } });
+                } else if playback_rate == 1.0 && store.scrub.is_none() {
+                    // Audio Record Mode
+                    if store.recording == 2 {
+                        let (this_pool, this_region) = (
+                            store.pool.as_mut().unwrap(),
+                            store.rec_region.clone()
+                        );
+                        // option_region is of type RwLockGuard<Option<Region>>
+                        let region_guard = this_region.write();
+                        match region_guard {
+                            Ok(mut option_region) => {
+                                // When a RwLockGuard<> contains an optional, you can't do:
+                                // if let Some(x) = guard { ... }
+                                // but you can call methods on its inner object, so instead:
+                                match option_region.deref_mut() {
+                                    Some(_region) => {
+                                        for (i, frame) in buffer.iter().enumerate() {
+                                            let index = _region.duration as usize % BUF_SIZE;
+                                            if index == 0 {
+                                                if let Some(new_buf) = this_pool.try_pull() {
+                                                    _region.buffer.push(new_buf.to_vec());
+                                                } else {
+                                                    // Out of space! Stop record
+                                                    store.recording = 0;
+                                                    break;
+                                                }
+                                            }
+                                            _region.buffer.last_mut().unwrap()[index] = *frame;
+                                            _region.duration += 1;
+                                        }
+                                    },
+                                    _ => {}
+                                }
+                            }
+                            _ => {}
+                        }
+                    } 
+                    dsp::slice::map_in_place(buffer, |a| {
+                        let frame = tape::compute(store);
+                        [
+                            frame[0] + if store.monitor { a[0] } else { 0.0 },
+                            frame[1] + if store.monitor { a[1] } else { 0.0 }
+                        ] 
                     });
                 } else {
-                    let mut source = signal::gen_mut(|| [tape::compute(store)] );
+                    let thru = store.monitor;
+                    let mut source = signal::gen_mut(|| tape::compute(store) );
                     let interp = Linear::from_source(&mut source);
-                    let mut resampled = source.scale_hz(interp, interp_factor);
-                    dsp::slice::map_in_place(buffer, |_| {
-                        Frame::from_fn(|_| resampled.next()[0])
+                    let mut resampled = source.scale_hz(interp, playback_rate);
+                    dsp::slice::map_in_place(buffer, |a| {
+                        let frame = resampled.next();
+                        [
+                            frame[0] + if thru { a[0] } else { 0.0 },
+                            frame[1] + if thru { a[1] } else { 0.0 }
+                        ] 
                     });
                 }
-
 
                 /*
                 let frames = ring_buffer::Fixed::from(vec![[0.0]; 10]);
@@ -413,11 +462,15 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
             for a in client_a.iter() {
                 let message = match a {
                     Action::Tick(offset) => Some(format!("TICK:{} ", offset)),
-                    Action::NoteOn(n,v) => Some(format!("NOTE_ON:{}:{} ", n, v)),
-                    Action::NoteOff(n) => Some(format!("NOTE_OFF:{} ", n)),
+                    Action::NoteOn(key, vel) => Some(format!("NOTE_ON:{}:{} ", key, vel)),
+                    Action::NoteOff(key) => Some(format!("NOTE_OFF:{} ", key)),
                     Action::AddNote(id, n) => Some(format!("NOTE_ADD:{}:{}:{}:{}:{} ",
                         id, n.note, n.vel, n.t_in, n.t_out
                     )),
+                    Action::AddRegion(n_id, t_id, r_id, a_id, offset, duration, source) => 
+                        Some(format!("REGION_ADD:{}:{}:{}:{}:{}:{}:{} ",
+                            n_id, t_id, r_id, a_id, offset, duration, source
+                        )),
                     _ => None
                 };
                 if let Some(text) = message {
@@ -459,11 +512,18 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
             "EXIT" => Action::Exit,
             "PLAY" => Action::Play(argv[1].parse::<u16>().unwrap()),
             "STOP" => Action::Stop(argv[1].parse::<u16>().unwrap()),
-            "RECORD" => Action::Record(argv[1].parse::<u16>().unwrap()),
             "RECORD_AT" => Action::RecordAt(argv[1].parse::<u16>().unwrap(),
-                                          argv[2].parse::<u16>().unwrap()),
+                                            argv[2].parse::<u16>().unwrap(),
+                                            argv[3].parse::<u8>().unwrap()),
             "MUTE_AT" => Action::MuteAt(argv[1].parse::<u16>().unwrap(),
-                                        argv[2].parse::<u16>().unwrap()),
+                                        argv[2].parse::<u16>().unwrap(),
+                                        argv[3].parse::<u8>().unwrap() == 1),
+            "MUTE_AT" => Action::SoloAt(argv[1].parse::<u16>().unwrap(),
+                                        argv[2].parse::<u16>().unwrap(),
+                                        argv[3].parse::<u8>().unwrap() == 1),
+            "MUTE_AT" => Action::MonitorAt(argv[1].parse::<u16>().unwrap(),
+                                        argv[2].parse::<u16>().unwrap(),
+                                        argv[3].parse::<u8>().unwrap() == 1),
             "NOTE_ON" => Action::NoteOn(argv[1].parse::<u8>().unwrap(), 
                                         argv[2].parse::<f64>().unwrap()),
             "NOTE_OFF" => Action::NoteOff(argv[1].parse::<u8>().unwrap()),

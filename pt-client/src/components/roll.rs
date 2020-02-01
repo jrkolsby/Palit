@@ -31,14 +31,17 @@ pub fn render(out: &mut Screen,
 
     for note in sorted_notes.iter() {
 
-        let x_in = char_offset(note.t_in, sample_rate, bpm, zoom) - start;
-        let x_out = char_offset(note.t_out, sample_rate, bpm, zoom) - start;
+        let x_in = match char_offset(note.t_in, sample_rate, bpm, zoom) as i16 - start as i16 {
+            x if x >= 0 && x <= window.w as i16 => x as u16,
+            // Note begins after the window
+            _ => continue
+        };
+        let x_out = match char_offset(note.t_out, sample_rate, bpm, zoom) as i16 - start as i16 {
+            x if x >= 0 && x >= x_in as i16 => x as u16,
+            // Note ends before the window
+            _ => continue
+        };
         let len = if x_out - x_in > 0 { x_out - x_in } else { 1 }; 
-
-        // Note ends before the window
-        if x_out < 0 { continue; }
-        // Note begins after the window
-        if x_in > window.w { continue; }
 
         let y_pos: i16 = (window.y + window.h) as i16 - (
             (note.note as i16 / 2) - 30 + C_POSITION
@@ -72,8 +75,8 @@ pub fn render(out: &mut Screen,
         for (j, beat) in line.iter().enumerate() {
             if *beat != "" {
                 write!(out, "{}{}", cursor::Goto(
-                    window.x + (j as u16),
-                    window.y+i as u16,
+                    window.x + j as u16,
+                    window.y + i as u16,
                 ), beat).unwrap();
             }
         }

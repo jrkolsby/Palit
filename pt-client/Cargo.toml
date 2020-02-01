@@ -9,7 +9,7 @@ edition = "2018"
 [dependencies]
 linux_raw_input_rs = "0.1.6"
 itertools = "0.8.0"
-wavefile = "0.2.0"
+hound = "3.4.0"
 termion = "1.5.3"
 braille = "1.0.2"
 xmltree = "0.8.0"

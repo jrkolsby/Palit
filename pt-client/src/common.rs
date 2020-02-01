@@ -9,8 +9,9 @@ mod multifocus;
 mod layout;
 mod files;
 
-pub use pcm::file_to_pairs;
+pub use pcm::generate_waveform;
 pub use pcm::generate_waveforms;
+pub use pcm::generate_partial_waveform;
 pub use pcm::char_offset;
 pub use pcm::offset_char;
 pub use pcm::Asset;

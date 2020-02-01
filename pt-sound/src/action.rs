@@ -38,10 +38,12 @@ pub enum Action {
     Goto(u16, Offset),
     Play(u16),
     Stop(u16),
-    Record(u16),
-    Monitor(u16),
-    RecordAt(u16, u16),
-    MuteAt(u16, u16),
+
+    MonitorAt(u16, u16, bool),
+    RecordAt(u16, u16, u8),
+    MuteAt(u16, u16, bool),
+    SoloAt(u16, u16, bool),
+
     AddNote(u16, Note),
     Scrub(u16, bool),
     SetLoop(u16, Offset, Offset),
@@ -53,6 +55,8 @@ pub enum Action {
 
     // Module ID, region ID, new track, new offset
     MoveRegion(u16, u16, u16, u16), 
+    // Module ID, Track ID, Region ID, offset, duration, wav_dest
+    AddRegion(u16, u16, u16, u16, Offset, Offset, String),
 
     Exit,
     Noop,

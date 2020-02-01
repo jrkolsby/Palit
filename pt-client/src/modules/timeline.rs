@@ -26,7 +26,7 @@ pub fn read(doc: Element) -> TimelineState {
         seq_out: *marks.get("seq_out").unwrap_or(&48000),
         loop_in: *marks.get("loop_in").unwrap_or(&0),
         loop_out: *marks.get("loop_out").unwrap_or(&0),
-        sample_rate: 44_100,
+        sample_rate: 48_000,
         tracks: HashMap::new(),
         assets: HashMap::new(),
         regions: HashMap::new(),
@@ -52,9 +52,10 @@ pub fn read(doc: Element) -> TimelineState {
 
         state.tracks.insert(_t_id, Track {
             id: _t_id,
-            record: false,
+            record: 0,
             mute: false,
             solo: false,
+            monitor: true,
             index: counter,
         });
 

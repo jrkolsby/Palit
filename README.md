@@ -65,30 +65,43 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 ### FEBRUARY 1 2020
 
-- [ ] INF-5: Unicode Support in linux TTY with KMSCON
-
-- [ ] UI-17: Add, remove module 
-- [ ] UI-22: Snap to grid
+- [X] UI-17: Add, remove module 
 
 - [X] SOUND-13: Timeline looping
-- [ ] SOUND-19: Timeline audio recording
+- [X] SOUND-19: Timeline audio recording
 - [X] SOUND-21: Timeline scrubbing
 
 ### MARCH 1 ( v1.0 )
 
 - [ ] SOUND-3: Faust synth compilation
-- [ ] SOUND-4: ALSA input module
-- [ ] SOUND-20: Import audio file to timeline
-- [ ] SOUND-22: Global sample rate conversion
 
 - [ ] INF-10: Faust UI generation
+- [ ] INF-12: Sound actions are sent to correct modules
 
 - [ ] UI-23: Project serialization & save 
+- [ ] UI-24: Timeline zoom
+- [ ] UI-25: Monitor control
+- [ ] UI-26: Proper metronome tick
+- [ ] UI-27: Track dB faders (gain control)
+- [ ] UI-28: Help view
+- [ ] UI-29: Error view
+- [ ] UI-30: Midi Region
+- [ ] UI-31: Move, split, trim, duplicate, delete audio and midi region
+- [ ] UI-32: Undo Redo Client
+
+- [ ] SOUND-23: Undo Redo Sound
 
 ### APRIL 1
 
 - [ ] UI-14: Network setup
+- [ ] UI-22: Snap to grid
+
+- [ ] SOUND-4: ALSA input module
 - [ ] SOUND-18: Radio module and directory API
+- [ ] SOUND-20: Import audio file to timeline
+- [ ] SOUND-22: Global sample rate conversion
+
+- [ ] INF-5: Unicode Support in linux TTY with KMSCON
 
 ### MAY 1
 
