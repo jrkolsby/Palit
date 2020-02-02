@@ -1,5 +1,5 @@
 [package]
-name = "pt-common"
+name = "libcommon"
 version = "0.1.0"
 authors = ["James Kolsby <jrkolsby@mac.com>"]
 edition = "2018"

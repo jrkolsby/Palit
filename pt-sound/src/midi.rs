@@ -1,16 +1,13 @@
 #[cfg(target_os = "linux")]
 extern crate alsa;
-
 extern crate sample;
 
 #[cfg(target_os = "linux")]
 use alsa::{seq, pcm};
-
 use std::{iter, error};
 use std::ffi::CString;
 use sample::signal;
-
-use crate::action::Action;
+use libcommon::Action;
 
 #[cfg(target_os = "linux")]
 pub fn connect_midi_source_ports(s: &alsa::Seq, our_port: i32) -> Result<(), Box<error::Error>> {

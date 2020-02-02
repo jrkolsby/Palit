@@ -1,6 +1,7 @@
+pub type Key = u8;
 pub type Volume = f64;
 pub type Offset = u32;
-pub type Key = u8;
+pub type Param = i16;
 
 #[derive(Clone, Debug)]
 pub struct Route {

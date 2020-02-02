@@ -1,3 +1,4 @@
+extern crate libcommon;
 extern crate libc;
 extern crate termion;
 

@@ -1,14 +1,15 @@
 use std::{iter};
-
 use sample::{signal, Signal, Sample};
 use xmltree::Element;
+use libcommon::Action;
 
 use crate::document::{param_map};
-use crate::core::{SF, SigGen, Output, CHANNELS, SAMPLE_HZ};
-use crate::action::Action;
+use crate::core::{SF, Output, CHANNELS, SAMPLE_HZ};
 
 // Standard Hammond drawbar.
 const BAR_FREQS: [f64; 9] = [16., 5.+1./3., 8., 4., 2.+2./3., 2., 1.+3./5., 1.+1./3., 1.];
+
+type SigGen = signal::Sine<signal::ConstHz>;
 
 #[derive(Clone)]
 pub struct Sig {

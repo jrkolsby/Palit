@@ -1,3 +1,4 @@
+extern crate libcommon;
 extern crate dsp;
 extern crate libc;
 extern crate sample;
@@ -10,7 +11,7 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::io::prelude::*;
 use std::collections::HashMap;
 use std::borrow::BorrowMut;
-
+use libcommon::{Action, Key};
 use dsp::{NodeIndex, Frame, FromSample, Graph, Node, Sample, Walker};
 use xmltree::Element;
 use sample::signal;
@@ -19,14 +20,12 @@ mod core;
 mod midi;
 mod synth;
 mod tape;
-mod action;
 mod chord;
 mod arpeggio;
 mod document;
 
-use crate::core::{event_loop, Module, Frequency, Key, Output, CHANNELS};
+use crate::core::{event_loop, Module, Output, CHANNELS};
 use crate::document::{Document, read_document, param_map};
-use crate::action::Action;
 
 const MASTER_ROUTE: u16 = 1;
 
@@ -188,7 +187,7 @@ fn main() -> Result<(), Box<error::Error>> {
             Action::LoopMode(n_id, _) |
             Action::SetLoop(n_id, _, _) |
             Action::Scrub(n_id, _) |
-            Action::Goto(n_id, _) |
+            Action::GotoAt(n_id, _) |
             Action::RecordAt(n_id, _, _) |
             Action::MuteAt(n_id, _, _) |
             Action::SoloAt(n_id, _, _) |
@@ -196,8 +195,8 @@ fn main() -> Result<(), Box<error::Error>> {
             Action::NoteOnAt(n_id, _, _) | 
             Action::NoteOffAt(n_id, _) |
             Action::SetParam(n_id, _, _) |
-            Action::Play(n_id) | 
-            Action::Stop(n_id) => {
+            Action::PlayAt(n_id) | 
+            Action::StopAt(n_id) => {
                 if let Some(id) = operators.get(&n_id) {
                     patch[*id].dispatch(a)
                 }

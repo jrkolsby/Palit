@@ -10,9 +10,7 @@ use std::str::FromStr;
     t_id => Track ID
 */
 
-pub struct ActionError;
-
-//#[derive(Debug, Clone)]
+#[derive(Debug, Clone)]
 pub enum Action {
 
     // KEYBOARD ACTIONS
@@ -54,8 +52,7 @@ pub enum Action {
     LoopOff(u16),
     Loop(u16, Offset, Offset),
 
-    // true = up
-    Octave(bool), 
+    Octave(bool), // true = up
     Volume(bool), 
 
     AddModule(u16, String),
@@ -82,7 +79,7 @@ pub enum Action {
     AddNote(u16, Note),
     Scrub(u16, bool),
     SetLoop(u16, Offset, Offset),
-    LoopMode(u16, bool),
+    LoopMode(u16, bool), // true = on
 
     // Global actions
     SetMeter(u16, u16),
@@ -100,12 +97,12 @@ pub enum Action {
     AddRoute(u16),
     DelRoute(u16),
     FadePatch(u16, f32),
-    PatchOut(u16, u16, u16),
-    PatchIn(u16, u16, u16),
-    DelPatch(u16, u16, bool),
+    PatchOut(u16, usize, u16),
+    PatchIn(u16, usize, u16),
+    DelPatch(u16, usize, bool),
 
-    NoteOn(u16, f32),
-    NoteOff(u16),
+    NoteOn(Key, Volume),
+    NoteOff(Key),
 
     SoloTrack(u16, bool), // Track ID, is_on
     MuteTrack(u16, bool),
@@ -131,8 +128,65 @@ impl ToString for Action {
 }
 
 impl FromStr for Action {
-    type Err = ActionError;
-    fn from_str(s: &str) -> Result<Action, ActionError> {
-        Ok(Action::Noop)
+    type Err = String;
+    fn from_str(raw: &str) -> Result<Self, Self::Err> {
+        let argv: Vec<&str> = raw.split(":").collect();
+        Ok(match argv[0] {
+            "EXIT" => Action::Exit,
+            "PLAY" => Action::PlayAt(argv[1].parse().unwrap()),
+            "STOP" => Action::StopAt(argv[1].parse().unwrap()),
+            "RECORD_AT" => Action::RecordAt(argv[1].parse().unwrap(),
+                                            argv[2].parse().unwrap(),
+                                            argv[3].parse().unwrap()),
+            "MUTE_AT" => Action::MuteAt(argv[1].parse().unwrap(),
+                                        argv[2].parse().unwrap(),
+                                        argv[3] == "1"),
+            "MUTE_AT" => Action::SoloAt(argv[1].parse().unwrap(),
+                                        argv[2].parse().unwrap(),
+                                        argv[3] == "1"),
+            "MUTE_AT" => Action::MonitorAt(argv[1].parse().unwrap(),
+                                        argv[2].parse().unwrap(),
+                                        argv[3] == "1"),
+            "NOTE_ON" => Action::NoteOn(argv[1].parse().unwrap(), 
+                                        argv[2].parse().unwrap()),
+            "NOTE_OFF" => Action::NoteOff(argv[1].parse().unwrap()),
+            "NOTE_ON_AT" => Action::NoteOnAt(argv[1].parse().unwrap(),
+                                             argv[2].parse().unwrap(),
+                                             argv[3].parse().unwrap()),
+            "NOTE_OFF_AT" => Action::NoteOffAt(argv[1].parse().unwrap(),
+                                               argv[2].parse().unwrap()),
+            "OCTAVE" => Action::Octave(argv[1] == "1"),
+            "SCRUB" => Action::Scrub(argv[1].parse().unwrap(),
+                                     argv[2] == "1"),
+            "OPEN_PROJECT" => Action::OpenProject(argv[1].to_string()),
+            "PATCH_OUT" => Action::PatchOut(argv[1].parse().unwrap(),
+                                            argv[2].parse().unwrap(),
+                                            argv[3].parse().unwrap()),
+            "PATCH_IN" => Action::PatchIn(argv[1].parse().unwrap(),
+                                          argv[2].parse().unwrap(),
+                                          argv[3].parse().unwrap()),
+            "DEL_PATCH" => Action::DelPatch(argv[1].parse().unwrap(),
+                                            argv[2].parse().unwrap(),
+                                            argv[3] == "1"),
+            "DEL_ROUTE" => Action::DelRoute(argv[1].parse().unwrap()),
+            "ADD_ROUTE" => Action::AddRoute(argv[1].parse().unwrap()),
+            "SET_PARAM" => Action::SetParam(argv[1].parse().unwrap(),
+                                            argv[2].to_string(),
+                                            argv[3].parse().unwrap()),
+            "GOTO" => Action::GotoAt(argv[1].parse().unwrap(),
+                                     argv[2].parse().unwrap()),
+            "SET_TEMPO" => Action::SetTempo(argv[1].parse().unwrap()),
+            "SET_METER" => Action::SetMeter(argv[1].parse().unwrap(),
+                                            argv[2].parse().unwrap()),
+            "LOOP_MODE" => Action::LoopMode(argv[1].parse().unwrap(),
+                                            argv[2] == "1"),
+            "SET_LOOP" => Action::SetLoop(argv[1].parse().unwrap(),
+                                          argv[2].parse().unwrap(),
+                                          argv[3].parse().unwrap()),
+            "ADD_MODULE" => Action::AddModule(argv[1].parse().unwrap(),
+                                              argv[2].to_string()),
+            "DEL_MODULE" => Action::DelModule(argv[1].parse().unwrap()),
+            _ => return Err(raw.to_string())
+        })
     }
 }

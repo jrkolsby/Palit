@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
-
 use xmltree::Element;
-
-use crate::core::{Param, Offset, Key};
+use libcommon::{Action, Param, Offset, Key};
 
 pub struct Document {
     pub title: String,

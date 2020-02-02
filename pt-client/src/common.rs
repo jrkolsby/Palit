@@ -3,7 +3,6 @@ use std::io::{BufWriter};
 use std::fs::{File};
 
 mod pcm;
-mod action;
 mod color;
 mod multifocus;
 mod layout;
@@ -17,8 +16,6 @@ pub use pcm::offset_char;
 pub use pcm::Asset;
 pub use pcm::Region;
 pub use pcm::Track;
-
-pub use action::Action;
 
 pub use color::Color;
 pub use color::write_bg;
