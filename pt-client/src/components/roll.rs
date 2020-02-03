@@ -1,8 +1,10 @@
-use termion::cursor;
 use std::io::Write;
-use crate::common::{Screen, Action, Window, Note};
-use crate::common::{char_offset};
+use termion::cursor;
 use itertools::Itertools;
+use libcommon::{Action, Note};
+
+use crate::common::{Screen, Window};
+use crate::common::{char_offset};
 
 const C_POSITION: i16 = 20;
 

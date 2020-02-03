@@ -1,3 +1,4 @@
+extern crate libcommon;
 extern crate libc;
 extern crate termion;
 
@@ -8,14 +9,12 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::ffi::CString;
 use std::os::unix::io::FromRawFd;
 use std::ops::DerefMut;
-use std::{thread, time};
-
-use xmltree::Element;
-
 use std::collections::VecDeque;
-
+use std::{thread, time};
+use xmltree::Element;
 use termion::{clear, color, cursor, terminal_size};
 use termion::raw::{IntoRawMode, RawTerminal};
+use libcommon::{Action, Module, Anchor};
 
 // NOTE: These need to be here
 mod views;
@@ -37,7 +36,7 @@ use views::{Layer,
 };
 use modules::{read_document, Document};
 
-use common::{Screen, Action, Anchor, Module, MARGIN_D0, MARGIN_D1, MARGIN_D2};
+use common::{Screen, MARGIN_D0, MARGIN_D1, MARGIN_D2};
 
 const DEFAULT_ROUTE_ID: u16 = 29200;
 const DEFAULT_HOME_ID: u16 = 29201;
@@ -79,70 +78,10 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
     let mut events: Vec<Action> = Vec::new();
 
     while let Some(action_raw) = ipc_iter.next() {
-        let argv: Vec<&str> = action_raw.split(":").collect();
-
-        let action = match argv[0] {
-            "ROUTE" => Action::Route,
-
-            "TICK" => Action::Tick(argv[1].parse::<u32>().unwrap()),
-
-            "?" => Action::Noop,
-
-            "1" => Action::Help,
-            "2" => Action::Back,
-
-            "PLAY" => Action::Play,
-            "STOP" => Action::Stop,
-
-            "M" => Action::SelectG,
-            "R" => Action::SelectY,
-            "V" => Action::SelectP,
-            "I" => Action::SelectB,
-            "SPC" => Action::SelectR,
-
-            "OCTAVE" => if argv[1].parse::<usize>().unwrap() == 1 {
-                Action::PitchUp 
-            } else {
-                Action::PitchDown
-            },
-
-            "NOTE_ON" => Action::NoteOn(argv[1].parse::<u16>().unwrap(), 
-                                        argv[2].parse::<f32>().unwrap()),
-
-            "NOTE_OFF" => Action::NoteOff(argv[1].parse::<u16>().unwrap()),
-            
-            "NOTE_ADD" => Action::AddNote(argv[1].parse::<u16>().unwrap(),
-                                          argv[2].parse::<u8>().unwrap(),
-                                          argv[3].parse::<f32>().unwrap(),
-                                          argv[4].parse::<u32>().unwrap(),
-                                          argv[5].parse::<u32>().unwrap()),
-
-            "REGION_ADD" => Action::AddRegion(argv[1].parse::<u16>().unwrap(), 
-                                      argv[2].parse::<u16>().unwrap(), 
-                                      argv[3].parse::<u16>().unwrap(),
-                                      argv[4].parse::<u16>().unwrap(),
-                                      argv[5].parse::<u32>().unwrap(),
-                                      argv[6].parse::<u32>().unwrap(),
-                                      argv[7].to_string()),
-
-            "UP" => Action::Up,
-            "DN" => Action::Down,
-            "LT" => Action::Left,
-            "RT" => Action::Right,
-
-            "EXIT" => Action::Exit,
-
-            "DESELECT" => Action::Deselect,
-
-            "EFFECT" |
-            "INSTRUMENT" => Action::Instrument,
-
-            _ => { Action::Noop },
-        };
-
-        match action {
-            Action::Noop => {},
-            a => { events.push(a); }
+        match action_raw.parse::<Action>() {
+            Ok(Action::Noop) => (),
+            Ok(a) => events.push(a),
+            Err(a) => (),
         };
     };
 
@@ -307,88 +246,6 @@ fn main() -> std::io::Result<()> {
                 Action::InputTitle => {
                     add_layer(&mut layers, Box::new(Title::new(23, 5, 36, 23)), 0);
                 },
-                Action::Play => {
-                    ipc_sound.write(format!("PLAY:{} ", target_id).as_bytes()).unwrap();
-                },
-                Action::Stop => {
-                    ipc_sound.write(format!("STOP:{} ", target_id).as_bytes()).unwrap();
-                },
-                Action::Scrub(dir) => {
-                    ipc_sound.write(format!("SCRUB:{}:{} ", 
-                        target_id, if dir { "1" } else { "0" }).as_bytes()).unwrap();
-                },
-                Action::MuteTrack(t_id, is_on) => {
-                    ipc_sound.write(format!("MUTE_AT:{}:{}:{} ", 
-                        target_id, t_id, if is_on { "1" } else { "0" }).as_bytes()).unwrap();
-                },
-                Action::RecordTrack(t_id, is_on) => {
-                    ipc_sound.write(format!("RECORD_AT:{}:{}:{} ", 
-                        target_id, t_id, match is_on {
-                            1 => "1",
-                            2 => "2",
-                            _ => "0",
-                        }).as_bytes()).unwrap();
-                },
-                Action::SoloTrack(t_id, is_on) => {
-                    ipc_sound.write(format!("SOLO_AT:{}:{}:{} ", 
-                        target_id, t_id, if is_on { "1" } else { "0" }).as_bytes()).unwrap();
-                },
-                Action::MonitorTrack(t_id, is_on) => {
-                    ipc_sound.write(format!("MONITOR_AT:{}:{}:{} ", 
-                        target_id, t_id, if is_on { "1" } else { "0" }).as_bytes()).unwrap();
-                },
-                Action::NoteOn(key, vel) => {
-                    ipc_sound.write(format!("NOTE_ON_AT:{}:{}:{} ", 
-                        target_id, key, vel).as_bytes()).unwrap();
-                },
-                Action::NoteOff(key) => {
-                    ipc_sound.write(format!("NOTE_OFF_AT:{}:{} ", 
-                        target_id, key).as_bytes()).unwrap();
-                },
-                Action::PatchOut(module_id, anchor_id, route_id) => {
-                    ipc_sound.write(format!("PATCH_OUT:{}:{}:{} ", 
-                        module_id, anchor_id, route_id).as_bytes()).unwrap();
-                },
-                Action::PatchIn(module_id, anchor_id, route_id) => {
-                    ipc_sound.write(format!("PATCH_IN:{}:{}:{} ", 
-                        module_id, anchor_id, route_id).as_bytes()).unwrap();
-                },
-                Action::DelPatch(module_id, anchor_id, input) => {
-                    ipc_sound.write(format!("DEL_PATCH:{}:{}:{} ", 
-                        module_id, anchor_id, if input {"1"} else {"2"}).as_bytes()).unwrap();
-                },
-                Action::DelRoute(route_id) => {
-                    ipc_sound.write(format!("DEL_ROUTE:{} ", 
-                        route_id).as_bytes()).unwrap();
-                },
-                Action::AddRoute(route_id) => {
-                    ipc_sound.write(format!("ADD_ROUTE:{} ", 
-                        route_id).as_bytes()).unwrap();
-                }
-                Action::SetParam(key, val) => {
-                    ipc_sound.write(format!("SET_PARAM:{}:{}:{} ", 
-                        target_id, key, val).as_bytes()).unwrap();
-                },
-                Action::SetMeter(beat, note) => {
-                    ipc_sound.write(format!("SET_METER:{}:{} ", 
-                        beat, note).as_bytes()).unwrap();
-                },
-                Action::SetTempo(tempo) => {
-                    ipc_sound.write(format!("SET_TEMPO:{} ", 
-                        tempo).as_bytes()).unwrap();
-                },
-                Action::SetLoop(l_in, l_out) => {
-                    ipc_sound.write(format!("SET_LOOP:{}:{}:{} ", 
-                        target_id, l_in, l_out).as_bytes()).unwrap();
-                },
-                Action::LoopMode(on) => {
-                    ipc_sound.write(format!("LOOP_MODE:{}:{} ", 
-                        target_id, if on { "1" } else { "0" }).as_bytes()).unwrap();
-                },
-                Action::Goto(playhead) => {
-                    ipc_sound.write(format!("GOTO:{}:{} ", 
-                        target_id, playhead).as_bytes()).unwrap();
-                },
                 a @ Action::Up | 
                 a @ Action::Down => {
                     // Make sure to pin {home|route|...|route?}
@@ -532,10 +389,14 @@ fn main() -> std::io::Result<()> {
                     route_view.dispatch(Action::ShowAnchors(anchors_fill));
                     add_layer(&mut layers, route_view, DEFAULT_ROUTE_ID);
                 },
-                Action::AddModule(name) => {
-                    // Get next sequential ID
-                    let mut new_id = layers.iter().fold(0, |max, (id,_)| 
-                        if *id > max { *id } else { max }) + 1;
+                Action::AddModule(0, name) => {
+                    let mut new_id = match &name[..] {
+                        "keyboard" => 104,
+                        // Get next sequential ID
+                        _ => layers.iter().fold(0, |max, (id,_)| 
+                            if *id > max { *id } else { max }
+                        ) + 1
+                    };
                     ipc_sound.write(format!("ADD_MODULE:{}:{} ", new_id, name).as_bytes()).unwrap();
                     // Make empty element with tag and id
                     let mut new_el = Element::new(&name);
@@ -578,7 +439,23 @@ fn main() -> std::io::Result<()> {
                     layers.push(Box::new(Error::new(message))) ;
                 }
                 */
-                _ => {}
+                sound_action => {
+                    ipc_sound.write(match sound_action {
+                        Action::Play => Action::PlayAt(target_id),
+                        Action::Stop => Action::StopAt(target_id),
+                        Action::RecordTrack(t_id, mode) => Action::RecordAt(target_id, t_id, mode),
+                        Action::SoloTrack(t_id, is_on) => Action::SoloAt(target_id, t_id, is_on),
+                        Action::MonitorTrack(t_id, is_on) => Action::MonitorAt(target_id, t_id, is_on),
+                        Action::MuteTrack(t_id, is_on) => Action::MuteAt(target_id, t_id, is_on),
+                        Action::Scrub(_, dir) => Action::Scrub(target_id, dir),
+                        Action::SetParam(_, key, val) => Action::SetParam(target_id, key, val),
+                        Action::SetLoop(_, l_in, l_out) => Action::SetLoop(target_id, l_in, l_out),
+                        Action::LoopMode(_, is_on) => Action::LoopMode(target_id, is_on),
+                        Action::NoteOn(key, vel) => Action::NoteOnAt(target_id, key, vel),
+                        Action::NoteOff(key) => Action::NoteOffAt(target_id, key),
+                        a => a
+                    }.to_string().as_bytes()).unwrap();
+                }
             };	
         }
 

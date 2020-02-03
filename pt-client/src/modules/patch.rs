@@ -1,10 +1,9 @@
 use std::convert::TryInto;
 use std::collections::HashMap;
-
 use xmltree::Element;
+use libcommon::{Route, Anchor};
 
 use crate::views::RoutesState;
-use crate::common::{Route, Anchor};
 use crate::modules::{param_map, mark_map};
 
 pub fn write(state: RoutesState) -> Element {

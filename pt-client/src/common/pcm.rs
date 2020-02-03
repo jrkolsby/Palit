@@ -3,12 +3,9 @@ extern crate xmltree;
 use std::fs::{self, OpenOptions};
 use std::collections::HashMap;
 use std::io::BufReader;
-
-use hound;
 use itertools::{self, Itertools};
 use xmltree::Element;
-
-use crate::common::{Color, Rate};
+use hound;
 
 #[derive(Debug, Clone)]
 pub struct Asset {

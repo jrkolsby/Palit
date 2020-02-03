@@ -1,8 +1,8 @@
 use std::io::{Write, Stdout};
-
 use termion::{color};
+use libcommon::Action;
 
-use crate::common::{Screen, Action};
+use crate::common::Screen;
 use crate::views::{Layer};
 use crate::components::{popup, keyboard};
 

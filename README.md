@@ -77,6 +77,7 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 - [ ] INF-10: Faust UI generation
 - [ ] INF-12: Sound actions are sent to correct modules
+- [ ] INF-13: Common Lib
 
 - [ ] UI-23: Project serialization & save 
 - [ ] UI-24: Timeline zoom

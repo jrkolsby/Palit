@@ -1,8 +1,9 @@
 use std::io::{Write, Stdout};
 use xmltree::Element;
+use libcommon::{Action, Anchor};
 
 use crate::common::{MultiFocus, shift_focus, render_focii, focus_dispatch};
-use crate::common::{Screen, Action, Direction, FocusType, Window, Anchor};
+use crate::common::{Screen, Direction, FocusType, Window};
 use crate::modules::param_map;
 use crate::views::{Layer};
 use crate::components::{piano, slider, button};
@@ -42,7 +43,7 @@ fn reduce(state: PianoState, action: Action) -> PianoState {
             _ => state.notes.clone()
         },
         eq: match action {
-            Action::SetParam(key, val) => {
+            Action::SetParam(_, key, val) => {
                 let mut new_eq = state.eq.clone();
                 match key.as_ref() {
                     "16" => new_eq[0] = val,
@@ -103,9 +104,9 @@ impl Piano {
                             state.eq[0], Direction::North)
                     },
                     g_t: |action, id, state| match action {
-                        Action::Up => { Action::SetParam("16".to_string(), 
+                        Action::Up => { Action::SetParam(0, "16".to_string(), 
                                                          state.eq[0]+1) },
-                        Action::Down => { Action::SetParam("16".to_string(), 
+                        Action::Down => { Action::SetParam(0, "16".to_string(), 
                                                          state.eq[0]-1) },
                         _ => Action::Noop
                     },
@@ -115,9 +116,9 @@ impl Piano {
                             state.eq[1], Direction::North)
                     },
                     y_t: |action, id, state| match action {
-                        Action::Up => { Action::SetParam("5.3".to_string(), 
+                        Action::Up => { Action::SetParam(0, "5.3".to_string(), 
                                                          state.eq[1]+1) },
-                        Action::Down => { Action::SetParam("5.3".to_string(), 
+                        Action::Down => { Action::SetParam(0, "5.3".to_string(), 
                                                          state.eq[1]-1) },
                         _ => Action::Noop
                     },
@@ -127,9 +128,9 @@ impl Piano {
                             state.eq[2], Direction::North)
                     },
                     p_t: |action, id, state| match action { 
-                        Action::Up => { Action::SetParam("8".to_string(), 
+                        Action::Up => { Action::SetParam(0, "8".to_string(), 
                                                          state.eq[2]+1) },
-                        Action::Down => { Action::SetParam("8".to_string(), 
+                        Action::Down => { Action::SetParam(0, "8".to_string(), 
                                                          state.eq[2]-1) },
                         _ => Action::Noop
                     },
@@ -139,9 +140,9 @@ impl Piano {
                             state.eq[3], Direction::North)
                     },
                     b_t: |action, id, state| match action { 
-                        Action::Up => { Action::SetParam("4".to_string(), 
+                        Action::Up => { Action::SetParam(0, "4".to_string(), 
                                                          state.eq[3]+1) },
-                        Action::Down => { Action::SetParam("4".to_string(), 
+                        Action::Down => { Action::SetParam(0, "4".to_string(), 
                                                          state.eq[3]-1) },
                         _ => Action::Noop
                     },
@@ -162,9 +163,9 @@ impl Piano {
                             state.eq[4], Direction::North)
                     },
                     g_t: |action, id, state| match action { 
-                        Action::Up => { Action::SetParam("2.6".to_string(), 
+                        Action::Up => { Action::SetParam(0, "2.6".to_string(), 
                                                          state.eq[4]+1) },
-                        Action::Down => { Action::SetParam("2.6".to_string(), 
+                        Action::Down => { Action::SetParam(0, "2.6".to_string(), 
                                                          state.eq[4]-1) },
                         _ => Action::Noop
                     }, 
@@ -175,9 +176,9 @@ impl Piano {
                             state.eq[5], Direction::North)
                     },
                     y_t: |action, id, state| match action {
-                        Action::Up => { Action::SetParam("2".to_string(), 
+                        Action::Up => { Action::SetParam(0, "2".to_string(), 
                                                          state.eq[5]+1) },
-                        Action::Down => { Action::SetParam("2".to_string(), 
+                        Action::Down => { Action::SetParam(0, "2".to_string(), 
                                                          state.eq[5]-1) },
                         _ => Action::Noop
                     },
@@ -187,9 +188,9 @@ impl Piano {
                             state.eq[6], Direction::North)
                     },
                     p_t: |action, id, state| match action {
-                        Action::Up => { Action::SetParam("1.6".to_string(), 
+                        Action::Up => { Action::SetParam(0, "1.6".to_string(), 
                                                          state.eq[6]+1) },
-                        Action::Down => { Action::SetParam("1.6".to_string(), 
+                        Action::Down => { Action::SetParam(0, "1.6".to_string(), 
                                                          state.eq[6]-1) },
                         _ => Action::Noop
                     },
@@ -199,9 +200,9 @@ impl Piano {
                             state.eq[7], Direction::North)
                     },
                     b_t: |action, id, state| match action {
-                        Action::Up => { Action::SetParam("1.3".to_string(), 
+                        Action::Up => { Action::SetParam(0, "1.3".to_string(), 
                                                          state.eq[7]+1) },
-                        Action::Down => { Action::SetParam("1.3".to_string(), 
+                        Action::Down => { Action::SetParam(0, "1.3".to_string(), 
                                                          state.eq[7]-1) },
                         _ => Action::Noop
                     },
@@ -211,9 +212,9 @@ impl Piano {
                             state.eq[8], Direction::North)
                     },
                     r_t: |action, id, state| match action { 
-                        Action::Up => { Action::SetParam("1".to_string(), 
+                        Action::Up => { Action::SetParam(0, "1".to_string(), 
                                                          state.eq[8]+1) },
-                        Action::Down => { Action::SetParam("1".to_string(), 
+                        Action::Down => { Action::SetParam(0, "1".to_string(), 
                                                          state.eq[8]-1) },
                         _ => Action::Noop
                     }, 
@@ -271,7 +272,7 @@ impl Layer for Piano {
                 a @ Action::Left |
                 a @ Action::Up | 
                 a @ Action::Down |
-                a @ Action::SetParam(_,_) => a,
+                a @ Action::SetParam(_,_,_) => a,
                 _ => { Action::Noop }
             }
         } else { Action::Noop }

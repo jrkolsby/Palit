@@ -1,7 +1,6 @@
 use xmltree::Element;
+use libcommon::{Action, Note, Key, Offset};
 
-use crate::core::{Note, Key, Offset};
-use crate::action::Action;
 use crate::document::{note_list};
 
 pub struct Store {

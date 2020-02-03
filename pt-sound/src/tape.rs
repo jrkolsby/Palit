@@ -7,16 +7,15 @@ use std::thread;
 use std::time;
 use std::sync::{Arc, RwLock, atomic::Ordering, atomic::AtomicU32};
 use std::ops::{Deref, DerefMut};
-
 use sample::{signal, Signal, Sample, Frame};
 use xmltree::Element;
 use hound;
 use object_pool::Pool;
 use chrono::prelude::*;
+use libcommon::{Action, Offset, Note, Key};
 
 use crate::core::{SAMPLE_HZ, BUF_SIZE, CHANNELS, BIT_RATE};
-use crate::core::{SF, SigGen, Output, Note, Key, Offset};
-use crate::action::Action;
+use crate::core::{SF, Output};
 use crate::document::{param_map, param_add, mark_map, mark_add};
 
 pub struct Region {
@@ -250,7 +249,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::Scrub(_, dir) => {
             store.scrub = Some(dir);
         },
-        Action::Play(_) => { 
+        Action::PlayAt(_) => { 
             store.velocity = 1.0; 
             store.scrub = None;
             if store.recording == 2 {
@@ -283,7 +282,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
                 ));
             }
         },
-        Action::Stop(_) => { 
+        Action::StopAt(_) => { 
             store.velocity = 0.0; 
             store.scrub = None;
             if store.loop_on {
@@ -338,7 +337,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
             store.loop_on = true;
         },
         Action::LoopOff(_) => { store.loop_on = false; },
-        Action::Goto(_, offset) => { 
+        Action::GotoAt(_, offset) => { 
             store.note_queue.clear();
             store.playhead = offset; 
         },

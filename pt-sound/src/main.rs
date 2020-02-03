@@ -1,3 +1,4 @@
+extern crate libcommon;
 extern crate dsp;
 extern crate libc;
 extern crate sample;
@@ -10,7 +11,7 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::io::prelude::*;
 use std::collections::HashMap;
 use std::borrow::BorrowMut;
-
+use libcommon::{Action, Key};
 use dsp::{NodeIndex, Frame, FromSample, Graph, Node, Sample, Walker};
 use xmltree::Element;
 use sample::signal;
@@ -19,14 +20,12 @@ mod core;
 mod midi;
 mod synth;
 mod tape;
-mod action;
 mod chord;
 mod arpeggio;
 mod document;
 
-use crate::core::{event_loop, Module, Frequency, Key, Output, CHANNELS};
+use crate::core::{event_loop, Module, Output, CHANNELS};
 use crate::document::{Document, read_document, param_map};
-use crate::action::Action;
 
 const MASTER_ROUTE: u16 = 1;
 
@@ -181,13 +180,14 @@ fn main() -> Result<(), Box<error::Error>> {
         // r_id Route ID
         // a_id Anchor ID (Any input or output from a module)
         // op_id Module Operator ID (Dispatches to a cluster of nodes)
+        // m_id Module ID (Key of operators)
 
         eprintln!("ACTION {:?}", a);
         match a {
             Action::LoopMode(n_id, _) |
             Action::SetLoop(n_id, _, _) |
             Action::Scrub(n_id, _) |
-            Action::Goto(n_id, _) |
+            Action::GotoAt(n_id, _) |
             Action::RecordAt(n_id, _, _) |
             Action::MuteAt(n_id, _, _) |
             Action::SoloAt(n_id, _, _) |
@@ -195,8 +195,8 @@ fn main() -> Result<(), Box<error::Error>> {
             Action::NoteOnAt(n_id, _, _) | 
             Action::NoteOffAt(n_id, _) |
             Action::SetParam(n_id, _, _) |
-            Action::Play(n_id) | 
-            Action::Stop(n_id) => {
+            Action::PlayAt(n_id) | 
+            Action::StopAt(n_id) => {
                 if let Some(id) = operators.get(&n_id) {
                     patch[*id].dispatch(a)
                 }
@@ -227,7 +227,7 @@ fn main() -> Result<(), Box<error::Error>> {
                 if let Some(route) = routes.get(&r_id) {
                     match &patch[*operators.get(&n_id).unwrap()] {
                         Module::Operator(_, anchors, _) => {
-                            let input = anchors[a_id];
+                            let input = anchors[a_id as usize];
                             if let Err(e) = &patch.add_connection(*route, input) {
                                 println!("CYCLE");
                             }
@@ -240,7 +240,7 @@ fn main() -> Result<(), Box<error::Error>> {
                 if let Some(route) = routes.get(&r_id) {
                     match &patch[*operators.get(&n_id).unwrap()] {
                         Module::Operator(_, anchors, _) => {
-                            let output = anchors[a_id];
+                            let output = anchors[a_id as usize];
                             if let Err(e) = &patch.add_connection(output, *route) {
                                 println!("CYCLE");
                             }
@@ -252,7 +252,7 @@ fn main() -> Result<(), Box<error::Error>> {
             Action::DelPatch(n_id, a_id, input) => {
                 match &patch[*operators.get(&n_id).unwrap()] {
                     Module::Operator(_, anchors, _) => {
-                        let id = anchors[a_id].clone();
+                        let id = anchors[a_id as usize].clone();
                         for (_, route) in routes.iter() {
                             let edge = if input {
                                 patch.find_connection(*route, id)

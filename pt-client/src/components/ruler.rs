@@ -7,7 +7,7 @@ pub fn render(out: &mut Screen,
     origin_y: u16, 
     width: u16,
     height: u16,
-    meter_beat: usize,
+    meter_beat: u16,
     zoom: usize,
     scroll: u16, 
     playhead: u16) {

@@ -9,6 +9,7 @@ use std::io::prelude::*;
 use std::thread;
 use std::sync::Arc;
 use std::ops::DerefMut;
+use libcommon::{Action, Key, Volume, Offset};
 
 #[cfg(target_os = "linux")]
 extern crate alsa;
@@ -28,25 +29,14 @@ use sample::{Signal, signal, ring_buffer};
 use sample::interpolate::{Converter, Floor, Linear, Sinc};
 
 use crate::midi::{open_midi_dev, read_midi_event, connect_midi_source_ports};
-use crate::action::Action;
 use crate::synth;
 use crate::tape;
 use crate::chord;
 use crate::arpeggio;
 
-// SAMPLE FORMAT ALSA
-pub type SF = i16;
-pub type SigGen = signal::Sine<signal::ConstHz>;
-
-// SAMPLE FORMAT PORTAUDIO
-pub type Output = f32;
-
-pub type Phase = f64;
-pub type Frequency = f64;
-pub type Volume = f64;
-pub type Offset = u32;
-pub type Key = u8;
-pub type Param = i16;
+// SAMPLE FORMATS 
+pub type Output = f32; // PORTAUDIO
+pub type SF = i16; // ALSA
 
 pub const CHANNELS: usize = 2;
 pub const SAMPLE_HZ: f64 = 48_000.0;
@@ -217,8 +207,6 @@ pub fn event_loop<F: 'static>(
 pub enum Module {
     // Exhibits default behavior of mixing inputs to its output
     Master,
-    // Generates a sine wave
-    Oscillator(Phase, Frequency, Volume),
     // A useful node which, when receiving an action, will dispatch it
     // ... to its neighbors
     Passthru(Vec<Action>),
@@ -312,13 +300,6 @@ impl Node<[Output; CHANNELS]> for Module {
     fn audio_requested(&mut self, buffer: &mut [[Output; CHANNELS]], sample_hz: f64) {
         match *self {
             Module::Master => (),
-            Module::Oscillator(ref mut phase, frequency, volume) => {
-                dsp::slice::map_in_place(buffer, |_| {
-                    let val = sine_wave(*phase, volume);
-                    *phase += frequency / sample_hz;
-                    Frame::from_fn(|_| val)
-                });
-            },
             Module::Synth(ref mut store) => {
                 dsp::slice::map_in_place(buffer, |_| synth::compute(store));
             },
@@ -421,15 +402,6 @@ impl Node<[Output; CHANNELS]> for Module {
     }
 }
 
-/// Return a sine wave for the given phase.
-fn sine_wave<S: Sample>(phase: Phase, volume: Volume) -> S
-where
-    S: Sample + FromSample<f64>,
-{
-    use std::f64::consts::PI;
-    ((phase * PI * 2.0).sin() as f64 * volume).to_sample::<S>()
-}
-
 // NOTE ABOUT EVENT LOOP TIMING
 // assume buffer size of 512 frames, and a 48000Hz sample_rate,
 // for each loop, we must write 512 frames to the audio device, 
@@ -461,16 +433,11 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
         if let Some(client_a) = client_d {
             for a in client_a.iter() {
                 let message = match a {
-                    Action::Tick(offset) => Some(format!("TICK:{} ", offset)),
-                    Action::NoteOn(key, vel) => Some(format!("NOTE_ON:{}:{} ", key, vel)),
-                    Action::NoteOff(key) => Some(format!("NOTE_OFF:{} ", key)),
-                    Action::AddNote(id, n) => Some(format!("NOTE_ADD:{}:{}:{}:{}:{} ",
-                        id, n.note, n.vel, n.t_in, n.t_out
-                    )),
-                    Action::AddRegion(n_id, t_id, r_id, a_id, offset, duration, source) => 
-                        Some(format!("REGION_ADD:{}:{}:{}:{}:{}:{}:{} ",
-                            n_id, t_id, r_id, a_id, offset, duration, source
-                        )),
+                    Action::Tick(_) |
+                    Action::NoteOn(_,_) |
+                    Action::NoteOff(_) |
+                    Action::AddNote(_,_) |
+                    Action::AddRegion(_,_,_,_,_,_,_) => Some(a.to_string()),
                     _ => None
                 };
                 if let Some(text) = message {
@@ -506,69 +473,10 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
     let mut events: Vec<Action> = Vec::new();
 
     while let Some(action_raw) = ipc_iter.next() {
-        let argv: Vec<&str> = action_raw.split(":").collect();
-
-        let action = match argv[0] {
-            "EXIT" => Action::Exit,
-            "PLAY" => Action::Play(argv[1].parse::<u16>().unwrap()),
-            "STOP" => Action::Stop(argv[1].parse::<u16>().unwrap()),
-            "RECORD_AT" => Action::RecordAt(argv[1].parse::<u16>().unwrap(),
-                                            argv[2].parse::<u16>().unwrap(),
-                                            argv[3].parse::<u8>().unwrap()),
-            "MUTE_AT" => Action::MuteAt(argv[1].parse::<u16>().unwrap(),
-                                        argv[2].parse::<u16>().unwrap(),
-                                        argv[3].parse::<u8>().unwrap() == 1),
-            "MUTE_AT" => Action::SoloAt(argv[1].parse::<u16>().unwrap(),
-                                        argv[2].parse::<u16>().unwrap(),
-                                        argv[3].parse::<u8>().unwrap() == 1),
-            "MUTE_AT" => Action::MonitorAt(argv[1].parse::<u16>().unwrap(),
-                                        argv[2].parse::<u16>().unwrap(),
-                                        argv[3].parse::<u8>().unwrap() == 1),
-            "NOTE_ON" => Action::NoteOn(argv[1].parse::<u8>().unwrap(), 
-                                        argv[2].parse::<f64>().unwrap()),
-            "NOTE_OFF" => Action::NoteOff(argv[1].parse::<u8>().unwrap()),
-            "NOTE_ON_AT" => Action::NoteOnAt(argv[1].parse::<u16>().unwrap(),
-                                             argv[2].parse::<u8>().unwrap(),
-                                             argv[3].parse::<f64>().unwrap()),
-            "NOTE_OFF_AT" => Action::NoteOffAt(argv[1].parse::<u16>().unwrap(),
-                                               argv[2].parse::<u8>().unwrap()),
-            "OCTAVE" => Action::Octave(argv[1].parse::<u8>().unwrap() == 1),
-            "SCRUB" => Action::Scrub(argv[1].parse::<u16>().unwrap(),
-                                     argv[2].parse::<u8>().unwrap() == 1),
-            "OPEN_PROJECT" => Action::OpenProject(argv[1].to_string()),
-            "PATCH_OUT" => Action::PatchOut(argv[1].parse::<u16>().unwrap(),
-                                            argv[2].parse::<usize>().unwrap(),
-                                            argv[3].parse::<u16>().unwrap()),
-            "PATCH_IN" => Action::PatchIn(argv[1].parse::<u16>().unwrap(),
-                                          argv[2].parse::<usize>().unwrap(),
-                                          argv[3].parse::<u16>().unwrap()),
-            "DEL_PATCH" => Action::DelPatch(argv[1].parse::<u16>().unwrap(),
-                                               argv[2].parse::<usize>().unwrap(),
-                                               argv[3].parse::<u8>().unwrap() == 1),
-            "DEL_ROUTE" => Action::DelRoute(argv[1].parse::<u16>().unwrap()),
-            "ADD_ROUTE" => Action::AddRoute(argv[1].parse::<u16>().unwrap()),
-            "SET_PARAM" => Action::SetParam(argv[1].parse::<u16>().unwrap(),
-                                            argv[2].to_string(),
-                                            argv[3].parse::<i32>().unwrap()),
-            "GOTO" => Action::Goto(argv[1].parse::<u16>().unwrap(),
-                                   argv[2].parse::<u32>().unwrap()),
-            "SET_TEMPO" => Action::SetTempo(argv[1].parse::<u16>().unwrap()),
-            "SET_METER" => Action::SetMeter(argv[1].parse::<u16>().unwrap(),
-                                            argv[2].parse::<u16>().unwrap()),
-            "LOOP_MODE" => Action::LoopMode(argv[1].parse::<u16>().unwrap(),
-                                            argv[2].parse::<u8>().unwrap() == 1),
-            "SET_LOOP" => Action::SetLoop(argv[1].parse::<u16>().unwrap(),
-                                          argv[2].parse::<u32>().unwrap(),
-                                          argv[3].parse::<u32>().unwrap()),
-            "ADD_MODULE" => Action::AddModule(argv[1].parse::<u16>().unwrap(),
-                                              argv[2].to_string()),
-            "DEL_MODULE" => Action::DelModule(argv[1].parse::<u16>().unwrap()),
-            _ => Action::Noop,
-        };
-
-        match action {
-            Action::Noop => {},
-            _ => { events.push(action); }
+        match action_raw.parse::<Action>() {
+            Ok(Action::Noop) => (),
+            Ok(a) => events.push(a),
+            Err(r) => (),
         };
     };
 

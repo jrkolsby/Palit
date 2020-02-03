@@ -1,7 +1,9 @@
-use termion::cursor;
 use std::io::Write;
-use crate::common::{Screen, Action, Window};
+use termion::cursor;
 use itertools::Itertools;
+use libcommon::{Action, Key};
+
+use crate::common::{Screen, Window};
 
 const ASSET: &str = r#"
 ▄▄██
@@ -27,7 +29,7 @@ pub fn render(out: &mut Screen,
         };
     }
 
-    let mut sorted_notes: Vec<u16> = active.iter().map(|a| 
+    let mut sorted_notes: Vec<Key> = active.iter().map(|a| 
         // Shift up a half step because c shares a row with b
         match a { Action::NoteOn(a, _) => *a + 1, _ => 0}
     ).unique().collect();

@@ -1,7 +1,8 @@
 use std::io::{Write, Stdout};
 use termion::{color, cursor, clear};
+use libcommon::{Action};
 
-use crate::common::{Screen, Action, Color, write_bg, write_fg, Window};
+use crate::common::{Screen, Color, write_bg, write_fg, Window};
 
 /*
     A multifocus render will render five components prefixed with

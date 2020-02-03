@@ -1,9 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
-
 use xmltree::Element;
-
-use crate::common::{Param, Offset, Module};
+use libcommon::{Param, Offset, Module};
 
 pub mod timeline;
 pub mod patch;

@@ -1,14 +1,14 @@
-use xmltree::Element;
-
-use termion::cursor;
-
 use std::io::{Write, Stdout};
 use std::collections::HashMap;
+
+use xmltree::Element;
+use termion::cursor;
+use libcommon::{Action, Anchor, Note};
 
 use crate::components::{tempo, button, ruler, region, roll};
 use crate::common::{ID, VOID_ID, FocusType};
 use crate::common::{MultiFocus, render_focii, shift_focus, generate_partial_waveform};
-use crate::common::{Screen, Action, Asset, Region, Track, Anchor, Window, Note};
+use crate::common::{Screen, Asset, Region, Track, Window};
 use crate::common::{char_offset, offset_char, generate_waveforms};
 use crate::modules::timeline;
 use crate::views::{Layer};
@@ -27,8 +27,8 @@ pub struct TimelineState {
     pub zoom: usize,
     pub temp_tempo: Option<u16>,
     pub temp_zoom: Option<usize>,
-    pub meter_beat: usize,
-    pub meter_note: usize,
+    pub meter_beat: u16,
+    pub meter_note: u16,
     pub loop_mode: bool,
     pub seq_in: u32,
     pub seq_out: u32,
@@ -77,7 +77,7 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
             r_t: |a, id, state| match a { 
                 Action::Up |
                 Action::Down |
-                Action::SelectR => Action::LoopMode(!state.loop_mode),
+                Action::SelectR => Action::LoopMode(0, !state.loop_mode),
                 _ => Action::Noop 
             },
 
@@ -121,12 +121,15 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
             g_t: |a, id, state| {
                 let o1 = offset_char(1, state.sample_rate, state.tempo, state.zoom);
                 match a { 
-                    Action::Left => Action::SetLoop(
+                    Action::Left => Action::SetLoop(0,
                         state.loop_in, 
                         if state.loop_out >= o1 { state.loop_out - o1 }
                         else { state.loop_out }
                     ), 
-                    Action::Right => Action::SetLoop(state.loop_in, state.loop_out + o1), 
+                    Action::Right => Action::SetLoop(0,
+                        state.loop_in, 
+                        state.loop_out + o1
+                    ), 
                     _ => Action::Noop 
                 }
             },
@@ -149,12 +152,15 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
             p_t: |a, id, state| {
                 let o1 = offset_char(1, state.sample_rate, state.tempo, state.zoom);
                 match a { 
-                    Action::Left => Action::SetLoop(
+                    Action::Left => Action::SetLoop(0,
                         if state.loop_in >= o1 { state.loop_in - o1 } 
                         else { state.loop_in }, 
                         state.loop_out
                     ), 
-                    Action::Right => Action::SetLoop(state.loop_in + o1, state.loop_out), 
+                    Action::Right => Action::SetLoop(0,
+                        state.loop_in + o1, 
+                        state.loop_out
+                    ), 
                     _ => Action::Noop 
                 }
             },
@@ -346,19 +352,19 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             _ => state.meter_note,
         },
         loop_mode: match action.clone() {
-            Action::LoopMode(on) => on,
+            Action::LoopMode(_, on) => on,
             _ => state.loop_mode
         },
         seq_in: state.seq_in,
         seq_out: state.seq_out,
         loop_in: match action.clone() {
-            Action::SetLoop(mark_in, mark_out) => if mark_in >= 0 { 
+            Action::SetLoop(_, mark_in, mark_out) => if mark_in >= 0 { 
                 if mark_in < mark_out { mark_in } else { state.loop_in }
             } else { 0 },
             _ => state.loop_in,
         },
         loop_out: match action.clone() {
-            Action::SetLoop(mark_in, mark_out) => if mark_out >= 0 { 
+            Action::SetLoop(_, mark_in, mark_out) => if mark_out >= 0 { 
                 if mark_out > mark_in { mark_out } else { state.loop_out }
             } else { 0 },
             _ => state.loop_out,
@@ -430,7 +436,7 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
                 });
                 new_regions
             },
-            Action::MoveRegion(id, t_id, offset) => {
+            Action::MoveRegion(_, id, t_id, offset) => {
                 let mut new_regions = state.regions.clone();
                 let r = new_regions.get_mut(&id).unwrap();
                 r.track = t_id;
@@ -439,21 +445,15 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             },
             _ => state.regions.clone(),
         },
-        notes: match action {
-            Action::AddNote(id, note, velocity, t_in, t_out) => {
+        notes: match action.clone() {
+            Action::AddNote(id, note) => {
                 let mut new_notes = state.notes.clone();
-                new_notes.push(Note {
-                    id,
-                    note,
-                    vel: velocity,
-                    t_in,
-                    t_out
-                });
+                new_notes.push(note);
                 new_notes
             },
             _ => state.notes.clone()
         },
-        tick: match action {
+        tick: match action.clone() {
             Action::Tick(_) => !state.tick,
             _ => state.tick
         },
@@ -589,12 +589,12 @@ impl Layer for Timeline {
                 FocusType::Region => if self.state.playhead == 0 {
                     shift_focus(self.state.focus, &self.focii, Action::Left)
                 } else {
-                    (self.state.focus, Some(Action::Scrub(false)))
+                    (self.state.focus, Some(Action::Scrub(0, false)))
                 }
                 _ => shift_focus(self.state.focus, &self.focii, Action::Left),
             },
             Action::Right => match multi_focus.w_id.0 {
-                FocusType::Region => (self.state.focus, Some(Action::Scrub(true))),
+                FocusType::Region => (self.state.focus, Some(Action::Scrub(0, true))),
                 _ => shift_focus(self.state.focus, &self.focii, Action::Right),
             },
             Action::Up | Action::Down => shift_focus(self.state.focus, &self.focii, _action.clone()),
@@ -647,8 +647,8 @@ impl Layer for Timeline {
                 }
                 (self.state.focus, Some(Action::ShowAnchors(anchors)))
             }
-            a @ Action::SetLoop(_,_) |
-            a @ Action::LoopMode(_) |
+            a @ Action::SetLoop(_,_,_) |
+            a @ Action::LoopMode(_,_) |
             a @ Action::SetMeter(_,_) |
             a @ Action::SetTempo(_) |
             a @ Action::RecordTrack(_, _) |

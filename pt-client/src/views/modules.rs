@@ -1,9 +1,10 @@
 use std::io::Write;
 use termion::cursor;
+use libcommon::{Action, Anchor, Module};
 
-use crate::common::{Screen, Action, Direction, FocusType, Window, Anchor};
+use crate::common::{Screen, Direction, FocusType, Window};
 use crate::common::{MultiFocus, ID, focus_dispatch, render_focii};
-use crate::common::{get_files, PALIT_MODULES, Module};
+use crate::common::{get_files, PALIT_MODULES};
 use crate::components::{popup};
 use crate::views::{Layer};
 
@@ -161,7 +162,7 @@ impl Layer for Modules {
             self.state = reduce(self.state.clone(), _default.clone());
             match _default {
                 Action::Deselect => if let Some(i) = current {
-                    Action::AddModule(self.state.modules[i].clone())
+                    Action::AddModule(0, self.state.modules[i].clone())
                 } else { Action::Cancel },
                 Action::Back => Action::Cancel,
                 _ => Action::Noop,

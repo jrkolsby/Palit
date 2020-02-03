@@ -163,6 +163,10 @@ version = "0.2.62"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 
 [[package]]
+name = "libcommon"
+version = "0.1.0"
+
+[[package]]
 name = "lock_api"
 version = "0.3.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -298,6 +302,7 @@ dependencies = [
  "dsp-chain 0.13.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "hound 3.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
+ "libcommon 0.1.0",
  "object-pool 0.4.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "portaudio 0.6.4 (registry+https://github.com/rust-lang/crates.io-index)",
  "sample 0.10.0 (registry+https://github.com/rust-lang/crates.io-index)",
