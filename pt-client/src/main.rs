@@ -390,9 +390,13 @@ fn main() -> std::io::Result<()> {
                     add_layer(&mut layers, route_view, DEFAULT_ROUTE_ID);
                 },
                 Action::AddModule(0, name) => {
-                    // Get next sequential ID
-                    let mut new_id = layers.iter().fold(0, |max, (id,_)| 
-                        if *id > max { *id } else { max }) + 1;
+                    let mut new_id = match &name[..] {
+                        "keyboard" => 104,
+                        // Get next sequential ID
+                        _ => layers.iter().fold(0, |max, (id,_)| 
+                            if *id > max { *id } else { max }
+                        ) + 1
+                    };
                     ipc_sound.write(format!("ADD_MODULE:{}:{} ", new_id, name).as_bytes()).unwrap();
                     // Make empty element with tag and id
                     let mut new_el = Element::new(&name);
