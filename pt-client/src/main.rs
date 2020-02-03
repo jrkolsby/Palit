@@ -81,7 +81,7 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
         match action_raw.parse::<Action>() {
             Ok(Action::Noop) => (),
             Ok(a) => events.push(a),
-            Err(a) => eprintln!("Unknown action {}", a)
+            Err(a) => (),
         };
     };
 
@@ -437,10 +437,16 @@ fn main() -> std::io::Result<()> {
                 */
                 sound_action => {
                     ipc_sound.write(match sound_action {
+                        Action::Play => Action::PlayAt(target_id),
+                        Action::Stop => Action::StopAt(target_id),
+                        Action::RecordTrack(t_id, mode) => Action::RecordAt(target_id, t_id, mode),
+                        Action::SoloTrack(t_id, is_on) => Action::SoloAt(target_id, t_id, is_on),
+                        Action::MonitorTrack(t_id, is_on) => Action::MonitorAt(target_id, t_id, is_on),
+                        Action::MuteTrack(t_id, is_on) => Action::MuteAt(target_id, t_id, is_on),
                         Action::Scrub(_, dir) => Action::Scrub(target_id, dir),
                         Action::SetParam(_, key, val) => Action::SetParam(target_id, key, val),
                         Action::SetLoop(_, l_in, l_out) => Action::SetLoop(target_id, l_in, l_out),
-                        Action::LoopMode(_, on) => Action::LoopMode(target_id, on),
+                        Action::LoopMode(_, is_on) => Action::LoopMode(target_id, is_on),
                         Action::NoteOn(key, vel) => Action::NoteOnAt(target_id, key, vel),
                         Action::NoteOff(key) => Action::NoteOffAt(target_id, key),
                         a => a

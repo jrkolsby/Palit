@@ -71,10 +71,14 @@ pub enum Action {
     PlayAt(u16),
     StopAt(u16),
 
-    MonitorAt(u16, u16, bool),
-    RecordAt(u16, u16, u8),
-    MuteAt(u16, u16, bool),
+    SoloTrack(u16, bool), // Track ID, is_on
     SoloAt(u16, u16, bool),
+    MuteTrack(u16, bool),
+    MuteAt(u16, u16, bool),
+    MonitorTrack(u16, bool),
+    MonitorAt(u16, u16, bool),
+    RecordTrack(u16, u8), // Track ID, mode (0 off, 1 midi, 2 audio)
+    RecordAt(u16, u16, u8),
 
     AddNote(u16, Note),
     Scrub(u16, bool),
@@ -104,12 +108,6 @@ pub enum Action {
     NoteOn(Key, Volume),
     NoteOff(Key),
 
-    SoloTrack(u16, bool), // Track ID, is_on
-    MuteTrack(u16, bool),
-    MonitorTrack(u16, bool),
-    RecordTrack(u16, u8), // Track ID, mode (0 off, 1 midi, 2 audio)
-
-
     TryoutModule(u16),
     DelModule(u16),
     ShowProject(String, Vec<Module>),
@@ -134,8 +132,8 @@ impl ToString for Action {
                 format!("REGION_ADD:{}:{}:{}:{}:{}:{}:{}",
                     n_id, t_id, r_id, a_id, offset, duration, source
                 ),
-            Action::PlayAt(n_id) => format!("PLAY:{}", n_id),
-            Action::StopAt(n_id) => format!("STOP:{}", n_id),
+            Action::PlayAt(n_id) => format!("PLAY_AT:{}", n_id),
+            Action::StopAt(n_id) => format!("STOP_AT:{}", n_id),
             Action::Scrub(n_id, dir) => format!("SCRUB:{}:{}", n_id, 
                 if *dir { "1" } else { "0" }
             ),
@@ -189,18 +187,36 @@ impl FromStr for Action {
         let argv: Vec<&str> = raw.split(":").collect();
         Ok(match argv[0] {
             "EXIT" => Action::Exit,
-            "PLAY" => Action::PlayAt(argv[1].parse().unwrap()),
-            "STOP" => Action::StopAt(argv[1].parse().unwrap()),
+            "ROUTE" => Action::Route,
+            "?" => Action::Noop,
+            "1" => Action::Help,
+            "2" => Action::Back,
+            "PLAY" => Action::Play,
+            "STOP" => Action::Stop,
+            "M" => Action::SelectG,
+            "R" => Action::SelectY,
+            "V" => Action::SelectP,
+            "I" => Action::SelectB,
+            "SPC" => Action::SelectR,
+            "UP" => Action::Up,
+            "DN" => Action::Down,
+            "LT" => Action::Left,
+            "RT" => Action::Right,
+            "EXIT" => Action::Exit,
+            "DESELECT" => Action::Deselect,
+            "EFFECT" | "INSTRUMENT" => Action::Instrument,
+            "PLAY_AT" => Action::PlayAt(argv[1].parse().unwrap()),
+            "STOP_AT" => Action::StopAt(argv[1].parse().unwrap()),
             "RECORD_AT" => Action::RecordAt(argv[1].parse().unwrap(),
                                             argv[2].parse().unwrap(),
                                             argv[3].parse().unwrap()),
             "MUTE_AT" => Action::MuteAt(argv[1].parse().unwrap(),
                                         argv[2].parse().unwrap(),
                                         argv[3] == "1"),
-            "MUTE_AT" => Action::SoloAt(argv[1].parse().unwrap(),
+            "SOLO_AT" => Action::SoloAt(argv[1].parse().unwrap(),
                                         argv[2].parse().unwrap(),
                                         argv[3] == "1"),
-            "MUTE_AT" => Action::MonitorAt(argv[1].parse().unwrap(),
+            "MONITOR_AT" => Action::MonitorAt(argv[1].parse().unwrap(),
                                         argv[2].parse().unwrap(),
                                         argv[3] == "1"),
             "NOTE_ON" => Action::NoteOn(argv[1].parse().unwrap(), 
@@ -242,36 +258,11 @@ impl FromStr for Action {
             "ADD_MODULE" => Action::AddModule(argv[1].parse().unwrap(),
                                               argv[2].to_string()),
             "DEL_MODULE" => Action::DelModule(argv[1].parse().unwrap()),
-
-            "ROUTE" => Action::Route,
-            
             "TICK" => Action::Tick(argv[1].parse().unwrap()),
-            
-            "?" => Action::Noop,
-            
-            "1" => Action::Help,
-            "2" => Action::Back,
-            
-            "PLAY" => Action::Play,
-            "STOP" => Action::Stop,
-            
-            "M" => Action::SelectG,
-            "R" => Action::SelectY,
-            "V" => Action::SelectP,
-            "I" => Action::SelectB,
-            "SPC" => Action::SelectR,
-            
-            "OCTAVE" => if argv[1] == "1" {
-                Action::PitchUp
-            } else {
-                Action::PitchDown
-            },
-            
+            "OCTAVE" => if argv[1] == "1" { Action::PitchUp } else { Action::PitchDown },
             "NOTE_ON" => Action::NoteOn(argv[1].parse().unwrap(),
                                         argv[2].parse().unwrap()),
-            
             "NOTE_OFF" => Action::NoteOff(argv[1].parse().unwrap()),
-            
             "NOTE_ADD" => Action::AddNote(argv[1].clone().parse().unwrap(), Note {
                 id: argv[1].parse().unwrap(),
                 note: argv[2].parse().unwrap(),
@@ -279,7 +270,6 @@ impl FromStr for Action {
                 t_in: argv[4].parse().unwrap(),
                 t_out: argv[5].parse().unwrap(),
             }),
-            
             "REGION_ADD" => Action::AddRegion(argv[1].parse().unwrap(),
                                       argv[2].parse().unwrap(),
                                       argv[3].parse().unwrap(),
@@ -287,19 +277,6 @@ impl FromStr for Action {
                                       argv[5].parse().unwrap(),
                                       argv[6].parse().unwrap(),
                                       argv[7].to_string()),
-            
-            "UP" => Action::Up,
-            "DN" => Action::Down,
-            "LT" => Action::Left,
-            "RT" => Action::Right,
-            
-            "EXIT" => Action::Exit,
-            
-            "DESELECT" => Action::Deselect,
-            
-            "EFFECT" |
-            "INSTRUMENT" => Action::Instrument,
-            
             _ => return Err(raw.to_string())
         })
     }
