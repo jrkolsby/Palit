@@ -1,6 +1,8 @@
-use termion::{color, cursor};
 use std::io::Write;
-use crate::common::{Action, Screen};
+use termion::{color, cursor};
+use libcommon::Action;
+
+use crate::common::Screen;
 
 const ASSET: &str = r#"
   ┌─────────────────────────────────────────────────────┬──┐

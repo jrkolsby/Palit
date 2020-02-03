@@ -2,10 +2,11 @@ use std::io::{Write, Stdout};
 use std::collections::HashMap;
 use termion::cursor;
 use xmltree::Element;
+use libcommon::{Action, Anchor, Route};
 
 use crate::common::{MultiFocus, FocusType, ID, VOID_ID};
 use crate::common::{shift_focus, render_focii, focus_dispatch};
-use crate::common::{Screen, Action, Window, Anchor, Route};
+use crate::common::{Screen, Window};
 use crate::common::{write_fg, write_bg};
 use crate::views::{Layer};
 use crate::components::{button, popup};

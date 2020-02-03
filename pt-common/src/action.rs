@@ -1,4 +1,4 @@
-use crate::pcm::{Offset, Volume, Key, Note, Anchor, Module};
+use crate::pcm::{Offset, Volume, Key, Note, Anchor, Module, Param};
 use std::str::FromStr;
 
 /*
@@ -64,7 +64,7 @@ pub enum Action {
 
     NoteOnAt(u16, Key, Volume),
     NoteOffAt(u16, Key),
-    SetParam(u16, String, i32),
+    SetParam(u16, String, Param),
 
     // Direct actions
     GotoAt(u16, Offset),
@@ -85,7 +85,7 @@ pub enum Action {
     SetMeter(u16, u16),
 
     // Module ID, region ID, new track, new offset
-    MoveRegion(u16, u16, u16, u16), 
+    MoveRegion(u16, u16, u16, Offset), 
     // Module ID, Track ID, Region ID, offset, duration, wav_dest
     AddRegion(u16, u16, u16, u16, Offset, Offset, String),
 
@@ -97,9 +97,9 @@ pub enum Action {
     AddRoute(u16),
     DelRoute(u16),
     FadePatch(u16, f32),
-    PatchOut(u16, usize, u16),
-    PatchIn(u16, usize, u16),
-    DelPatch(u16, usize, bool),
+    PatchOut(u16, u16, u16),
+    PatchIn(u16, u16, u16),
+    DelPatch(u16, u16, bool),
 
     NoteOn(Key, Volume),
     NoteOff(Key),
@@ -123,7 +123,63 @@ pub enum Action {
 
 impl ToString for Action {
     fn to_string(&self) -> String {
-        "NOOP".to_string()
+        format!("{} ", match self {
+            Action::Tick(offset) => format!("TICK:{}", offset),
+            Action::NoteOn(key, vel) => format!("NOTE_ON:{}:{}", key, vel),
+            Action::NoteOff(key) => format!("NOTE_OFF:{}", key),
+            Action::AddNote(id, n) => format!("NOTE_ADD:{}:{}:{}:{}:{}",
+                id, n.note, n.vel, n.t_in, n.t_out
+            ),
+            Action::AddRegion(n_id, t_id, r_id, a_id, offset, duration, source) => 
+                format!("REGION_ADD:{}:{}:{}:{}:{}:{}:{}",
+                    n_id, t_id, r_id, a_id, offset, duration, source
+                ),
+            Action::PlayAt(n_id) => format!("PLAY:{}", n_id),
+            Action::StopAt(n_id) => format!("STOP:{}", n_id),
+            Action::Scrub(n_id, dir) => format!("SCRUB:{}:{}", n_id, 
+                if *dir { "1" } else { "0" }
+            ),
+            Action::MuteAt(n_id, t_id, is_on) => format!("MUTE_AT:{}:{}:{}", 
+                n_id, t_id, if *is_on { "1" } else { "0" }
+            ),
+            Action::RecordAt(n_id, t_id, is_on) => format!("RECORD_AT:{}:{}:{}", 
+                n_id, t_id, match *is_on {
+                    1 => "1",
+                    2 => "2",
+                    _ => "0",
+                }
+            ),
+            Action::SoloAt(n_id, t_id, is_on) => format!("SOLO_AT:{}:{}:{}", 
+                n_id, t_id, if *is_on { "1" } else { "0" }
+            ),
+            Action::MonitorAt(n_id, t_id, is_on) => format!("MONITOR_AT:{}:{}:{}", 
+                n_id, t_id, if *is_on { "1" } else { "0" }
+            ),
+            Action::NoteOnAt(n_id, key, vel) => format!("NOTE_ON_AT:{}:{}:{}", n_id, key, vel),
+            Action::NoteOffAt(n_id, key) => format!("NOTE_OFF_AT:{}:{}", n_id, key),
+            Action::PatchOut(module_id, anchor_id, route_id) => format!("PATCH_OUT:{}:{}:{}", 
+                module_id, anchor_id, route_id
+            ),
+            Action::PatchIn(module_id, anchor_id, route_id) => format!("PATCH_IN:{}:{}:{}", 
+                module_id, anchor_id, route_id
+            ),
+            Action::DelPatch(module_id, anchor_id, is_input) => format!("DEL_PATCH:{}:{}:{}", 
+                module_id, anchor_id, if *is_input {"1"} else {"2"}
+            ),
+            Action::DelRoute(route_id) => format!("DEL_ROUTE:{}", route_id),
+            Action::AddRoute(route_id) => format!("ADD_ROUTE:{}", route_id),
+            Action::SetParam(n_id, key, val) => format!("SET_PARAM:{}:{}:{}", n_id, key, val),
+            Action::SetMeter(beat, note) => format!("SET_METER:{}:{}", beat, note),
+            Action::SetTempo(tempo) => format!("SET_TEMPO:{}", tempo),
+            Action::SetLoop(n_id, l_in, l_out) => format!("SET_LOOP:{}:{}:{}", 
+                n_id, l_in, l_out
+            ),
+            Action::LoopMode(n_id, is_on) => format!("LOOP_MODE:{}:{}", 
+                n_id, if *is_on { "1" } else { "0" }
+            ),
+            Action::GotoAt(n_id, playhead) => format!("GOTO:{}:{}", n_id, playhead),
+            _ => "NOOP".to_string()
+        })
     }
 }
 
@@ -186,6 +242,64 @@ impl FromStr for Action {
             "ADD_MODULE" => Action::AddModule(argv[1].parse().unwrap(),
                                               argv[2].to_string()),
             "DEL_MODULE" => Action::DelModule(argv[1].parse().unwrap()),
+
+            "ROUTE" => Action::Route,
+            
+            "TICK" => Action::Tick(argv[1].parse().unwrap()),
+            
+            "?" => Action::Noop,
+            
+            "1" => Action::Help,
+            "2" => Action::Back,
+            
+            "PLAY" => Action::Play,
+            "STOP" => Action::Stop,
+            
+            "M" => Action::SelectG,
+            "R" => Action::SelectY,
+            "V" => Action::SelectP,
+            "I" => Action::SelectB,
+            "SPC" => Action::SelectR,
+            
+            "OCTAVE" => if argv[1] == "1" {
+                Action::PitchUp
+            } else {
+                Action::PitchDown
+            },
+            
+            "NOTE_ON" => Action::NoteOn(argv[1].parse().unwrap(),
+                                        argv[2].parse().unwrap()),
+            
+            "NOTE_OFF" => Action::NoteOff(argv[1].parse().unwrap()),
+            
+            "NOTE_ADD" => Action::AddNote(argv[1].clone().parse().unwrap(), Note {
+                id: argv[1].parse().unwrap(),
+                note: argv[2].parse().unwrap(),
+                vel: argv[3].parse().unwrap(),
+                t_in: argv[4].parse().unwrap(),
+                t_out: argv[5].parse().unwrap(),
+            }),
+            
+            "REGION_ADD" => Action::AddRegion(argv[1].parse().unwrap(),
+                                      argv[2].parse().unwrap(),
+                                      argv[3].parse().unwrap(),
+                                      argv[4].parse().unwrap(),
+                                      argv[5].parse().unwrap(),
+                                      argv[6].parse().unwrap(),
+                                      argv[7].to_string()),
+            
+            "UP" => Action::Up,
+            "DN" => Action::Down,
+            "LT" => Action::Left,
+            "RT" => Action::Right,
+            
+            "EXIT" => Action::Exit,
+            
+            "DESELECT" => Action::Deselect,
+            
+            "EFFECT" |
+            "INSTRUMENT" => Action::Instrument,
+            
             _ => return Err(raw.to_string())
         })
     }

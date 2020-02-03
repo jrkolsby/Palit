@@ -1,9 +1,9 @@
 use std::io::{self, Write, Stdout, BufReader};
 use std::io::prelude::*;
-
 use termion::{color, cursor};
+use libcommon::{Action, Anchor};
 
-use crate::common::{Screen, Action, Anchor};
+use crate::common::Screen;
 use crate::common::{get_files, PALIT_PROJECTS};
 use crate::views::Layer;
 use crate::components::{logo, button, bigtext};

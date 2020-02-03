@@ -1,25 +1,6 @@
-use std::io::{Stdout};
+use libcommon::Action;
 
-use termion::raw::{RawTerminal};
-
-use crate::common::{Screen, Action};
-
-// Every module has an associated view which can render its state
-/*
-pub enum View {
-    Modal,
-    Patch,
-    Timeline,
-    Keyboard,
-    Device,
-    Hammond,
-    Instrument,
-    Effect,
-    Arpeggio,
-}
-
-pub type ID = (View, usize);
-*/
+use crate::common::{Screen};
 
 pub trait Layer {
     fn render(&self, out: &mut Screen, target: bool);

@@ -227,7 +227,7 @@ fn main() -> Result<(), Box<error::Error>> {
                 if let Some(route) = routes.get(&r_id) {
                     match &patch[*operators.get(&n_id).unwrap()] {
                         Module::Operator(_, anchors, _) => {
-                            let input = anchors[a_id];
+                            let input = anchors[a_id as usize];
                             if let Err(e) = &patch.add_connection(*route, input) {
                                 println!("CYCLE");
                             }
@@ -240,7 +240,7 @@ fn main() -> Result<(), Box<error::Error>> {
                 if let Some(route) = routes.get(&r_id) {
                     match &patch[*operators.get(&n_id).unwrap()] {
                         Module::Operator(_, anchors, _) => {
-                            let output = anchors[a_id];
+                            let output = anchors[a_id as usize];
                             if let Err(e) = &patch.add_connection(output, *route) {
                                 println!("CYCLE");
                             }
@@ -252,7 +252,7 @@ fn main() -> Result<(), Box<error::Error>> {
             Action::DelPatch(n_id, a_id, input) => {
                 match &patch[*operators.get(&n_id).unwrap()] {
                     Module::Operator(_, anchors, _) => {
-                        let id = anchors[a_id].clone();
+                        let id = anchors[a_id as usize].clone();
                         for (_, route) in routes.iter() {
                             let edge = if input {
                                 patch.find_connection(*route, id)

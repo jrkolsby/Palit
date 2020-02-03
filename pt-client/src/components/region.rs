@@ -1,11 +1,12 @@
 use std::io::Write;
 use termion::cursor;
-use crate::common::{Screen, MultiFocus, FocusType, Action, ID, Window};
+use libcommon::Action;
+
+use crate::common::{Screen, MultiFocus, FocusType, ID, Window};
 use crate::common::{char_offset, offset_char};
+use crate::common::{REGIONS_X, TIMELINE_Y};
 use crate::components::{waveform};
 use crate::views::TimelineState;
-
-use crate::common::{REGIONS_X, TIMELINE_Y};
 
 pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
@@ -113,20 +114,12 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
             Action::Right => { 
                 let r = state.regions.get(&id.1).unwrap();
                 let d_offset = offset_char(1, state.sample_rate, state.tempo, state.zoom);
-                Action::MoveRegion(id.1, r.track, r.offset+d_offset) 
+                Action::MoveRegion(0, id.1, r.track, r.offset + d_offset) 
             },
             Action::Left => { 
                 let r = state.regions.get(&id.1).unwrap();
                 let d_offset = offset_char(1, state.sample_rate, state.tempo, state.zoom);
-                Action::MoveRegion(id.1, r.track, r.offset-d_offset) 
-            },
-            Action::Up => { 
-                let r = state.regions.get(&id.1).unwrap();
-                Action::MoveRegion(id.1, r.track-1, r.offset) 
-            },
-            Action::Down => { 
-                let r = state.regions.get(&id.1).unwrap();
-                Action::MoveRegion(id.1, r.track+1, r.offset) 
+                Action::MoveRegion(0, id.1, r.track, r.offset - d_offset) 
             },
             _ => Action::Noop,
         },

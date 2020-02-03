@@ -1,6 +1,8 @@
-use termion::cursor;
 use std::io::Write;
-use crate::common::{Action, Screen};
+use termion::cursor;
+use libcommon::Action;
+
+use crate::common::Screen;
 
 const KEYBOARD: &str = r#"
 [][][][][][_________][][][][]

@@ -433,16 +433,11 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
         if let Some(client_a) = client_d {
             for a in client_a.iter() {
                 let message = match a {
-                    Action::Tick(offset) => Some(format!("TICK:{} ", offset)),
-                    Action::NoteOn(key, vel) => Some(format!("NOTE_ON:{}:{} ", key, vel)),
-                    Action::NoteOff(key) => Some(format!("NOTE_OFF:{} ", key)),
-                    Action::AddNote(id, n) => Some(format!("NOTE_ADD:{}:{}:{}:{}:{} ",
-                        id, n.note, n.vel, n.t_in, n.t_out
-                    )),
-                    Action::AddRegion(n_id, t_id, r_id, a_id, offset, duration, source) => 
-                        Some(format!("REGION_ADD:{}:{}:{}:{}:{}:{}:{} ",
-                            n_id, t_id, r_id, a_id, offset, duration, source
-                        )),
+                    Action::Tick(_) |
+                    Action::NoteOn(_,_) |
+                    Action::NoteOff(_) |
+                    Action::AddNote(_,_) |
+                    Action::AddRegion(_,_,_,_,_,_,_) => Some(a.to_string()),
                     _ => None
                 };
                 if let Some(text) = message {

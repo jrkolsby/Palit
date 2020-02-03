@@ -1,9 +1,9 @@
 use std::io::{Write, Stdout};
-
 use termion::{color, cursor};
 use xmltree::Element;
+use libcommon::{Action, Anchor};
 
-use crate::common::{Screen, Action, Window, Anchor};
+use crate::common::{Screen, Window};
 use crate::views::{Layer};
 use crate::components::{popup, ivories};
 use crate::modules::param_map;

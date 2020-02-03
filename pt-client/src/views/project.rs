@@ -1,7 +1,8 @@
 use std::io::Write;
 use termion::cursor;
+use libcommon::{Action, Anchor, Module};
 
-use crate::common::{Screen, Action, Direction, FocusType, Window, Anchor, Module};
+use crate::common::{Screen, Direction, FocusType, Window};
 use crate::common::{MultiFocus, ID, focus_dispatch, render_focii};
 use crate::components::{popup};
 use crate::views::{Layer};
