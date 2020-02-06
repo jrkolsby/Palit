@@ -23,6 +23,7 @@ mod tape;
 mod chord;
 mod arpeggio;
 mod document;
+mod plugin;
 
 use crate::core::{event_loop, Module, Output, CHANNELS};
 use crate::document::{Document, read_document, param_map};
@@ -36,6 +37,9 @@ fn add_module(
     routes: &mut HashMap<u16, NodeIndex>, 
     operators: &mut HashMap<u16, NodeIndex>) {
         match &el.name[..] {
+            "plugin" => {
+                let store = plugin::read(el);
+            }
             "timeline" => {
                 let mut anchors: Vec<NodeIndex> = vec![];
                 // Mutate el by removing track elements until
