@@ -33,7 +33,7 @@ use crate::synth;
 use crate::tape;
 use crate::chord;
 use crate::arpeggio;
-use crate::faust;
+use crate::plugin;
 
 // SAMPLE FORMATS 
 pub type Output = f32; // PORTAUDIO
@@ -221,7 +221,7 @@ pub enum Module {
     Tape(tape::Store),
     Chord(chord::Store),
     Arpeggio(arpeggio::Store),
-    Plugin(faust::Store),
+    Plugin(plugin::Store),
 }
 
 impl Module {
@@ -399,6 +399,9 @@ impl Node<[Output; CHANNELS]> for Module {
                     arpeggio::compute(store); a
                 });
             },
+            Module::Plugin(ref mut store) => {
+                plugin::compute_buf(store, &buffer);
+            }
             _ => ()
         }
     }

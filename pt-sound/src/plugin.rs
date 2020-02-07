@@ -1,4 +1,5 @@
 use std::ffi::{OsStr};
+use libc::c_int;
 use libcommon::{Action, dsp, UI};
 use libloading::{Library, Symbol};
 use libloading::os::unix::Symbol as RawSymbol;
@@ -7,14 +8,17 @@ use crate::core::{Output, CHANNELS, FRAMES};
 // So we are going to build a struct which implements the UI trait
 // ... and load an object from our compiled library which will
 // ... implement dsp. We can store a these functions in our store
-// ... which will act as a virtual table
+// ... which will act as a virtual table. 
+// A single instance of this struct will be able to process one set
+// ... of inputs and outputs and so it will be known as a Voice
 
 // This opaque structure fills in for the mydsp class
-#[repr(C)] pub struct Plugin { _private: [u8; 0] }
-type New = extern "C" fn() -> *mut Plugin;
-type Init = extern "C" fn(*mut Plugin, i32) -> ();
-type Compute = unsafe extern "C" fn(*mut Plugin, i32, *const *const Output, *mut *mut Output) -> ();
-type BuildUI = extern "C" fn(*mut Plugin, *mut PluginUI) -> ();
+#[repr(C)] pub struct Voice { _private: [u8; 0] }
+type New = extern "C" fn() -> *mut Voice;
+type Init = extern "C" fn(*mut Voice, c_int) -> ();
+type Compute = unsafe extern "C" fn(*mut Voice, c_int, *const *const Output, *mut *mut Output) -> ();
+type BuildUI = extern "C" fn(*mut Voice, *mut PluginUI) -> ();
+type NumIO = extern "C" fn(*mut Voice) -> c_int;
 
 struct PluginUI {
     param_declarations: Vec<Action>,
@@ -79,16 +83,16 @@ struct PluginVTable {
     init: RawSymbol<Init>,
     compute: RawSymbol<Compute>,
     buildUserInterface: RawSymbol<BuildUI>,
+    getNumInputs: RawSymbol<NumIO>,
+    getNumOutputs: RawSymbol<NumIO>,
     /* DO WE NEED THSE FUNCTIONS?
-    instanceInit: Symbol<extern fn(&Plugin, i32) -> ()>,
-    getSampleRate: Symbol<extern fn(&Plugin) -> i32>;
-    getNumInputs: Symbol<extern fn(&Plugin) -> i32>,
-    getNumOutputs: Symbol<extern fn(&Plugin) -> i32>,
-    getInputRate: Symbol<extern fn(&Plugin, i32) -> i32>,
-    getOutputRate: Symbol<extern fn(&Plugin, i32) -> i32>,
-    instanceResetUserInterface: Symbol<extern fn(&Plugin) -> ()>,
-    instanceClear: Symbol<extern fn(&Plugin) -> ()>,
-    instanceConstants: Symbol<extern fn(&Plugin, i32) -> ()>,
+    instanceInit: Symbol<extern fn(&Voice, i32) -> ()>,
+    getSampleRate: Symbol<extern fn(&Voice) -> i32>;
+    getInputRate: Symbol<extern fn(&Voice, i32) -> i32>,
+    getOutputRate: Symbol<extern fn(&Voice, i32) -> i32>,
+    instanceResetUserInterface: Symbol<extern fn(&Voice) -> ()>,
+    instanceClear: Symbol<extern fn(&Voice) -> ()>,
+    instanceConstants: Symbol<extern fn(&Voice, i32) -> ()>,
     */
 }
 
@@ -99,11 +103,15 @@ impl PluginVTable {
             let init: Symbol<Init> = lib.get(b"initmydsp").unwrap();
             let compute: Symbol<Compute> = lib.get(b"computemydsp").unwrap();
             let buildUserInterface: Symbol<BuildUI> = lib.get(b"buildUserInterfacemydsp").unwrap();
+            let getNumInputs: Symbol<NumIO> = lib.get(b"getNumInputs").unwrap();
+            let getNumOutputs: Symbol<NumIO> = lib.get(b"getNumOutputs").unwrap();
             PluginVTable {
                 new: new.into_raw(),
                 init: init.into_raw(),
                 compute: compute.into_raw(),
                 buildUserInterface: buildUserInterface.into_raw(),
+                getNumInputs: getNumInputs.into_raw(),
+                getNumOutputs: getNumOutputs.into_raw(),
             }
         }
     }
@@ -112,18 +120,17 @@ impl PluginVTable {
 impl dsp<Output> for Store {
     fn init(&mut self, samplingFreq: i32) {
         unsafe {
-            (self.vtable.init)(self.object, samplingFreq)
+            (self.vtable.init)(self.voices[0], samplingFreq)
         }
     }
 
     fn compute(&mut self, count: i32, inputs: &[&[Output]], outputs: &mut[&mut[Output]]) {
         unsafe {
-            (self.vtable.compute)(self.object, count, inputs.as_ptr() as *const *const Output, outputs.as_mut_ptr() as *mut *mut Output)
+            (self.vtable.compute)(self.voices[0], count, inputs.as_ptr() as *const *const Output, outputs.as_mut_ptr() as *mut *mut Output)
         }
     }
 
     fn buildUserInterface(&mut self, ui_interface: &UI<f32>) {}
-
     fn getSampleRate(&mut self) -> i32 { 0 }
     fn getNumInputs(&mut self) -> i32 { 1 }
     fn getNumOutputs(&mut self) -> i32 { 1 }
@@ -139,16 +146,45 @@ impl dsp<Output> for Store {
 pub struct Store {
     ui: PluginUI,
     vtable: PluginVTable,
-    object: *mut Plugin,
+    voices: Vec<*mut Voice>,
+    outputs: Vec<Vec<Output>>,
 }
 
 pub fn init(lib_src: String) -> Store {
     let lib = Library::new(OsStr::new(&lib_src)).unwrap();
     let vtable = PluginVTable::new(&lib);
+    let voice0 = (vtable.new)();
+    let num_inputs = (vtable.getNumInputs)(voice0) as usize;
+    let num_outputs = (vtable.getNumOutputs)(voice0);
     Store {
         ui: PluginUI::new(),
-        object: (vtable.new)(),
+        voices: vec![voice0],
         vtable: vtable,
+        // Make sure we are not allocating this in tight loop (see below)
+        outputs: vec![vec![0.0; FRAMES as usize]; num_inputs]
+    }
+}
+
+pub fn compute_buf(store: &mut Store, buffer: &&mut [[Output; CHANNELS]]) {
+    // We need to prepare our channels as two seperate arrays
+    // ... instead of using frames. This is just what faust wants *shrug*
+    for (i, frame) in buffer.iter().enumerate() {
+        for (j, sample) in frame.iter().enumerate() {
+            if j < store.outputs.len() {
+                store.outputs[j][i] = *sample;
+            }
+        }
+    }
+    let mut out_mut_ptr: Vec<*mut Output> = store.outputs.iter_mut().map(|out| out.as_mut_ptr()).collect();
+    let out_const_ptr: Vec<*const Output> = store.outputs.iter().map(|out| out.as_ptr()).collect();
+
+    unsafe {
+        (store.vtable.compute)(
+            store.voices[0], 
+            FRAMES as i32, 
+            out_const_ptr.as_ptr(), 
+            out_mut_ptr.as_mut_ptr()
+        );
     }
 }
 
