@@ -104,6 +104,15 @@ fn add_module(
                 patch.add_connection(operator, octave);
                 operators.insert(id, operator);
             },
+            "plugin" => {
+                let store = plugin::init(el.attributes.get("src").unwrap().to_string());
+                let plugin = patch.add_node(Module::Plugin(store));
+                let operator = patch.add_node(Module::Operator(vec![], 
+                    vec![plugin, plugin], id.clone()
+                ));
+                patch.add_connection(operator, plugin);
+                operators.insert(id, operator);
+            },
             // This module should always be last in doc.modules or else 
             // operators and routes maps won't be completely filled
             "patch" => {

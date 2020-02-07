@@ -103,8 +103,8 @@ impl PluginVTable {
             let init: Symbol<Init> = lib.get(b"initmydsp").unwrap();
             let compute: Symbol<Compute> = lib.get(b"computemydsp").unwrap();
             let buildUserInterface: Symbol<BuildUI> = lib.get(b"buildUserInterfacemydsp").unwrap();
-            let getNumInputs: Symbol<NumIO> = lib.get(b"getNumInputs").unwrap();
-            let getNumOutputs: Symbol<NumIO> = lib.get(b"getNumOutputs").unwrap();
+            let getNumInputs: Symbol<NumIO> = lib.get(b"getNumInputsmydsp").unwrap();
+            let getNumOutputs: Symbol<NumIO> = lib.get(b"getNumOutputsmydsp").unwrap();
             PluginVTable {
                 new: new.into_raw(),
                 init: init.into_raw(),
