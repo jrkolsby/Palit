@@ -12,3 +12,5 @@ pub use pcm::Key;
 pub use pcm::Param;
 
 pub mod faust;
+pub use faust::UI;
+pub use faust::dsp;

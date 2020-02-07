@@ -33,6 +33,7 @@ use crate::synth;
 use crate::tape;
 use crate::chord;
 use crate::arpeggio;
+use crate::faust;
 
 // SAMPLE FORMATS 
 pub type Output = f32; // PORTAUDIO
@@ -42,8 +43,8 @@ pub const CHANNELS: usize = 2;
 pub const SAMPLE_HZ: f64 = 48_000.0;
 pub const BUF_SIZE: usize = 24_000;
 pub const BIT_RATE: usize = 16;
+pub const FRAMES: u32 = 128;
 
-const FRAMES: u32 = 128;
 const DEBUG_KEY_PERIOD: u16 = 24100;
 const SCRUB_MAX: f64 = 4.0;
 const SCRUB_ACC: f64 = 0.01;
@@ -220,6 +221,7 @@ pub enum Module {
     Tape(tape::Store),
     Chord(chord::Store),
     Arpeggio(arpeggio::Store),
+    Plugin(faust::Store),
 }
 
 impl Module {

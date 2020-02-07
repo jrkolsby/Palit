@@ -23,6 +23,7 @@ mod tape;
 mod chord;
 mod arpeggio;
 mod document;
+mod faust;
 
 use crate::core::{event_loop, Module, Output, CHANNELS};
 use crate::document::{Document, read_document, param_map};
