@@ -1,5 +1,4 @@
 *.cpp
-*.h
 /target
 dsp-faust
 target

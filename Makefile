@@ -21,3 +21,18 @@ tick:
 .PHONY : sound
 sound:
 	cd pt-sound && cargo run --release NVidia 48000 128
+
+.PHONY : modTest
+modTest:
+	gcc -c -fpic _plugin.c;
+	gcc -shared -o testPlugin.so _plugin.o;
+
+.PHONY : plugin
+plugin: 
+	faust -lang c -cn mydsp ./storage/modules/$(name).dsp > ./_plugin_part.c;
+	cat ./pt-common/src/faust.h ./_plugin_part.c > _plugin.c;
+	gcc -c -fpic _plugin.c;
+	gcc -shared -o $(name).so _plugin.o;
+	rm ./_plugin_part.c;
+	rm ./_plugin.c;
+	rm ./_plugin.o;
