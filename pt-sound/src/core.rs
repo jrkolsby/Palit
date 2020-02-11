@@ -291,6 +291,7 @@ impl Module {
             Module::Chord(ref mut store) => chord::dispatch_requested(store),
             Module::Arpeggio(ref mut store) => arpeggio::dispatch_requested(store),
             Module::Synth(ref mut store) => synth::dispatch_requested(store),
+            Module::Plugin(ref mut store) => plugin::dispatch_requested(store),
             Module::Master => (None, None, None), // TODO: give master levels to client
             _ => (None, None, None)
         }
@@ -436,13 +437,22 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
             }
         }
         if let Some(client_a) = client_d {
+            let mut outs = patch.outputs(n);
+            let mut op_id = 0;
+            'search: while let Some(oid) = outs.next_node(&patch) {
+                match patch[oid] {
+                    Module::Operator(_, _, id) => { op_id = id; break 'search; },
+                    _ => {}
+                }
+            }
             for a in client_a.iter() {
                 let message = match a {
                     Action::Tick(_) |
                     Action::NoteOn(_,_) |
                     Action::NoteOff(_) |
                     Action::AddNote(_,_) |
-                    Action::AddRegion(_,_,_,_,_,_,_) => Some(a.to_string()),
+                    Action::AddRegion(_,_,_,_,_,_,_) |
+                    Action::AddParam(_,_,_,_,_) => Some(a.to_string()),
                     _ => None
                 };
                 if let Some(text) = message {

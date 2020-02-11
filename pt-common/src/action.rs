@@ -65,6 +65,7 @@ pub enum Action {
     NoteOnAt(u16, Key, Volume),
     NoteOffAt(u16, Key),
     SetParam(u16, String, Param),
+    AddParam(String, f32, f32, f32, f32),
 
     // Direct actions
     GotoAt(u16, Offset),
@@ -167,6 +168,9 @@ impl ToString for Action {
             Action::DelRoute(route_id) => format!("DEL_ROUTE:{}", route_id),
             Action::AddRoute(route_id) => format!("ADD_ROUTE:{}", route_id),
             Action::SetParam(n_id, key, val) => format!("SET_PARAM:{}:{}:{}", n_id, key, val),
+            Action::AddParam(key, init, min, max, step) => format!("ADD_PARAM:{}:{}:{}:{}:{}",
+                key, init, min, max, step
+            ),
             Action::SetMeter(beat, note) => format!("SET_METER:{}:{}", beat, note),
             Action::SetTempo(tempo) => format!("SET_TEMPO:{}", tempo),
             Action::SetLoop(n_id, l_in, l_out) => format!("SET_LOOP:{}:{}:{}", 
@@ -245,6 +249,11 @@ impl FromStr for Action {
             "SET_PARAM" => Action::SetParam(argv[1].parse().unwrap(),
                                             argv[2].to_string(),
                                             argv[3].parse().unwrap()),
+            "ADD_PARAM" => Action::AddParam(argv[1].to_string(),
+                                            argv[2].parse().unwrap(),
+                                            argv[3].parse().unwrap(),
+                                            argv[4].parse().unwrap(),
+                                            argv[5].parse().unwrap()),
             "GOTO" => Action::GotoAt(argv[1].parse().unwrap(),
                                      argv[2].parse().unwrap()),
             "SET_TEMPO" => Action::SetTempo(argv[1].parse().unwrap()),
@@ -259,10 +268,6 @@ impl FromStr for Action {
                                               argv[2].to_string()),
             "DEL_MODULE" => Action::DelModule(argv[1].parse().unwrap()),
             "TICK" => Action::Tick(argv[1].parse().unwrap()),
-            "OCTAVE" => if argv[1] == "1" { Action::PitchUp } else { Action::PitchDown },
-            "NOTE_ON" => Action::NoteOn(argv[1].parse().unwrap(),
-                                        argv[2].parse().unwrap()),
-            "NOTE_OFF" => Action::NoteOff(argv[1].parse().unwrap()),
             "NOTE_ADD" => Action::AddNote(argv[1].clone().parse().unwrap(), Note {
                 id: argv[1].parse().unwrap(),
                 note: argv[2].parse().unwrap(),

@@ -230,6 +230,7 @@ fn main() -> std::io::Result<()> {
                     Action::Noop
                 }
                 a => {
+                    eprintln!("{:?}", a);
                     let (_, target) = layers.get_mut(target_index).unwrap();
                     target.dispatch(a)
                 }

@@ -8,35 +8,35 @@ use crate::views::{Layer};
 use crate::components::{popup, ivories};
 use crate::modules::param_map;
 
-pub struct Arpeggio {
+pub struct Plugin {
     x: u16,
     y: u16,
     width: u16,
     height: u16,
-    state: ArpeggioState,
-    history: Vec<ArpeggioState>,
+    state: PluginState,
+    history: Vec<PluginState>,
 }
 
 #[derive(Clone, Debug)]
-pub struct ArpeggioState {
+pub struct PluginState {
     length: u32,
 }
 
-fn reduce(state: ArpeggioState, action: Action) -> ArpeggioState {
-    ArpeggioState {
+fn reduce(state: PluginState, action: Action) -> PluginState {
+    PluginState {
         length: state.length
     }
 }
 
-impl Arpeggio {
+impl Plugin {
     pub fn new(x: u16, y: u16, width: u16, height: u16, doc: Element) -> Self {
         let (_, params) = param_map(doc);
         // Initialize State
-        let initial_state: ArpeggioState = ArpeggioState {
+        let initial_state: PluginState = PluginState {
             length: *params.get("length").unwrap_or(&4) as u32
         };
 
-        Arpeggio {
+        Plugin {
             x: x,
             y: y,
             width: width,
@@ -47,7 +47,7 @@ impl Arpeggio {
     }
 }
 
-impl Layer for Arpeggio {
+impl Layer for Plugin {
     fn render(&self, out: &mut Screen, target: bool) {
         let win = Window {
             x: self.x,
@@ -56,7 +56,7 @@ impl Layer for Arpeggio {
             h: self.height
         };
 
-        write!(out, "{}ARPEGGIO {}", cursor::Goto(win.x, win.y), self.state.length);
+        write!(out, "{}FAUST PLUGIN {}", cursor::Goto(win.x, win.y), self.state.length);
     }
     fn dispatch(&mut self, action: Action) -> Action {
         self.state = reduce(self.state.clone(), action.clone());

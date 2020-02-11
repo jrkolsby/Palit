@@ -28,8 +28,8 @@ pub struct KeyboardState {
 fn reduce(state: KeyboardState, action: Action) -> KeyboardState {
     KeyboardState {
         octave: match action {
-            Action::PitchUp => state.octave + 1,
-            Action::PitchDown => state.octave - 1,
+            Action::Octave(true) => state.octave + 1,
+            Action::Octave(false) => state.octave - 1,
             _ => state.octave
         },
         keys_active: match action {

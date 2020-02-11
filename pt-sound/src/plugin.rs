@@ -1,6 +1,5 @@
-#![crate_type = "cdylib"]
-
 use std::ffi::{OsStr, CStr};
+use std::collections::HashMap;
 use libc::{c_int, c_char, c_float};
 use libcommon::{Action};
 use libloading::{Library, Symbol};
@@ -26,96 +25,121 @@ type UIAddButton = extern "C" fn (*mut PluginUI, *const c_char, *mut c_float);
 type UIAddSlider = extern "C" fn (*mut PluginUI, 
     *const c_char,    // label
     *mut c_float,     // zone (mutable value)
-    *const c_float,   // init
-    *const c_float,   // min
-    *const c_float,   // max
-    *const c_float);  // step
+    c_float,   // init
+    c_float,   // min
+    c_float,   // max
+    c_float);  // step
 type UIAddBargraph = extern "C" fn (*mut PluginUI, 
     *const c_char, 
     *mut c_float, 
-    *const c_float,   // min
-    *const c_float);  // max
+    c_float,   // min
+    c_float);  // max
 type UIAddSoundFile = extern "C" fn (*mut PluginUI, *const c_char, *const c_char, *const *const SoundFile);
 type UIDeclare = extern "C" fn (*mut PluginUI, *mut c_float, *const c_char, *const c_char);
 
 extern "C" fn openTabBox(ui: *mut PluginUI, label: *const c_char) { 
-    eprintln!("openHorizontalBox {:?}", label);
+    //eprintln!("openHorizontalBox {:?}", label);
 }
 extern "C" fn openHorizontalBox(ui: *mut PluginUI, label: *const c_char) { 
-    eprintln!("openHorizontalBox {:?}", label);
+    //eprintln!("openHorizontalBox {:?}", label);
 }
 extern "C" fn openVerticalBox(ui: *mut PluginUI, label: *const c_char) { 
-    eprintln!("openVerticalBox {:?}", label);
+    //eprintln!("openVerticalBox {:?}", label);
 }
 extern "C" fn closeBox(ui: *mut PluginUI) { 
-    eprintln!("closeBox");
+    //eprintln!("closeBox");
 }
 extern "C" fn addButton(ui: *mut PluginUI, label: *const c_char, param: *mut c_float) { 
-    eprintln!("addButton {:?}", label);
+    //eprintln!("addButton {:?}", label);
 }
 extern "C" fn addCheckButton(ui: *mut PluginUI, label: *const c_char, param: *mut c_float) { 
-    eprintln!("addCheckButton {:?}", label);
+    //eprintln!("addCheckButton {:?}", label);
 }
 extern "C" fn addVerticalSlider(ui: *mut PluginUI, 
         label: *const c_char,
         param: *mut c_float,
-        init: *const c_float,
-        min: *const c_float,
-        max: *const c_float,
-        step: *const c_float) { 
-    eprintln!("addVerticalSlider {:?}", label);
+        init: c_float,
+        min: c_float,
+        max: c_float,
+        step: c_float) { 
+    unsafe {
+        let label_str = CStr::from_ptr(label).to_str().unwrap();
+        let mut params = &mut (*ui).params;
+        let mut declarations = &mut (*ui).declarations;
+        params.insert(label_str.to_string(), param);
+        declarations.push(Action::AddParam(
+            label_str.to_string(),
+            init as f32,
+            min as f32,
+            max as f32,
+            step as f32,
+        ));
+    }
 }
 extern "C" fn addHorizontalSlider(ui: *mut PluginUI,
         label: *const c_char,
         param: *mut c_float,
-        init: *const c_float,
-        min: *const c_float,
-        max: *const c_float,
-        step: *const c_float) { 
-    eprintln!("addHorizontalSlider {:?}", label);
+        init: c_float,
+        min: c_float,
+        max: c_float,
+        step: c_float) { 
+    unsafe {
+        let label_str = CStr::from_ptr(label).to_str().unwrap();
+        let mut params = &mut (*ui).params;
+        let mut declarations = &mut (*ui).declarations;
+        params.insert(label_str.to_string(), param);
+        declarations.push(Action::AddParam(
+            label_str.to_string(),
+            init as f32,
+            min as f32,
+            max as f32,
+            step as f32,
+        ));
+    }
 }
 extern "C" fn addNumEntry(ui: *mut PluginUI,
         label: *const c_char,
         param: *mut c_float,
-        init: *const c_float,
-        min: *const c_float,
-        max: *const c_float,
-        step: *const c_float) { 
-    eprintln!("addNumEntry {:?}", label);
+        init: c_float,
+        min: c_float,
+        max: c_float,
+        step: c_float) { 
+    //eprintln!("addNumEntry {:?}", label);
 }
 extern "C" fn addHorizontalBargraph(ui: *mut PluginUI,
         label: *const c_char,
         param: *mut c_float,
-        min: *const c_float,
-        max: *const c_float) { 
-    eprintln!("addHorizontalBargraph {:?}", label);
+        min: c_float,
+        max: c_float) { 
+    //eprintln!("addHorizontalBargraph {:?}", label);
 }
 extern "C" fn addVerticalBargraph(ui: *mut PluginUI,
         label: *const c_char,
         param: *mut c_float,
-        min: *const c_float,
-        max: *const c_float) {
-    eprintln!("addVerticalBargraph {:?}", label);
+        min: c_float,
+        max: c_float) {
+    //eprintln!("addVerticalBargraph {:?}", label);
 }
 extern "C" fn addSoundfile(ui: *mut PluginUI,
         foo: *const c_char, 
         bar: *const c_char,
         sf: *const *const SoundFile) { 
-    eprintln!("addSoundFile");
+    //eprintln!("addSoundFile");
 }
 extern "C" fn declare(ui: *mut PluginUI,
         param: *mut c_float,
         key: *const c_char,
         val: *const c_char) { 
-    eprintln!("declare {:?} {:?}", key, val);
+    //eprintln!("declare {:?} {:?}", key, val);
 }
 
 // These structs contain no data and stand in for void*
 #[repr(C)] pub struct Voice { _private: [u8; 0] }
 #[repr(C)] pub struct SoundFile { _private: [u8; 0] }
 #[repr(C)] pub struct PluginUI { 
-    name: String,
-    _private: [u8; 0] 
+    params: HashMap<String, *mut c_float>,
+    declarations: Vec<Action>,
+    _private: [u8; 0],
 }
 
 // Plugin will access properties and functions from this struct
@@ -138,8 +162,12 @@ pub struct UIGlue {
 }
 
 impl PluginUI {
-    fn new(name: String) -> Self {
-        PluginUI { name, _private: [] }
+    fn new() -> Self {
+        PluginUI { 
+            params: HashMap::new(), 
+            declarations: vec![],
+            _private: [] 
+        }
     }
 }
 
@@ -183,6 +211,7 @@ impl PluginVTable {
 }
 
 pub struct Store {
+    lib: Library,
     ui: Box<PluginUI>,
     uiGlue: Box<UIGlue>,
     vtable: PluginVTable,
@@ -193,7 +222,7 @@ pub struct Store {
 pub fn init(lib_src: String) -> Store {
     let lib = Library::new(OsStr::new(&lib_src)).unwrap();
     let vtable = PluginVTable::new(&lib);
-    let mut ui = Box::new(PluginUI::new("Test".to_string()));
+    let mut ui = Box::new(PluginUI::new());
     let mut uiGlue = Box::new(UIGlue { 
         uiInterface: &mut *ui,
         openTabBox,
@@ -214,16 +243,15 @@ pub fn init(lib_src: String) -> Store {
     // Initialize voice
     let voice0 = (vtable.new)();
     (vtable.init)(voice0, 48000);
-    eprintln!("did this work 1?");
 
     let num_inputs = (vtable.getNumInputs)(voice0) as usize;
     let num_outputs = (vtable.getNumOutputs)(voice0) as usize;
     eprintln!("{} INPUTS {} OUTPUTS", num_inputs, num_outputs);
 
     (vtable.buildUserInterface)(voice0, &mut *uiGlue);
-    eprintln!("did this work 2?"); // NO!
 
     Store {
+        lib,
         ui,
         uiGlue,
         vtable,
@@ -251,7 +279,6 @@ pub fn compute_buf(store: &mut Store, buffer: &&mut [[Output; CHANNELS]]) {
         out.as_ptr()
     ).collect();
 
-    // SEG FAULTING!
     unsafe {
         (store.vtable.compute)(
             store.voices[0],
@@ -266,7 +293,15 @@ pub fn dispatch_requested(store: &mut Store) -> (
         Option<Vec<Action>>, // Output
         Option<Vec<Action>>, // Input
         Option<Vec<Action>>) { // Client 
-    let mut client_actions: Vec<Action> = vec![];
-    let mut output_actions: Vec<Action> = vec![];
-    (None, None, None)
+    let decls = unsafe {
+        &mut (*store.ui).declarations
+    };
+    let carry = if decls.len() > 0 {
+        eprintln!("SOME DECLS {:?}", decls);
+        Some(decls.clone())
+    } else {
+        None
+    };
+    decls.clear();
+    (None, None, carry)
 }
