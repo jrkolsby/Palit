@@ -445,18 +445,13 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
                     _ => {}
                 }
             }
-            for a in client_a.iter() {
-                let message = match a {
-                    Action::Tick(_) |
-                    Action::NoteOn(_,_) |
-                    Action::NoteOff(_) |
-                    Action::AddNote(_,_) |
-                    Action::AddRegion(_,_,_,_,_,_,_) |
-                    Action::AddParam(_,_,_,_,_) => Some(a.to_string()),
-                    _ => None
+            for action in client_a.iter() {
+                let filtered_direct = match action {
+                    Action::Noop => None,
+                    a => Some(Action::At(op_id, Box::new(a.to_owned()))),
                 };
-                if let Some(text) = message {
-                    ipc_client.write(text.as_bytes());
+                if let Some(a) = filtered_direct {
+                    ipc_client.write(a.to_string().as_bytes());
                 }
             }
         }

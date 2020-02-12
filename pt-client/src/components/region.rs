@@ -114,12 +114,12 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
             Action::Right => { 
                 let r = state.regions.get(&id.1).unwrap();
                 let d_offset = offset_char(1, state.sample_rate, state.tempo, state.zoom);
-                Action::MoveRegion(0, id.1, r.track, r.offset + d_offset) 
+                Action::MoveRegion(id.1, r.track, r.offset + d_offset) 
             },
             Action::Left => { 
                 let r = state.regions.get(&id.1).unwrap();
                 let d_offset = offset_char(1, state.sample_rate, state.tempo, state.zoom);
-                Action::MoveRegion(0, id.1, r.track, r.offset - d_offset) 
+                Action::MoveRegion(id.1, r.track, r.offset - d_offset) 
             },
             _ => Action::Noop,
         },

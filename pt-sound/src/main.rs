@@ -194,21 +194,9 @@ fn main() -> Result<(), Box<error::Error>> {
 
         eprintln!("ACTION {:?}", a);
         match a {
-            Action::LoopMode(n_id, _) |
-            Action::SetLoop(n_id, _, _) |
-            Action::Scrub(n_id, _) |
-            Action::GotoAt(n_id, _) |
-            Action::RecordAt(n_id, _, _) |
-            Action::MuteAt(n_id, _, _) |
-            Action::SoloAt(n_id, _, _) |
-            Action::MonitorAt(n_id, _, _) |
-            Action::NoteOnAt(n_id, _, _) | 
-            Action::NoteOffAt(n_id, _) |
-            Action::SetParam(n_id, _, _) |
-            Action::PlayAt(n_id) | 
-            Action::StopAt(n_id) => {
+            Action::At(n_id, action) => {
                 if let Some(id) = operators.get(&n_id) {
-                    patch[*id].dispatch(a)
+                    patch[*id].dispatch(*action)
                 }
             },
             Action::SetMeter(_, _) |
@@ -220,13 +208,6 @@ fn main() -> Result<(), Box<error::Error>> {
             Action::NoteOn(_,_) | Action::NoteOff(_) | Action::Octave(_) => {
                 if let Some(id) = operators.get(&104) {
                     patch[*id].dispatch(a)
-                }
-            },
-            Action::MoveRegion(m_id, r_id, track, offset) => {
-                if let Some(n_id) = operators.get(&m_id) {
-                    if let Some(node) = patch.node_mut(*n_id) {
-                        node.dispatch(a)
-                    }
                 }
             },
             Action::AddRoute(r_id) => {
