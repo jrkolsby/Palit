@@ -192,7 +192,6 @@ fn main() -> Result<(), Box<error::Error>> {
         // op_id Module Operator ID (Dispatches to a cluster of nodes)
         // m_id Module ID (Key of operators)
 
-        eprintln!("ACTION {:?}", a);
         match a {
             Action::At(n_id, action) => {
                 if let Some(id) = operators.get(&n_id) {

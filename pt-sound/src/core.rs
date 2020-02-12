@@ -437,9 +437,9 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
             }
         }
         if let Some(client_a) = client_d {
-            let mut outs = patch.outputs(n);
+            let mut ins = patch.inputs(n);
             let mut op_id = 0;
-            'search: while let Some(oid) = outs.next_node(&patch) {
+            'search: while let Some(oid) = ins.next_node(&patch) {
                 match patch[oid] {
                     Module::Operator(_, _, id) => { op_id = id; break 'search; },
                     _ => {}
@@ -469,7 +469,10 @@ fn ipc_dispatch<F: 'static>(
         match action {
             Action::Exit => { return Action::Exit; },
             // Pass any other action to root
-            _ => { root_dispatch(patch, action.clone()); }
+            a => { 
+                eprintln!("SOUND GETS {:?}", a);
+                root_dispatch(patch, a.clone()); 
+            }
         };
     }
     Action::Noop

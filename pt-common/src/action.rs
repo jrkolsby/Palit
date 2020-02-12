@@ -100,11 +100,10 @@ impl ToString for Action {
     fn to_string(&self) -> String {
         format!("{} ", match self {
             Action::At(n_id, action) => format!("{}@{}", n_id, action.to_string()),
-            Action::Tick(offset) => format!("TICK:{}", offset),
             Action::NoteOn(key, vel) => format!("NOTE_ON:{}:{}", key, vel),
             Action::NoteOff(key) => format!("NOTE_OFF:{}", key),
-            Action::AddNote(n) => format!("NOTE_ADD:{}:{}:{}:{}",
-                n.note, n.vel, n.t_in, n.t_out),
+            Action::AddNote(n) => format!("NOTE_ADD:{}:{}:{}:{}:{}",
+                n.id, n.note, n.vel, n.t_in, n.t_out),
             Action::AddRegion(t_id, r_id, a_id, offset, duration, source) => 
                 format!("REGION_ADD:{}:{}:{}:{}:{}:{}",
                     t_id, r_id, a_id, offset, duration, source),
@@ -142,6 +141,9 @@ impl ToString for Action {
                 if *is_on { "1" } else { "0" }
             ),
             Action::Goto(playhead) => format!("GOTO:{}", playhead),
+            Action::Tick(offset) => format!("TICK:{}", offset),
+            Action::Play => format!("PLAY"),
+            Action::Stop => format!("STOP"),
             _ => "NOOP".to_string()
         })
     }

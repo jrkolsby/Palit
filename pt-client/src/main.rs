@@ -228,9 +228,17 @@ fn main() -> std::io::Result<()> {
                         size.1 - (MARGIN_D1.1 * 2),
                     )), DEFAULT_MODULES_ID); 
                     Action::Noop
-                }
+                },
+                Action::At(n_id, action) => {
+                    let mut default = Action::Noop;
+                    for (id, layer) in layers.iter_mut() {
+                        if *id == n_id {
+                            default = layer.dispatch(*action.to_owned())
+                        }
+                    }
+                    default
+                },
                 a => {
-                    eprintln!("{:?}", a);
                     let (_, target) = layers.get_mut(target_index).unwrap();
                     target.dispatch(a)
                 }
@@ -440,10 +448,18 @@ fn main() -> std::io::Result<()> {
                     layers.push(Box::new(Error::new(message))) ;
                 }
                 */
-                sound_action => {
+                a @ Action::DelRoute(_) |
+                a @ Action::AddRoute(_) |
+                a @ Action::PatchIn(_, _, _) |
+                a @ Action::PatchOut(_, _, _) |
+                a @ Action::DelPatch(_, _, _) => {
+                    ipc_sound.write(a.to_string().as_bytes()).unwrap();
+                },
+                Action::Noop => {},
+                direct_action => {
                     ipc_sound.write(Action::At(
                         target_id, 
-                        Box::new(sound_action)
+                        Box::new(direct_action)
                     ).to_string().as_bytes()).unwrap();
                 }
             };	
