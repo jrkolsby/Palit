@@ -36,3 +36,6 @@ pub use modules::Modules;
 
 mod project;
 pub use project::Project;
+
+mod plugin;
+pub use plugin::Plugin;

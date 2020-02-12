@@ -297,7 +297,6 @@ pub fn dispatch_requested(store: &mut Store) -> (
         &mut (*store.ui).declarations
     };
     let carry = if decls.len() > 0 {
-        eprintln!("SOME DECLS {:?}", decls);
         Some(decls.clone())
     } else {
         None

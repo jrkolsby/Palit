@@ -35,7 +35,7 @@ fn reduce(state: PianoState, action: Action) -> PianoState {
             Action::NoteOff(note) => {
                 let mut new_keys = state.notes.clone();
                 new_keys.retain(|a| match a {
-                    Action::NoteOn(_note, _) => note == *_note,
+                    Action::NoteOn(_note, _) => note != *_note,
                     _ => false,
                 });
                 new_keys

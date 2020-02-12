@@ -33,6 +33,7 @@ use views::{Layer,
     Arpeggio,
     Modules,
     Project,
+    Plugin,
 };
 use modules::{read_document, Document};
 
@@ -125,6 +126,8 @@ fn add_module(
                 ), DEFAULT_ROUTE_ID);
             }
         },
+        "plugin" => add_layer(a,
+            Box::new(Plugin::new(1, 1, size.0, size.1, (el).to_owned())), id),
         name => { eprintln!("unimplemented module {:?}", name)}
     }
 }

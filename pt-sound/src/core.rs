@@ -470,7 +470,6 @@ fn ipc_dispatch<F: 'static>(
             Action::Exit => { return Action::Exit; },
             // Pass any other action to root
             a => { 
-                eprintln!("SOUND GETS {:?}", a);
                 root_dispatch(patch, a.clone()); 
             }
         };

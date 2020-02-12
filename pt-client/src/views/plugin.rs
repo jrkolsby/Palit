@@ -8,6 +8,15 @@ use crate::views::{Layer};
 use crate::components::{popup, ivories};
 use crate::modules::param_map;
 
+#[derive(Clone, Debug)]
+struct FaustParam {
+    label: String,
+    init: f32,
+    min: f32,
+    max: f32,
+    step: f32,
+}
+
 pub struct Plugin {
     x: u16,
     y: u16,
@@ -20,11 +29,13 @@ pub struct Plugin {
 #[derive(Clone, Debug)]
 pub struct PluginState {
     length: u32,
+    params: Vec<FaustParam>,
 }
 
 fn reduce(state: PluginState, action: Action) -> PluginState {
     PluginState {
-        length: state.length
+        length: state.length,
+        params: state.params.clone(),
     }
 }
 
@@ -33,7 +44,8 @@ impl Plugin {
         let (_, params) = param_map(doc);
         // Initialize State
         let initial_state: PluginState = PluginState {
-            length: *params.get("length").unwrap_or(&4) as u32
+            length: *params.get("length").unwrap_or(&4) as u32,
+            params: vec![],
         };
 
         Plugin {
