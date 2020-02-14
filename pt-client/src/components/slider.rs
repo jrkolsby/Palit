@@ -1,5 +1,6 @@
 use termion::cursor;
 use std::io::Write;
+use libcommon::Param;
 use crate::common::{Direction, Screen};
 
 pub fn render(out: &mut Screen, 

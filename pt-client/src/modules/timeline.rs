@@ -1,27 +1,27 @@
 use std::convert::TryInto;
 use std::collections::HashMap;
+use libcommon::{Param, param_map, mark_map};
 
 use xmltree::Element;
 
 use crate::views::TimelineState;
 use crate::views::Timeline;
-use crate::modules::{param_map, mark_map};
 use crate::common::{Region, Track, Asset};
 
 pub fn write(state: TimelineState) -> Element {
     Element::new("param")
 }
 
-pub fn read(doc: Element) -> TimelineState {
+pub fn read(mut doc: Element) -> TimelineState {
 
-    let (doc, params) = param_map(doc);
-    let (mut doc, marks) = mark_map(doc);
+    let (mut doc, params) = param_map(&mut doc);
+    let (mut doc, marks) = mark_map(&mut doc);
 
     let mut state = TimelineState {
 
-        tempo: *params.get("bpm").unwrap_or(&127) as u16,
-        meter_beat: *params.get("meter_beat").unwrap_or(&4) as u16,
-        meter_note: *params.get("meter_note").unwrap_or(&4) as u16,
+        tempo: *params.get("bpm").unwrap_or(&127.0) as u16,
+        meter_beat: *params.get("meter_beat").unwrap_or(&4.0) as u16,
+        meter_note: *params.get("meter_note").unwrap_or(&4.0) as u16,
         seq_in: *marks.get("seq_in").unwrap_or(&0),
         seq_out: *marks.get("seq_out").unwrap_or(&48000),
         loop_in: *marks.get("loop_in").unwrap_or(&0),

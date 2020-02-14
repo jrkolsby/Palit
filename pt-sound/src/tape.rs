@@ -12,11 +12,10 @@ use xmltree::Element;
 use hound;
 use object_pool::Pool;
 use chrono::prelude::*;
-use libcommon::{Action, Offset, Note, Key};
+use libcommon::{Action, Offset, Note, Key, Param, param_map, param_add, mark_map, mark_add};
 
 use crate::core::{SAMPLE_HZ, BUF_SIZE, CHANNELS, BIT_RATE};
 use crate::core::{SF, Output};
-use crate::document::{param_map, param_add, mark_map, mark_add};
 
 pub struct Region {
     pub id: u16,
@@ -35,10 +34,10 @@ pub struct Store {
     pub meter_beat: u16,
     pub meter_note: u16,
     pub loop_on: bool,
-    pub loop_in: u32,
-    pub loop_out: u32,
-    pub duration: u32,
-    pub playhead: u32, 
+    pub loop_in: Offset,
+    pub loop_out: Offset,
+    pub duration: Offset,
+    pub playhead: Offset, 
     pub regions: Vec<Region>,
     pub notes: Vec<Note>,
     pub velocity: f64,
@@ -51,7 +50,7 @@ pub struct Store {
     pub out_queue: Vec<Action>,
     pub note_queue: Vec<Note>,
     pub sample_rate: u32,
-    pub beat: u32,
+    pub beat: Offset,
     pub pool: Option<Pool<'static, Vec<[Output; CHANNELS]>>>,
     pub writer: Option<thread::JoinHandle<()>>,
     pub rec_region: Arc<RwLock<Option<Region>>>,
@@ -205,13 +204,16 @@ fn write_recording_region(source_region: Arc<RwLock<Option<Region>>>, source_cou
                                     _writer.write_sample((frame[1] * std::i16::MAX as f32) as i16);
                                     count += 1;
                                 }
-                                _writer.flush();
+                                if count % BUF_SIZE as u32 == 0 {
+                                    _writer.flush();
+                                }
                                 source_count.store(count, Ordering::SeqCst);
                             }
                         }
                     },
                     None => { 
-                        if let Some(_writer) = writer.take() {
+                        if let Some(mut _writer) = writer.take() {
+                            _writer.flush();
                             _writer.finalize();
                             writer = None;
                         }
@@ -459,13 +461,13 @@ pub fn read(doc: &mut Element) -> Option<Store> {
     let (mut doc, mut params) = param_map(doc);
     let (mut doc, mut marks) = mark_map(doc);
 
-    store.bpm = (*params.get("bpm").unwrap_or(&127)).try_into().unwrap();
-    store.duration = (*marks.get("seq_out").unwrap_or(&48000) - 
-                   *marks.get("seq_in").unwrap_or(&0)).try_into().unwrap();
-    store.meter_beat = (*params.get("meter_beat").unwrap_or(&4)).try_into().unwrap();
-    store.meter_note = (*params.get("meter_note").unwrap_or(&4)).try_into().unwrap();
+    store.bpm = (*params.get("bpm").unwrap_or(&127.0)) as u16;
+    store.meter_beat = (*params.get("meter_beat").unwrap_or(&4.0)) as u16;
+    store.meter_note = (*params.get("meter_note").unwrap_or(&4.0)) as u16;
     store.loop_in = (*marks.get("loop_in").unwrap_or(&0)).try_into().unwrap();
     store.loop_out = (*marks.get("loop_out").unwrap_or(&0)).try_into().unwrap();
+    store.duration = (*marks.get("seq_out").unwrap_or(&48000) - 
+                      *marks.get("seq_in").unwrap_or(&0)).try_into().unwrap();
     store.beat = calculate_beat(store.sample_rate, store.bpm);
 
     for (name, value) in params.drain() {

@@ -35,7 +35,7 @@ use views::{Layer,
     Project,
     Plugin,
 };
-use modules::{read_document, Document};
+use libcommon::{read_document, Document};
 
 use common::{Screen, MARGIN_D0, MARGIN_D1, MARGIN_D2};
 
@@ -415,7 +415,7 @@ fn main() -> std::io::Result<()> {
                     new_el.attributes.insert("id".to_string(), new_id.to_string());
                     add_module(&mut layers, &name, new_id, size, new_el.clone());
                     if let Some(mut doc) = document {
-                        doc.modules.insert(new_id, new_el);
+                        doc.modules.push((new_id, new_el));
                         document = Some(doc);
                     }
                     // Make sure modules view is still in front so it can Cancel
@@ -426,7 +426,7 @@ fn main() -> std::io::Result<()> {
                     ipc_sound.write(format!("DEL_MODULE:{} ", id).as_bytes()).unwrap();
                     layers.retain(|(i, _)| *i != id);
                     if let Some(mut doc) = document {
-                        doc.modules.retain(|i, _| *i != id);
+                        doc.modules.retain(|(i, _)| *i != id);
                         document = Some(doc);
                     }
                     let mut routes_index: Option<usize> = None;

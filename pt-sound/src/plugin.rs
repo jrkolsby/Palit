@@ -67,7 +67,7 @@ extern "C" fn addVerticalSlider(ui: *mut PluginUI,
         let mut params = &mut (*ui).params;
         let mut declarations = &mut (*ui).declarations;
         params.insert(label_str.to_string(), param);
-        declarations.push(Action::AddParam(
+        declarations.push(Action::DeclareParam(
             label_str.to_string(),
             init as f32,
             min as f32,
@@ -88,7 +88,7 @@ extern "C" fn addHorizontalSlider(ui: *mut PluginUI,
         let mut params = &mut (*ui).params;
         let mut declarations = &mut (*ui).declarations;
         params.insert(label_str.to_string(), param);
-        declarations.push(Action::AddParam(
+        declarations.push(Action::DeclareParam(
             label_str.to_string(),
             init as f32,
             min as f32,
@@ -246,7 +246,7 @@ pub fn init(lib_src: String) -> Store {
 
     let num_inputs = (vtable.getNumInputs)(voice0) as usize;
     let num_outputs = (vtable.getNumOutputs)(voice0) as usize;
-    eprintln!("{} INPUTS {} OUTPUTS", num_inputs, num_outputs);
+    ui.declarations.push(Action::DeclareAnchors(num_inputs, num_outputs));
 
     (vtable.buildUserInterface)(voice0, &mut *uiGlue);
 

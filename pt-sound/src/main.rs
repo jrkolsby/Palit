@@ -11,7 +11,7 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::io::prelude::*;
 use std::collections::HashMap;
 use std::borrow::BorrowMut;
-use libcommon::{Action, Key};
+use libcommon::{Action, Key, Document, read_document, param_map};
 use dsp::{NodeIndex, Frame, FromSample, Graph, Node, Sample, Walker};
 use xmltree::Element;
 use sample::signal;
@@ -22,11 +22,9 @@ mod synth;
 mod tape;
 mod chord;
 mod arpeggio;
-mod document;
 mod plugin;
 
 use crate::core::{event_loop, Module, Output, CHANNELS};
-use crate::document::{Document, read_document, param_map};
 
 const MASTER_ROUTE: u16 = 1;
 
@@ -95,7 +93,7 @@ fn add_module(
             },
             "keyboard" => {
                 let (_, params) = param_map(el);
-                let shift = *params.get("octave").unwrap_or(&3) as Key;
+                let shift = *params.get("octave").unwrap_or(&3.0) as Key;
                 let octave = patch.add_node(Module::Octave(vec![], shift));
                 //let shift = patch.add_node(Module::Octave(vec![], 4));
                 let operator = patch.add_node(Module::Operator(vec![], 

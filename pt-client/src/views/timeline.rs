@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use xmltree::Element;
 use termion::cursor;
-use libcommon::{Action, Anchor, Note};
+use libcommon::{Action, Anchor, Note, Param};
 
 use crate::components::{tempo, button, ruler, region, roll};
 use crate::common::{ID, VOID_ID, FocusType};

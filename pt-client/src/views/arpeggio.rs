@@ -1,12 +1,11 @@
 use std::io::Write;
 use termion::cursor;
 use xmltree::Element;
-use libcommon::{Action, Anchor};
+use libcommon::{Action, Anchor, param_map};
 
 use crate::common::{Screen, Window};
 use crate::views::{Layer};
 use crate::components::{popup, ivories};
-use crate::modules::param_map;
 
 pub struct Arpeggio {
     x: u16,
@@ -29,11 +28,11 @@ fn reduce(state: ArpeggioState, action: Action) -> ArpeggioState {
 }
 
 impl Arpeggio {
-    pub fn new(x: u16, y: u16, width: u16, height: u16, doc: Element) -> Self {
-        let (_, params) = param_map(doc);
+    pub fn new(x: u16, y: u16, width: u16, height: u16, mut doc: Element) -> Self {
+        let (_, params) = param_map(&mut doc);
         // Initialize State
         let initial_state: ArpeggioState = ArpeggioState {
-            length: *params.get("length").unwrap_or(&4) as u32
+            length: *params.get("length").unwrap_or(&4.0) as u32
         };
 
         Arpeggio {

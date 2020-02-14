@@ -36,6 +36,9 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 [[package]]
 name = "libcommon"
 version = "0.1.0"
+dependencies = [
+ "xmltree 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
+]
 
 [[package]]
 name = "linux_raw_input_rs"

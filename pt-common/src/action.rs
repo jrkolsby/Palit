@@ -69,7 +69,8 @@ pub enum Action {
     OpenProject(String),
     CreateProject(String),
     SetParam(String, Param),
-    AddParam(String, f32, f32, f32, f32),
+    DeclareParam(String, f32, f32, f32, f32),
+    DeclareAnchors(usize, usize),
     SoloTrack(u16, bool), // Track ID, is_on
     MuteTrack(u16, bool),
     MonitorTrack(u16, bool),
@@ -132,8 +133,10 @@ impl ToString for Action {
             Action::DelRoute(route_id) => format!("DEL_ROUTE:{}", route_id),
             Action::AddRoute(route_id) => format!("ADD_ROUTE:{}", route_id),
             Action::SetParam(key, val) => format!("SET_PARAM:{}:{}", key, val),
-            Action::AddParam(key, init, min, max, step) => 
-                format!("ADD_PARAM:{}:{}:{}:{}:{}", key, init, min, max, step),
+            Action::DeclareParam(key, init, min, max, step) => 
+                format!("DECLARE_PARAM:{}:{}:{}:{}:{}", key, init, min, max, step),
+            Action::DeclareAnchors(ins, outs) => 
+                format!("DECLARE_ANCHORS:{}:{}", ins, outs),
             Action::SetMeter(beat, note) => format!("SET_METER:{}:{}", beat, note),
             Action::SetTempo(tempo) => format!("SET_TEMPO:{}", tempo),
             Action::SetLoop(l_in, l_out) => format!("SET_LOOP:{}:{}", l_in, l_out),
@@ -212,12 +215,15 @@ impl FromStr for Action {
             "SET_PARAM" => Action::SetParam(
                 argv[1].to_string(),
                 argv[2].parse().unwrap()),
-            "ADD_PARAM" => Action::AddParam(
+            "DECLARE_PARAM" => Action::DeclareParam(
                 argv[1].to_string(),
                 argv[2].parse().unwrap(),
                 argv[3].parse().unwrap(),
                 argv[4].parse().unwrap(),
                 argv[5].parse().unwrap()),
+            "DECLARE_ANCHORS" => Action::DeclareAnchors(
+                argv[1].parse().unwrap(),
+                argv[2].parse().unwrap()),
             "GOTO" => Action::Goto(argv[2].parse().unwrap()),
             "SET_TEMPO" => Action::SetTempo(argv[1].parse().unwrap()),
             "SET_METER" => Action::SetMeter(

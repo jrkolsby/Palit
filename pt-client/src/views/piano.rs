@@ -1,10 +1,9 @@
 use std::io::{Write, Stdout};
 use xmltree::Element;
-use libcommon::{Action, Anchor};
+use libcommon::{Action, Anchor, Param, param_map};
 
 use crate::common::{MultiFocus, shift_focus, render_focii, focus_dispatch};
 use crate::common::{Screen, Direction, FocusType, Window};
-use crate::modules::param_map;
 use crate::views::{Layer};
 use crate::components::{piano, slider, button};
 
@@ -21,7 +20,7 @@ pub struct Piano {
 pub struct PianoState {
     focus: (usize, usize),
     notes: Vec<Action>,
-    eq: [i16; 9],
+    eq: [Param; 9],
 }
 
 fn reduce(state: PianoState, action: Action) -> PianoState {
@@ -66,22 +65,24 @@ fn reduce(state: PianoState, action: Action) -> PianoState {
 }
 
 const SIZE: (u16, u16) = (70, 30);
+const EQ_STEP: Param = 0.001;
+const EQ_FACTOR: Param = 200.0;
 
 impl Piano {
-    pub fn new(x: u16, y: u16, width: u16, height: u16, doc: Element) -> Self {
+    pub fn new(x: u16, y: u16, width: u16, height: u16, mut doc: Element) -> Self {
 
-        let (_, params) = param_map(doc);
+        let (_, params) = param_map(&mut doc);
 
         let initial_eq = [
-            *params.get("16").unwrap_or(&10),
-            *params.get("5.3").unwrap_or(&10),
-            *params.get("8").unwrap_or(&10),
-            *params.get("4").unwrap_or(&10),
-            *params.get("2.6").unwrap_or(&10),
-            *params.get("2").unwrap_or(&10),
-            *params.get("1.6").unwrap_or(&10),
-            *params.get("1.3").unwrap_or(&10),
-            *params.get("1").unwrap_or(&10),
+            *params.get("16").unwrap_or(&0.01),
+            *params.get("5.3").unwrap_or(&0.01),
+            *params.get("8").unwrap_or(&0.01),
+            *params.get("4").unwrap_or(&0.01),
+            *params.get("2.6").unwrap_or(&0.01),
+            *params.get("2").unwrap_or(&0.01),
+            *params.get("1.6").unwrap_or(&0.01),
+            *params.get("1.3").unwrap_or(&0.01),
+            *params.get("1").unwrap_or(&0.01),
         ];
 
         // Initialize State
@@ -101,49 +102,49 @@ impl Piano {
                 MultiFocus::<PianoState> {
                     g: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+5, window.y+5, "16'".to_string(), 
-                            state.eq[0], Direction::North)
+                            (state.eq[0] * EQ_FACTOR) as i16, Direction::North)
                     },
                     g_t: |action, id, state| match action {
                         Action::Up => { Action::SetParam("16".to_string(), 
-                                                         state.eq[0]+1) },
+                                                         state.eq[0] + EQ_STEP) },
                         Action::Down => { Action::SetParam("16".to_string(), 
-                                                         state.eq[0]-1) },
+                                                         state.eq[0] - EQ_STEP) },
                         _ => Action::Noop
                     },
                     g_id: (FocusType::Button, 0),
                     y: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+10, window.y+5, "5⅓'".to_string(), 
-                            state.eq[1], Direction::North)
+                            (state.eq[1] * EQ_FACTOR) as i16, Direction::North)
                     },
                     y_t: |action, id, state| match action {
                         Action::Up => { Action::SetParam("5.3".to_string(), 
-                                                         state.eq[1]+1) },
+                                                         state.eq[1] + EQ_STEP) },
                         Action::Down => { Action::SetParam("5.3".to_string(), 
-                                                         state.eq[1]-1) },
+                                                         state.eq[1] - EQ_STEP) },
                         _ => Action::Noop
                     },
                     y_id: (FocusType::Button, 0),
                     p: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+15, window.y+5, "8'".to_string(), 
-                            state.eq[2], Direction::North)
+                            (state.eq[2] * EQ_FACTOR) as i16, Direction::North)
                     },
                     p_t: |action, id, state| match action { 
                         Action::Up => { Action::SetParam("8".to_string(), 
-                                                         state.eq[2]+1) },
+                                                         state.eq[2] + EQ_STEP) },
                         Action::Down => { Action::SetParam("8".to_string(), 
-                                                         state.eq[2]-1) },
+                                                         state.eq[2] - EQ_STEP) },
                         _ => Action::Noop
                     },
                     p_id: (FocusType::Button, 0),
                     b: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+20, window.y+5, "4'".to_string(), 
-                            state.eq[3], Direction::North)
+                            (state.eq[3] * EQ_FACTOR) as i16, Direction::North)
                     },
                     b_t: |action, id, state| match action { 
                         Action::Up => { Action::SetParam("4".to_string(), 
-                                                         state.eq[3]+1) },
+                                                         state.eq[3] + EQ_STEP) },
                         Action::Down => { Action::SetParam("4".to_string(), 
-                                                         state.eq[3]-1) },
+                                                         state.eq[3] - EQ_STEP) },
                         _ => Action::Noop
                     },
                     b_id: (FocusType::Button, 0),
@@ -160,62 +161,62 @@ impl Piano {
 
                     g: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+25, window.y+5, "2⅔'".to_string(), 
-                            state.eq[4], Direction::North)
+                            (state.eq[4] * EQ_FACTOR) as i16, Direction::North)
                     },
                     g_t: |action, id, state| match action { 
                         Action::Up => { Action::SetParam("2.6".to_string(), 
-                                                         state.eq[4]+1) },
+                                                         state.eq[4] + EQ_STEP) },
                         Action::Down => { Action::SetParam("2.6".to_string(), 
-                                                         state.eq[4]-1) },
+                                                         state.eq[4] - EQ_STEP) },
                         _ => Action::Noop
                     }, 
                     g_id: (FocusType::Button, 0),
 
                     y: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+30, window.y+5, "2'".to_string(), 
-                            state.eq[5], Direction::North)
+                            (state.eq[5] * EQ_FACTOR) as i16, Direction::North)
                     },
                     y_t: |action, id, state| match action {
                         Action::Up => { Action::SetParam("2".to_string(), 
-                                                         state.eq[5]+1) },
+                                                         state.eq[5] + EQ_STEP) },
                         Action::Down => { Action::SetParam("2".to_string(), 
-                                                         state.eq[5]-1) },
+                                                         state.eq[5] - EQ_STEP) },
                         _ => Action::Noop
                     },
                     y_id: (FocusType::Button, 0),
                     p: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+35, window.y+5, "1⅗'".to_string(), 
-                            state.eq[6], Direction::North)
+                            (state.eq[6] * EQ_FACTOR) as i16, Direction::North)
                     },
                     p_t: |action, id, state| match action {
                         Action::Up => { Action::SetParam("1.6".to_string(), 
-                                                         state.eq[6]+1) },
+                                                         state.eq[6] + EQ_STEP) },
                         Action::Down => { Action::SetParam("1.6".to_string(), 
-                                                         state.eq[6]-1) },
+                                                         state.eq[6] - EQ_STEP) },
                         _ => Action::Noop
                     },
                     p_id: (FocusType::Button, 0),
                     b: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+40, window.y+5, "1⅓'".to_string(), 
-                            state.eq[7], Direction::North)
+                            (state.eq[7] * EQ_FACTOR) as i16, Direction::North)
                     },
                     b_t: |action, id, state| match action {
                         Action::Up => { Action::SetParam("1.3".to_string(), 
-                                                         state.eq[7]+1) },
+                                                         state.eq[7] + EQ_STEP) },
                         Action::Down => { Action::SetParam("1.3".to_string(), 
-                                                         state.eq[7]-1) },
+                                                         state.eq[7] - EQ_STEP) },
                         _ => Action::Noop
                     },
                     b_id: (FocusType::Button, 0),
                     r: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+45, window.y+5, "1'".to_string(), 
-                            state.eq[8], Direction::North)
+                            (state.eq[8] * EQ_FACTOR) as i16, Direction::North)
                     },
                     r_t: |action, id, state| match action { 
                         Action::Up => { Action::SetParam("1".to_string(), 
-                                                         state.eq[8]+1) },
+                                                         state.eq[8] + EQ_STEP) },
                         Action::Down => { Action::SetParam("1".to_string(), 
-                                                         state.eq[8]-1) },
+                                                         state.eq[8] - EQ_STEP) },
                         _ => Action::Noop
                     }, 
                     r_id: (FocusType::Button, 0),

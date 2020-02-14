@@ -1,8 +1,9 @@
 use std::collections::HashMap;
 use std::fs;
 use xmltree::Element;
-use libcommon::{Action, Param, Offset, Key};
+use crate::{Key, Param, Offset, Module};
 
+#[derive(Clone, Debug)]
 pub struct Document {
     pub title: String,
     pub sample_rate: u32,
@@ -31,30 +32,10 @@ pub fn mark_map(doc: &mut Element) -> (&mut Element, HashMap<String, Offset>) {
     return (doc, marks);
 }
 
-pub fn note_list(doc: &mut Element) -> (&mut Element, Vec<Key>) {
-    let mut notes: Vec<Key> = vec![];
-    while let Some(param) = doc.take_child("note") {
-        let note = param.attributes.get("key").unwrap();
-        notes.push(note.parse::<Key>().unwrap());
-    }
-    return (doc, notes);
-}
-
-pub fn param_add<T>(el: &mut Element, value: T, name: String) 
-    where T: std::string::ToString {
-    let mut param = Element::new("param");
-    param.attributes.insert("value".to_string(), value.to_string());
-    param.attributes.insert("name".to_string(), name);
-    el.children.push(param)
-}
-
-pub fn mark_add<T>(el: &mut Element, value: T, name: String) 
-    where T: std::string::ToString {
-    let mut mark = Element::new("mark");
-    mark.attributes.insert("value".to_string(), value.to_string());
-    mark.attributes.insert("name".to_string(), name);
-    el.children.push(mark)
-}
+/* 
+    In the end, we need to take a document and return a list of views with
+    ids, as well as set the project title and sample and bit rates
+*/
 
 pub fn read_document(filename: String) -> Document {
 
@@ -66,7 +47,7 @@ pub fn read_document(filename: String) -> Document {
     let mut result = Document {
         title: "Untitled".to_string(),
         sample_rate: 48000,
-        modules: Vec::new(),
+        modules: vec![],
     };
 
     if let Some(title) = doc.take_child("title") {
@@ -82,14 +63,14 @@ pub fn read_document(filename: String) -> Document {
     if let Some(modules) = doc.take_child("modules") {
         for module in modules.children.iter() {
             if let Some(i) = module.attributes.get("id") {
-                // Make sure that patch is the last module in the group
+                // Make sure patch is the last module in the result
                 if module.name == "patch" {
                     patch = Some((i.parse::<u16>().unwrap(), module.to_owned()));
                     continue;
                 }
                 result.modules.push((i.parse::<u16>().unwrap(), module.to_owned()));
             } else {
-                panic!("Module {} missing ID", module.name);
+                panic!("Module missing ID");
             }
         }
     } else {
@@ -97,9 +78,34 @@ pub fn read_document(filename: String) -> Document {
     }
 
     match patch {
-        Some(p) => result.modules.push(p),
+        Some(p) => { result.modules.push(p); },
         None => panic!("No patch defined!")
     }
 
     result
+}
+
+pub fn note_list(doc: &mut Element) -> (&mut Element, Vec<Key>) {
+    let mut notes: Vec<Key> = vec![];
+    while let Some(param) = doc.take_child("note") {
+        let note = param.attributes.get("key").unwrap();
+        notes.push(note.parse::<Key>().unwrap());
+    }
+    return (doc, notes);
+}
+
+pub fn param_add<T>(el: &mut Element, value: T, name: String)
+    where T: std::string::ToString {
+    let mut param = Element::new("param");
+    param.attributes.insert("value".to_string(), value.to_string());
+    param.attributes.insert("name".to_string(), name);
+    el.children.push(param)
+}
+
+pub fn mark_add<T>(el: &mut Element, value: T, name: String)
+    where T: std::string::ToString {
+    let mut mark = Element::new("mark");
+    mark.attributes.insert("value".to_string(), value.to_string());
+    mark.attributes.insert("name".to_string(), name);
+    el.children.push(mark)
 }
