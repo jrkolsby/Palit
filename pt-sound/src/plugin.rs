@@ -50,7 +50,19 @@ extern "C" fn closeBox(ui: *mut PluginUI) {
     //eprintln!("closeBox");
 }
 extern "C" fn addButton(ui: *mut PluginUI, label: *const c_char, param: *mut c_float) { 
-    //eprintln!("addButton {:?}", label);
+    unsafe {
+        let label_str = CStr::from_ptr(label).to_str().unwrap();
+        let mut params = &mut (*ui).params;
+        let mut declarations = &mut (*ui).declarations;
+        params.insert(label_str.to_string(), param);
+        declarations.push(Action::DeclareParam(
+            label_str.to_string(),
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+        ));
+    }
 }
 extern "C" fn addCheckButton(ui: *mut PluginUI, label: *const c_char, param: *mut c_float) { 
     //eprintln!("addCheckButton {:?}", label);
@@ -164,7 +176,7 @@ pub struct UIGlue {
 impl PluginUI {
     fn new() -> Self {
         PluginUI { 
-            params: HashMap::new(), 
+            params: HashMap::new(),
             declarations: vec![],
             _private: [] 
         }
@@ -216,7 +228,7 @@ pub struct Store {
     uiGlue: Box<UIGlue>,
     vtable: PluginVTable,
     voices: Vec<*mut Voice>,
-    outputs: Vec<Vec<Output>>,
+    outputs: Vec<Vec<c_float>>,
 }
 
 pub fn init(lib_src: String) -> Store {
@@ -261,21 +273,23 @@ pub fn init(lib_src: String) -> Store {
     }
 }
 
-pub fn compute_buf(store: &mut Store, buffer: &&mut [[Output; CHANNELS]]) {
+// These values are really small, like 0.1
+pub fn compute_buf(store: &mut Store, buffer: &mut [[Output; CHANNELS]]) {
     // We need to prepare our channels as two seperate arrays
     // ... instead of using frames. This is just what faust wants *shrug*
     for (i, frame) in buffer.iter().enumerate() {
         for (j, sample) in frame.iter().enumerate() {
             if j < store.outputs.len() {
-                store.outputs[j][i] = *sample;
+                store.outputs[j][i] = *sample as c_float;
             }
         }
     }
-    let mut out_mut_ptr: Vec<*mut Output> = 
+
+    let mut out_mut_ptr: Vec<*mut Output> =
         store.outputs.iter_mut().map(|out| out.as_mut_ptr()
     ).collect();
 
-    let out_const_ptr: Vec<*const Output> = store.outputs.iter().map(|out| 
+    let out_const_ptr: Vec<*const Output> = store.outputs.iter().map(|out|
         out.as_ptr()
     ).collect();
 
@@ -283,9 +297,29 @@ pub fn compute_buf(store: &mut Store, buffer: &&mut [[Output; CHANNELS]]) {
         (store.vtable.compute)(
             store.voices[0],
             FRAMES as c_int, 
-            out_const_ptr.as_ptr() as *const *const Output, 
+            out_const_ptr.as_ptr() as *const *const Output,
             out_mut_ptr.as_mut_ptr() as *mut *mut Output,
         );
+    }
+
+    // ... and then we have to map back to frames *sigh*
+    for i in 0..FRAMES as usize {
+        for j in 0..CHANNELS {
+            buffer[i][j] = store.outputs[j][i];
+        }
+    }
+}
+
+pub fn dispatch(store: &mut Store, a: Action) {
+    match a {
+        Action::SetParam(key, val) => {
+            if let Some(param) = store.ui.params.get_mut(&key) {
+                unsafe {
+                    **param = val;
+                }
+            }
+        },
+        _ => {}
     }
 }
 

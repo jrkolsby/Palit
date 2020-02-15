@@ -242,6 +242,7 @@ impl Module {
                 }
             },
             Module::Arpeggio(ref mut store) => arpeggio::dispatch(store, a.clone()),
+            Module::Plugin(ref mut store) => plugin::dispatch(store, a.clone()),
             _ => {}
         };
     }
@@ -401,7 +402,7 @@ impl Node<[Output; CHANNELS]> for Module {
                 });
             },
             Module::Plugin(ref mut store) => {
-                plugin::compute_buf(store, &buffer);
+                plugin::compute_buf(store, buffer);
             }
             _ => ()
         }

@@ -23,7 +23,6 @@ pub struct Store {
     pub queue: Vec<Action>,
     pub sigs: Vec<Option<Sig>>,
     pub sample_rate: signal::Rate,
-    pub stored_sample: Option<Output>,
     pub bar_values: [Param; 9],
 }
 
@@ -32,7 +31,6 @@ pub fn init() -> Store {
         queue: vec![],
         sigs: iter::repeat(None).take(256).collect(),
         sample_rate: signal::rate(f64::from(SAMPLE_HZ)),
-        stored_sample: None,
         bar_values: [0.25, 0.25, 0.25, 0.75, 0.5, 0., 0., 0., 0.],
     }
 }
@@ -130,7 +128,6 @@ pub fn compute(store: &mut Store) -> [Output; CHANNELS] {
         if remove { *sig = None };
     }
     let z = z.min(0.999).max(-0.999);
-    store.stored_sample = Some(z);
     [z, z]
 }
 

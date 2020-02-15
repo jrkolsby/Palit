@@ -1,21 +1,21 @@
 use std::io::Write;
 use termion::cursor;
 use xmltree::Element;
-use libcommon::{Action, Anchor, param_map};
+use libcommon::{Action, Anchor, Param, param_map};
 
 use crate::views::{Layer};
-use crate::components::{popup, ivories};
-use crate::common::{Screen, Window, ID, VOID_ID, FocusType};
+use crate::components::{popup, ivories, slider};
+use crate::common::{Screen, Window, ID, VOID_ID, FocusType, Direction};
 use crate::common::{MultiFocus, render_focii, shift_focus};
 
 #[derive(Clone, Debug)]
 struct FaustParam {
     label: String,
-    init: f32,
-    min: f32,
-    max: f32,
-    step: f32,
-    value: f32,
+    init: Param,
+    min: Param,
+    max: Param,
+    step: Param,
+    value: Param,
 }
 
 pub struct Plugin {
@@ -32,9 +32,11 @@ pub struct Plugin {
 pub struct PluginState {
     params: Vec<FaustParam>,
     faust_anchors: Vec<(String, bool)>, // name, input
+    focus: (usize, usize),
 }
 
 const PADDING: (u16, u16) = (5,5);
+const PARAM_WIDTH: f32 = 40.0;
 
 static VOID_RENDER: fn( &mut Screen, Window, ID, &PluginState, bool) =
     |_, _, _, _, _| {};
@@ -72,18 +74,32 @@ fn generate_focii(params: &Vec<FaustParam>) -> Vec<Vec<MultiFocus<PluginState>>>
         let transform: fn(Action, ID, &PluginState) -> Action = |a, id, state| {
             let param = &state.params[id.1 as usize];
             match a {
-                Action::Up => Action::SetParam(param.label.clone(), param.value + param.step),
-                Action::Down => Action::SetParam(param.label.clone(), param.value - param.step),
+                Action::Up | 
+                Action::Right => {
+                    let mut target = param.value + param.step;
+                    if target > param.max { target = param.max };
+                    Action::SetParam(param.label.clone(), target)
+                },
+                Action::Down | 
+                Action::Left => {
+                    let mut target = param.value - param.step;
+                    if target < param.min { target = param.min };
+                    Action::SetParam(param.label.clone(), target)
+                },
                 _ => a
             }
         };
         let render: fn(&mut Screen, Window, ID, &PluginState, bool) = 
             |mut out, window, id, state, focus| {
                 let param = &state.params[id.1 as usize];
-                write!(out, "{}{}", cursor::Goto(
+                let factor = PARAM_WIDTH / param.max;
+                slider::render(out,
                     PADDING.0 + window.x, 
-                    PADDING.1 + window.y + id.1 * 2,
-                ), param.label).unwrap();
+                    PADDING.1 + window.y + id.1 * 3,
+                    format!("{} ({})", param.label, param.value),
+                    (param.value * factor) as i16, 
+                    Direction::East);
+
         };
         counter = match counter {
             0 => { focus_acc.r_id = id; focus_acc.r = render; focus_acc.r_t = transform; 1 },
@@ -104,6 +120,13 @@ fn generate_focii(params: &Vec<FaustParam>) -> Vec<Vec<MultiFocus<PluginState>>>
 fn reduce(state: PluginState, action: Action) -> PluginState {
     PluginState {
         params: match action.clone() {
+            Action::SetParam(key, val) => {
+                let mut new_params = state.params.clone();
+                if let Some(mut param) = new_params.iter_mut().find(|p| p.label == key) {
+                    param.value = val;
+                }
+                new_params
+            },
             Action::DeclareParam(label, init, min, max, step) => {
                 let mut new_params = state.params.clone();
                 new_params.push(FaustParam {
@@ -131,7 +154,8 @@ fn reduce(state: PluginState, action: Action) -> PluginState {
                 new_anchors
             },
             _ => state.faust_anchors.clone()
-        }
+        },
+        focus: state.focus,
     }
 }
 
@@ -142,6 +166,7 @@ impl Plugin {
         let initial_state: PluginState = PluginState {
             params: vec![],
             faust_anchors: vec![],
+            focus: (0, 0),
         };
 
         Plugin {
@@ -165,12 +190,39 @@ impl Layer for Plugin {
             h: self.height
         };
 
-        write!(out, "{}FAUST PLUGIN", cursor::Goto(win.x + PADDING.0, win.y + PADDING.1));
+        render_focii(
+            out, win, 
+            self.state.focus.clone(), 
+            &self.focii, &self.state, false, !target);
+
+        write!(out, "{}FAUST PLUGIN", cursor::Goto(win.x + PADDING.0, win.y + 2));
     }
     fn dispatch(&mut self, action: Action) -> Action {
-        self.state = reduce(self.state.clone(), action.clone());
-        match action {
-            Action::Route => Action::ShowAnchors({
+        // Let the focus transform the action 
+        let _action = {
+            if let Some(multi_focus_row) = &mut self.focii.get_mut(self.state.focus.1) {
+                if let Some(multi_focus) = &mut multi_focus_row.get_mut(self.state.focus.0) {
+                    multi_focus.transform(action.clone(), &mut self.state)
+                } else {
+                    action
+                }
+            } else {
+                action
+            }
+        };
+
+        self.state = reduce(self.state.clone(), _action.clone());
+
+        let (focus, default) = match _action {
+            Action::DeclareParam(_,_,_,_,_) => {
+                self.focii = generate_focii(&self.state.params);
+                (self.state.focus, None)
+            },
+            a @ Action::Up | 
+            a @ Action::Down => {
+                shift_focus(self.state.focus, &self.focii, a)
+            },
+            Action::Route => (self.state.focus, Some(Action::ShowAnchors({
                 let mut anchors: Vec<Anchor> = self.state.faust_anchors
                     .iter().enumerate().map(|(i, anchor)| Anchor {
                         index: i as u16,
@@ -178,8 +230,9 @@ impl Layer for Plugin {
                         name: anchor.0.clone(),
                         input: anchor.1.clone(),
                     }).collect();
-                if self.state.params.iter().find(|&p| p.label == "freq").is_some() &&
-                    self.state.params.iter().find(|&p| p.label == "gain").is_some() {
+                // Add a midi route if the faust plugin supports it
+                if (self.state.params.iter().find(|&p| p.label == "freq").is_some() &&
+                    self.state.params.iter().find(|&p| p.label == "gain").is_some()) {
                         anchors.push(Anchor {
                             index: anchors.len() as u16,
                             module_id: 0,
@@ -188,12 +241,16 @@ impl Layer for Plugin {
                         });
                     }
                 anchors
-                
-            }),
-            a @ Action::Left |
-            a @ Action::Up | 
-            a @ Action::Down => a,
-            _ => Action::Noop
+            }))),
+            a @ Action::SetParam(_,_) => (self.state.focus, Some(a)),
+            _ => (self.state.focus, None)
+        };
+
+        self.state.focus = focus;
+
+        match default {
+            Some(a) => a,
+            None => Action::Noop,
         }
     }
     fn undo(&mut self) {
