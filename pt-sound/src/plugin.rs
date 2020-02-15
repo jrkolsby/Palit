@@ -1,7 +1,7 @@
 use std::ffi::{OsStr, CStr};
 use std::collections::HashMap;
 use libc::{c_int, c_char, c_float};
-use libcommon::{Action};
+use libcommon::{Action, note_to_hz};
 use libloading::{Library, Symbol};
 use libloading::os::unix::Symbol as RawSymbol;
 use crate::core::{Output, CHANNELS, FRAMES};
@@ -312,6 +312,22 @@ pub fn compute_buf(store: &mut Store, buffer: &mut [[Output; CHANNELS]]) {
 
 pub fn dispatch(store: &mut Store, a: Action) {
     match a {
+        Action::NoteOn(key, vel) => {
+            if let Some(freq_param) = store.ui.params.get_mut("freq") {
+                unsafe { **freq_param = note_to_hz(key); }
+            }
+            if let Some(gain_param) = store.ui.params.get_mut("gain") {
+                unsafe { **gain_param = vel as f32; }
+            }
+            if let Some(gate_param) = store.ui.params.get_mut("gate") {
+                unsafe { **gate_param = 1.0; }
+            }
+        },
+        Action::NoteOff(key) => {
+            if let Some(gate_param) = store.ui.params.get_mut("gate") {
+                unsafe { **gate_param = 0.0; }
+            }
+        },
         Action::SetParam(key, val) => {
             if let Some(param) = store.ui.params.get_mut(&key) {
                 unsafe {

@@ -232,7 +232,8 @@ impl Layer for Plugin {
                     }).collect();
                 // Add a midi route if the faust plugin supports it
                 if (self.state.params.iter().find(|&p| p.label == "freq").is_some() &&
-                    self.state.params.iter().find(|&p| p.label == "gain").is_some()) {
+                    self.state.params.iter().find(|&p| p.label == "gain").is_some() &&
+                    self.state.params.iter().find(|&p| p.label == "gate").is_some()) {
                         anchors.push(Anchor {
                             index: anchors.len() as u16,
                             module_id: 0,

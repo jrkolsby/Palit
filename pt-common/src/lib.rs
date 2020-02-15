@@ -12,6 +12,7 @@ pub use pcm::Volume;
 pub use pcm::Offset;
 pub use pcm::Key;
 pub use pcm::Param;
+pub use pcm::note_to_hz;
 
 pub mod document;
 pub use document::mark_map;

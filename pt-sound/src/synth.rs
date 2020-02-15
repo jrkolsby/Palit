@@ -1,7 +1,7 @@
 use std::{iter};
 use sample::{signal, Signal, Sample};
 use xmltree::Element;
-use libcommon::{Action, Param, param_map};
+use libcommon::{Action, Param, param_map, note_to_hz};
 
 use crate::core::{SF, Output, CHANNELS, SAMPLE_HZ};
 
@@ -39,7 +39,7 @@ pub fn dispatch(store: &mut Store, action: Action) {
     match action {
         Action::NoteOn(note, vol) |
         Action::NoteOn(note, vol) => {
-            let hz = 440. * 2_f32.powf((note as f32 - 69.)/12.);
+            let hz = note_to_hz(note);
 
             for (baridx, barfreq) in BAR_FREQS.iter().enumerate() {
                 let idx = store.sigs.iter().position(|s| s.is_none());

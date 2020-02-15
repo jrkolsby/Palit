@@ -31,3 +31,7 @@ pub struct Note {
     pub note: Key,
     pub vel: Volume,
 }
+
+pub fn note_to_hz(note: Key) -> f32 {
+    440. * 2_f32.powf((note as f32 - 69.)/12.)
+}
