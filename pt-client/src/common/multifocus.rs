@@ -149,8 +149,12 @@ pub fn shift_focus<T>(
     focii: &Vec<Vec<MultiFocus<T>>>, 
     a: Action) ->
 ((usize, usize), Option<Action>) {
+    // Get current focus
+    if focii.len() <= focus.1 { return (focus, Some(a)) }
     let focus_row = &focii[focus.1];
+    if focus_row.len() <= focus.0 { return (focus, Some(a)) }
     let focus_i = &focus_row[focus.0];
+
     let mut default: Option<Action> = None;
     let mut focus = focus.clone();
     if focus_i.active.is_none() {

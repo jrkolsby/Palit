@@ -247,13 +247,20 @@ impl Routes {
         // Initialize State
         let mut initial_state: RoutesState = if let Some(el) = doc {
             patch::read(el)
-        } else { RoutesState {
-            routes: HashMap::new(),
-            anchors: HashMap::new(),
-            focus: (0,0),
-            selected_anchor: None,
-            selected_route: None,
-        }};
+        } else { 
+            let mut default_routes = HashMap::new();
+            default_routes.insert(1, Route {
+                id: 1,
+                patch: vec![]
+            });
+            RoutesState {
+                routes: default_routes,
+                anchors: HashMap::new(),
+                selected_anchor: None,
+                selected_route: None,
+                focus: (0,0),
+            }
+        };
 
         Routes {
             x: x,

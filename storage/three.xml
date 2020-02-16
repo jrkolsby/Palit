@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE notedoc>
+
+<project>
+
+    <title>WOWEE XML</title>
+    <meta samplerate="48000" bitrate="12"/>
+
+    <modules>
+
+        <patch id="1">
+            <route id="1">
+                <output module="9" index="0" />
+            </route>
+            <route id="2">
+                <input module="10" index="1" />
+                <output module="104" index="0" />
+            </route>
+            <route id="3">
+                <input module="9" index="1" />
+                <output module="10" index="0" />
+            </route>
+        </patch>
+
+        <keyboard id="104">
+            <param value="2" name="octave" />
+            <param value="0" name="shift" />
+            <param value="500" name="velocity" />
+        </keyboard>
+
+        <timeline id="8">
+            <mark value="68000" name="duration" />
+            <mark value="0" name="seq_in" />
+            <mark value="0" name="seq_out" />
+            <mark value="0" name="loop_in" />
+            <mark value="0" name="loop_out" />
+            <mark value="0" name="playhead" />
+            <param value="4" name="meter_beat" />
+            <param value="4" name="meter_note" />
+            <param value="127" name="bpm" />
+            <asset id="0" size="1488000" src="/usr/local/palit/assets/Who.wav" />
+            <asset id="1" size="336000" src="/usr/local/palit/assets/Loop.wav" />
+            <asset id="2" size="1728000" src="/usr/local/palit/assets/Keyboard.wav" />
+            <track id="1">
+                <region id="1" asset="0" in="0" out="1488000" offset="0" />
+                <region id="2" asset="2" in="0" out="148800" offset="1808000" />
+            </track>
+            <track id="2">
+                <region id="4" asset="1" in="0" out="336000" offset="0" />
+                <region id="3" asset="2" in="0" out="148800" offset="1808000" />
+                <region id="8" asset="0" in="0" out="1488000" offset="80000" />
+            </track>
+            <track id="3">
+                <region id="7" asset="2" in="0" out="92800" offset="0" />
+                <region id="5" asset="2" in="0" out="708800" offset="1808000" />
+            </track>
+            <track id="4">
+            </track>
+        </timeline>
+
+        <hammond id="9">
+            <param name="16" value="0.01" />
+            <param name="5.3" value="0.01" />
+            <param name="8" value="0.01" />
+            <param name="4" value="0.01" />
+            <param name="2.6" value="0.01" />
+            <param name="2" value="0.01" />
+            <param name="1.6" value="0.01" />
+            <param name="1.3" value="0.01" />
+            <param name="1" value="0.01" />
+            <param name="height" value="0" />
+            <param name="reverb" value="0" />
+        </hammond>
+
+        <arpeggio id="10">
+            <param value="24" name="length" />
+        </arpeggio>
+
+        <chord id="11">
+            <note key="0" />
+            <note key="4" />
+            <note key="7" />
+        </chord>
+
+    </modules>
+</project>

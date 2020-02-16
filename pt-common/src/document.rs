@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
 use xmltree::Element;
-use crate::{Key, Param, Offset, Module};
+use crate::{Key, Param, Offset};
 
 #[derive(Clone, Debug)]
 pub struct Document {

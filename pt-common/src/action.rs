@@ -66,7 +66,11 @@ pub enum Action {
     LoopOff,
     Loop(Offset, Offset),
     AddModule(u16, String),
+    TryoutModule(u16),
+    DelModule(u16),
     OpenProject(String),
+    ShowProject(String, Vec<Module>),
+    InputTitle,
     CreateProject(String),
     SetParam(String, Param),
     DeclareParam(String, f32, f32, f32, f32),
@@ -88,10 +92,6 @@ pub enum Action {
     PatchOut(u16, u16, u16),
     PatchIn(u16, u16, u16),
     DelPatch(u16, u16, bool),
-    TryoutModule(u16),
-    DelModule(u16),
-    ShowProject(String, Vec<Module>),
-    InputTitle,
     Noop,
     Error(String),
     Exit,
@@ -147,6 +147,9 @@ impl ToString for Action {
             Action::Tick(offset) => format!("TICK:{}", offset),
             Action::Play => format!("PLAY"),
             Action::Stop => format!("STOP"),
+            Action::OpenProject(name) => format!("OPEN_PROJECT:{}", name),
+            Action::AddModule(id, name) => format!("ADD_MODULE:{}:{}", id, name),
+            Action::DelModule(id) => format!("DEL_MODULE:{}", id),
             _ => "NOOP".to_string()
         })
     }

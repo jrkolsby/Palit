@@ -63,13 +63,13 @@ impl Layer for Arpeggio {
             Action::Route => Action::ShowAnchors(vec![Anchor {
                 index: 0,
                 module_id: 0,
-                name: "Arp Out".to_string(),
+                name: "MIDI Out".to_string(),
                 input: false,
             },
             Anchor {
                 index: 1,
                 module_id: 0,
-                name: "Arp In".to_string(),
+                name: "MIDI In".to_string(),
                 input: true,
             }]),
             a @ Action::Left |

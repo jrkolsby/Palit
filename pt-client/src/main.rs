@@ -7,6 +7,7 @@ use std::io::prelude::*;
 use std::fs::{OpenOptions, File};
 use std::os::unix::fs::OpenOptionsExt;
 use std::ffi::CString;
+use std::process::Command;
 use std::os::unix::io::FromRawFd;
 use std::ops::DerefMut;
 use std::collections::VecDeque;
@@ -126,9 +127,19 @@ fn add_module(
                 ), DEFAULT_ROUTE_ID);
             }
         },
-        "plugin" => add_layer(a,
-            Box::new(Plugin::new(1, 1, size.0, size.1, (el).to_owned())), id),
-        name => { eprintln!("unimplemented module {:?}", name)}
+        plugin => {
+            let cmd = format!("sudo make plugin name={} &> /dev/null", plugin);
+            // Run make as arg to sh in parent directory
+            let result = Command::new("sh").current_dir("..").arg("-c").arg(cmd).status()
+                .expect("failed to run plugin compiler");
+            if result.success() {
+                add_layer(a, Box::new(Plugin::new(1, 1, size.0, size.1, (el).to_owned())), id)
+            } else {
+                // Make sure that plugin.so exists by the time we leave this function, or panic
+                panic!("Failed to compile plugin")
+                //add_layer(a, Box::new(Plugin::new(1, 1, size.0, size.1, (el).to_owned())), id)
+            }
+        }
     }
 }
 
@@ -340,10 +351,9 @@ fn main() -> std::io::Result<()> {
                     }
                 }, 
                 Action::OpenProject(title) => {
-                    ipc_sound.write(format!("OPEN_PROJECT:{} ", title).as_bytes()).unwrap();
+                    ipc_sound.write(Action::OpenProject(title.clone()).to_string().as_bytes()).unwrap();
                     let mut doc = read_document(title);
-                    ipc_sound.write(format!("SAMPLE_RATE:{} ", doc.sample_rate).as_bytes()).unwrap();
-                    for (id, el) in doc.modules.iter() {
+                    for (id, el) in doc.modules.iter().rev() {
                         add_module(&mut layers, &el.name, *id, size, el.to_owned());
                     }
                     document = Some(doc.clone());
@@ -409,7 +419,6 @@ fn main() -> std::io::Result<()> {
                             if *id > max { *id } else { max }
                         ) + 1
                     };
-                    ipc_sound.write(format!("ADD_MODULE:{}:{} ", new_id, name).as_bytes()).unwrap();
                     // Make empty element with tag and id
                     let mut new_el = Element::new(&name);
                     new_el.attributes.insert("id".to_string(), new_id.to_string());
@@ -418,12 +427,13 @@ fn main() -> std::io::Result<()> {
                         doc.modules.push((new_id, new_el));
                         document = Some(doc);
                     }
+                    ipc_sound.write(Action::AddModule(new_id, name).to_string().as_bytes()).unwrap();
                     // Make sure modules view is still in front so it can Cancel
                     layers.swap(layers.len()-1, layers.len()-2);
                     events.push(Action::Back);
                 },
                 Action::DelModule(id) => {
-                    ipc_sound.write(format!("DEL_MODULE:{} ", id).as_bytes()).unwrap();
+                    ipc_sound.write(Action::DelModule(id).to_string().as_bytes()).unwrap();
                     layers.retain(|(i, _)| *i != id);
                     if let Some(mut doc) = document {
                         doc.modules.retain(|(i, _)| *i != id);

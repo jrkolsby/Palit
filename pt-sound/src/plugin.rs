@@ -261,7 +261,11 @@ pub struct Store {
 }
 
 pub fn init(lib_src: String) -> Store {
-    let lib = Library::new(OsStr::new(&lib_src)).unwrap();
+    let lib = match Library::new(OsStr::new(&lib_src)) {
+        Ok(lib) => lib,
+        Err(_) => panic!("No such plugin {}", lib_src)
+    };
+
     let vtable = PluginVTable::new(&lib);
     let mut declarations: Vec<Action> = vec![];
 

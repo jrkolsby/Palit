@@ -488,7 +488,10 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
     while let Some(action_raw) = ipc_iter.next() {
         match action_raw.parse::<Action>() {
             Ok(Action::Noop) => (),
-            Ok(a) => events.push(a),
+            Ok(a) => {
+                eprintln!("ACTION {:?}", a);
+                events.push(a)
+            },
             Err(r) => (),
         };
     };

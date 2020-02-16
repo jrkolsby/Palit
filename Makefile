@@ -1,6 +1,8 @@
+homedir = /usr/local/palit
+
 .PHONY : dev
 dev:
-	tmux split-window -v "tail -f /tmp/pt-debug" && tmux split-window -v "cd pt-sound && sudo make dev" && tmux split-window -v "cd pt-input && cargo run" && cd pt-client/ && cargo run --release 2> /tmp/pt-debug	
+	tmux split-window -v "tail -f /tmp/pt-debug" && tmux split-window -v "cd pt-sound && sudo make dev" && tmux split-window -v "cd pt-input && cargo run" && cd pt-client/ && sudo cargo run --release 2> /tmp/pt-debug	
 
 .PHONY : demo
 demo:
@@ -24,10 +26,10 @@ sound:
 
 .PHONY : plugin
 plugin: 
-	faust -lang c -cn mydsp ./storage/modules/$(name).dsp > ./_plugin_part.c;
-	cat ./pt-common/src/faust.h ./_plugin_part.c > _plugin.c;
-	gcc -c -fpic _plugin.c;
-	gcc -shared -o $(name).so _plugin.o;
-	rm ./_plugin_part.c;
-	rm ./_plugin.c;
-	rm ./_plugin.o;
+	faust -lang c -cn mydsp $(homedir)/modules/$(name).dsp > $(homedir)/modules/_plugin_part.c;
+	cat $(homedir)/modules/faust.h $(homedir)/modules/_plugin_part.c > $(homedir)/modules/_plugin.c;
+	gcc -c -fpic $(homedir)/modules/_plugin.c -o $(homedir)/modules/_plugin.o;
+	gcc -shared -o $(homedir)/modules/$(name).so $(homedir)/modules/_plugin.o;
+	rm $(homedir)/modules/_plugin_part.c;
+	rm $(homedir)/modules/_plugin.c;
+	rm $(homedir)/modules/_plugin.o;

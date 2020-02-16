@@ -17,14 +17,6 @@ const CORE_MODULES: [&str; 4] = [
     "keyboard",
 ];
 
-/*
-struct Module {
-    name: String,
-    src: String,
-    icon: String,
-}
-*/
-
 pub struct Modules {
     window: Window,
     state: ModulesState,
@@ -41,11 +33,26 @@ pub struct ModulesState {
 impl Modules {
     pub fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
         let mut core: Vec<String> = CORE_MODULES.iter().map(|a| a.to_string()).collect();
-        let modules = get_files(PALIT_MODULES, core);
+        let mut modules: Vec<String> = get_files(PALIT_MODULES, core).unwrap();
+        modules = modules.iter().filter_map(|m| {
+            let parts: Vec<&str> = m.split(".").collect();
+            if parts.len() < 2 {
+                // Core modules
+                Some(parts[0].to_string())
+            } else {
+                // Faust plugins
+                match parts[1] {
+                    "so" => None,
+                    "dsp" => Some(parts[0].to_string()),
+                    _ => None,
+
+                }
+            }
+        }).collect();
         let initial_state = ModulesState {
             focus: (0,0),
             current: None,
-            modules: modules.unwrap(),
+            modules: modules,
         };
         return Modules {
             window: Window {
