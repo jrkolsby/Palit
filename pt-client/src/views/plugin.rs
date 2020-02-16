@@ -218,6 +218,7 @@ impl Layer for Plugin {
                 self.focii = generate_focii(&self.state.params);
                 (self.state.focus, None)
             },
+            a @ Action::Left | 
             a @ Action::Up | 
             a @ Action::Down => {
                 shift_focus(self.state.focus, &self.focii, a)
