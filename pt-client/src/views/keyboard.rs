@@ -1,12 +1,11 @@
 use std::io::Write;
 use termion::cursor;
 use xmltree::Element;
-use libcommon::{Action, Anchor};
+use libcommon::{Action, Anchor, param_map};
 
 use crate::common::{Screen, Window};
 use crate::views::{Layer};
 use crate::components::{popup, ivories};
-use crate::modules::param_map;
 
 pub struct Keyboard {
     x: u16,
@@ -28,8 +27,8 @@ pub struct KeyboardState {
 fn reduce(state: KeyboardState, action: Action) -> KeyboardState {
     KeyboardState {
         octave: match action {
-            Action::PitchUp => state.octave + 1,
-            Action::PitchDown => state.octave - 1,
+            Action::Octave(true) => state.octave + 1,
+            Action::Octave(false) => state.octave - 1,
             _ => state.octave
         },
         keys_active: match action {
@@ -54,14 +53,14 @@ fn reduce(state: KeyboardState, action: Action) -> KeyboardState {
 }
 
 impl Keyboard {
-    pub fn new(x: u16, y: u16, width: u16, height: u16, doc: Element) -> Self {
-        let (_, params) = param_map(doc);
+    pub fn new(x: u16, y: u16, width: u16, height: u16, mut doc: Element) -> Self {
+        let (_, params) = param_map(&mut doc);
         // Initialize State
         let initial_state: KeyboardState = KeyboardState {
             keys_active: vec![],
-            octave: *params.get("octave").unwrap_or(&3) as usize,
-            shift: *params.get("shift").unwrap_or(&0) as i8,
-            velocity: *params.get("velocity").unwrap_or(&500) as f32 / 1000.
+            octave: *params.get("octave").unwrap_or(&3.0) as usize,
+            shift: *params.get("shift").unwrap_or(&0.0) as i8,
+            velocity: *params.get("velocity").unwrap_or(&0.3)
         };
 
         Keyboard {

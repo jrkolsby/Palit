@@ -1,19 +1,18 @@
 use std::convert::TryInto;
 use std::collections::HashMap;
 use xmltree::Element;
-use libcommon::{Route, Anchor};
+use libcommon::{Route, Anchor, Param, param_map, mark_map};
 
 use crate::views::RoutesState;
-use crate::modules::{param_map, mark_map};
 
 pub fn write(state: RoutesState) -> Element {
     Element::new("param")
 }
 
-pub fn read(doc: Element) -> RoutesState {
+pub fn read(mut doc: Element) -> RoutesState {
 
-    let (doc, params) = param_map(doc);
-    let (mut doc, marks) = mark_map(doc);
+    let (mut doc, params) = param_map(&mut doc);
+    let (mut doc, marks) = mark_map(&mut doc);
 
     let mut state = RoutesState {
         routes: HashMap::new(),

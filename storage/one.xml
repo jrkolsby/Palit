@@ -59,15 +59,15 @@
         </timeline>
 
         <hammond id="9">
-            <param name="16" value="48" />
-            <param name="5.3" value="48" />
-            <param name="8" value="48" />
-            <param name="4" value="32" />
-            <param name="2.6" value="16" />
-            <param name="2" value="8" />
-            <param name="1.6" value="4" />
-            <param name="1.3" value="2" />
-            <param name="1" value="1" />
+            <param name="16" value="0.01" />
+            <param name="5.3" value="0.01" />
+            <param name="8" value="0.01" />
+            <param name="4" value="0.01" />
+            <param name="2.6" value="0.01" />
+            <param name="2" value="0.01" />
+            <param name="1.6" value="0.01" />
+            <param name="1.3" value="0.01" />
+            <param name="1" value="0.01" />
             <param name="height" value="0" />
             <param name="reverb" value="0" />
         </hammond>

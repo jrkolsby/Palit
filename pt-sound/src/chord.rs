@@ -1,7 +1,5 @@
 use xmltree::Element;
-use libcommon::{Action, Note, Key, Offset};
-
-use crate::document::{note_list};
+use libcommon::{Action, Note, Key, Offset, note_list};
 
 pub struct Store {
     thru_queue: Vec<Action>,

@@ -7,6 +7,7 @@ use std::io::prelude::*;
 use std::fs::{OpenOptions, File};
 use std::os::unix::fs::OpenOptionsExt;
 use std::ffi::CString;
+use std::process::Command;
 use std::os::unix::io::FromRawFd;
 use std::ops::DerefMut;
 use std::collections::VecDeque;
@@ -33,8 +34,9 @@ use views::{Layer,
     Arpeggio,
     Modules,
     Project,
+    Plugin,
 };
-use modules::{read_document, Document};
+use libcommon::{read_document, Document};
 
 use common::{Screen, MARGIN_D0, MARGIN_D1, MARGIN_D2};
 
@@ -125,7 +127,19 @@ fn add_module(
                 ), DEFAULT_ROUTE_ID);
             }
         },
-        name => { eprintln!("unimplemented module {:?}", name)}
+        plugin => {
+            let cmd = format!("sudo make plugin name={} &> /dev/null", plugin);
+            // Run make as arg to sh in parent directory
+            let result = Command::new("sh").current_dir("..").arg("-c").arg(cmd).status()
+                .expect("failed to run plugin compiler");
+            if result.success() {
+                add_layer(a, Box::new(Plugin::new(1, 1, size.0, size.1, (el).to_owned())), id)
+            } else {
+                // Make sure that plugin.so exists by the time we leave this function, or panic
+                panic!("Failed to compile plugin")
+                //add_layer(a, Box::new(Plugin::new(1, 1, size.0, size.1, (el).to_owned())), id)
+            }
+        }
     }
 }
 
@@ -228,7 +242,16 @@ fn main() -> std::io::Result<()> {
                         size.1 - (MARGIN_D1.1 * 2),
                     )), DEFAULT_MODULES_ID); 
                     Action::Noop
-                }
+                },
+                Action::At(n_id, action) => {
+                    let mut default = Action::Noop;
+                    for (id, layer) in layers.iter_mut() {
+                        if *id == n_id {
+                            default = layer.dispatch(*action.to_owned())
+                        }
+                    }
+                    default
+                },
                 a => {
                     let (_, target) = layers.get_mut(target_index).unwrap();
                     target.dispatch(a)
@@ -328,10 +351,9 @@ fn main() -> std::io::Result<()> {
                     }
                 }, 
                 Action::OpenProject(title) => {
-                    ipc_sound.write(format!("OPEN_PROJECT:{} ", title).as_bytes()).unwrap();
+                    ipc_sound.write(Action::OpenProject(title.clone()).to_string().as_bytes()).unwrap();
                     let mut doc = read_document(title);
-                    ipc_sound.write(format!("SAMPLE_RATE:{} ", doc.sample_rate).as_bytes()).unwrap();
-                    for (id, el) in doc.modules.iter() {
+                    for (id, el) in doc.modules.iter().rev() {
                         add_module(&mut layers, &el.name, *id, size, el.to_owned());
                     }
                     document = Some(doc.clone());
@@ -397,24 +419,24 @@ fn main() -> std::io::Result<()> {
                             if *id > max { *id } else { max }
                         ) + 1
                     };
-                    ipc_sound.write(format!("ADD_MODULE:{}:{} ", new_id, name).as_bytes()).unwrap();
                     // Make empty element with tag and id
                     let mut new_el = Element::new(&name);
                     new_el.attributes.insert("id".to_string(), new_id.to_string());
                     add_module(&mut layers, &name, new_id, size, new_el.clone());
                     if let Some(mut doc) = document {
-                        doc.modules.insert(new_id, new_el);
+                        doc.modules.push((new_id, new_el));
                         document = Some(doc);
                     }
+                    ipc_sound.write(Action::AddModule(new_id, name).to_string().as_bytes()).unwrap();
                     // Make sure modules view is still in front so it can Cancel
                     layers.swap(layers.len()-1, layers.len()-2);
                     events.push(Action::Back);
                 },
                 Action::DelModule(id) => {
-                    ipc_sound.write(format!("DEL_MODULE:{} ", id).as_bytes()).unwrap();
+                    ipc_sound.write(Action::DelModule(id).to_string().as_bytes()).unwrap();
                     layers.retain(|(i, _)| *i != id);
                     if let Some(mut doc) = document {
-                        doc.modules.retain(|i, _| *i != id);
+                        doc.modules.retain(|(i, _)| *i != id);
                         document = Some(doc);
                     }
                     let mut routes_index: Option<usize> = None;
@@ -439,22 +461,19 @@ fn main() -> std::io::Result<()> {
                     layers.push(Box::new(Error::new(message))) ;
                 }
                 */
-                sound_action => {
-                    ipc_sound.write(match sound_action {
-                        Action::Play => Action::PlayAt(target_id),
-                        Action::Stop => Action::StopAt(target_id),
-                        Action::RecordTrack(t_id, mode) => Action::RecordAt(target_id, t_id, mode),
-                        Action::SoloTrack(t_id, is_on) => Action::SoloAt(target_id, t_id, is_on),
-                        Action::MonitorTrack(t_id, is_on) => Action::MonitorAt(target_id, t_id, is_on),
-                        Action::MuteTrack(t_id, is_on) => Action::MuteAt(target_id, t_id, is_on),
-                        Action::Scrub(_, dir) => Action::Scrub(target_id, dir),
-                        Action::SetParam(_, key, val) => Action::SetParam(target_id, key, val),
-                        Action::SetLoop(_, l_in, l_out) => Action::SetLoop(target_id, l_in, l_out),
-                        Action::LoopMode(_, is_on) => Action::LoopMode(target_id, is_on),
-                        Action::NoteOn(key, vel) => Action::NoteOnAt(target_id, key, vel),
-                        Action::NoteOff(key) => Action::NoteOffAt(target_id, key),
-                        a => a
-                    }.to_string().as_bytes()).unwrap();
+                a @ Action::DelRoute(_) |
+                a @ Action::AddRoute(_) |
+                a @ Action::PatchIn(_, _, _) |
+                a @ Action::PatchOut(_, _, _) |
+                a @ Action::DelPatch(_, _, _) => {
+                    ipc_sound.write(a.to_string().as_bytes()).unwrap();
+                },
+                Action::Noop => {},
+                direct_action => {
+                    ipc_sound.write(Action::At(
+                        target_id, 
+                        Box::new(direct_action)
+                    ).to_string().as_bytes()).unwrap();
                 }
             };	
         }

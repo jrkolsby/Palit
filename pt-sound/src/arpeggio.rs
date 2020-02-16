@@ -1,13 +1,11 @@
 use std::borrow::BorrowMut;
 use xmltree::Element;
-use libcommon::{Action, Note, Key, Offset};
-
-use crate::document::{param_map};
+use libcommon::{Action, Note, Key, Offset, Param, param_map};
 
 pub struct Store {
     timer: Offset,
-    length: u8,
-    bpm: u16,
+    length: Param,
+    bpm: Param,
     sample_rate: Offset,
     bar: Offset,
     notes: Vec<Note>,
@@ -17,16 +15,16 @@ pub struct Store {
 pub fn init() -> Store {
     Store {
         timer: 0,
-        length: 4, // beats per loop
-        bpm: 127,
+        length: 4.0, // beats per loop
+        bpm: 127.0,
         sample_rate: 48000,
-        bar: calculate_beat(48000, 127, 4),
+        bar: calculate_beat(48000, 127.0, 4.0),
         notes: vec![],
         queue: vec![],
     }
 }
 
-fn calculate_beat(sample_rate: Offset, bpm: u16, length: u8) -> Offset {
+fn calculate_beat(sample_rate: Offset, bpm: Param, length: Param) -> Offset {
     (sample_rate * 60 / bpm as Offset) * length as Offset
 }
 
@@ -74,7 +72,7 @@ pub fn dispatch(store: &mut Store, action: Action) {
 pub fn read(doc: &mut Element) -> Option<Store> {
     let (mut doc, params) = param_map(doc);
     let mut store: Store = init();
-    store.length = *params.get("length").unwrap_or(&4) as u8;
+    store.length = *params.get("length").unwrap_or(&4.0);
     store.bar = calculate_beat(store.sample_rate, store.bpm, store.length);
     Some(store)
 }

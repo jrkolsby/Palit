@@ -11,7 +11,7 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::io::prelude::*;
 use std::collections::HashMap;
 use std::borrow::BorrowMut;
-use libcommon::{Action, Key};
+use libcommon::{Action, Key, Document, read_document, param_map};
 use dsp::{NodeIndex, Frame, FromSample, Graph, Node, Sample, Walker};
 use xmltree::Element;
 use sample::signal;
@@ -22,10 +22,9 @@ mod synth;
 mod tape;
 mod chord;
 mod arpeggio;
-mod document;
+mod plugin;
 
 use crate::core::{event_loop, Module, Output, CHANNELS};
-use crate::document::{Document, read_document, param_map};
 
 const MASTER_ROUTE: u16 = 1;
 
@@ -94,7 +93,7 @@ fn add_module(
             },
             "keyboard" => {
                 let (_, params) = param_map(el);
-                let shift = *params.get("octave").unwrap_or(&3) as Key;
+                let shift = *params.get("octave").unwrap_or(&3.0) as Key;
                 let octave = patch.add_node(Module::Octave(vec![], shift));
                 //let shift = patch.add_node(Module::Octave(vec![], 4));
                 let operator = patch.add_node(Module::Operator(vec![], 
@@ -142,7 +141,17 @@ fn add_module(
                         patch.add_connection(out_id ,route);
                     }
                 }
-            }
+            },
+            plugin => {
+                // FIXME: use current directory
+                let store = plugin::init(format!("/usr/local/palit/modules/{}.so", plugin));
+                let plugin = patch.add_node(Module::Plugin(store));
+                let operator = patch.add_node(Module::Operator(vec![], 
+                    vec![plugin, plugin], id.clone()
+                ));
+                patch.add_connection(operator, plugin);
+                operators.insert(id, operator);
+            },
             name @ _ => { eprintln!("Unimplemented module {:?}", name)}
         }
     }
@@ -174,6 +183,13 @@ fn main() -> Result<(), Box<error::Error>> {
     let mut operators: HashMap<u16, NodeIndex> = HashMap::new();
     let mut routes: HashMap<u16, NodeIndex> = HashMap::new();
 
+    // Make a master route available without a project
+    let master_node = graph.add_node(Module::Master);
+    let master_route = graph.add_node(Module::Master);
+    routes.insert(MASTER_ROUTE, master_route);
+    graph.add_connection(master_route, master_node);
+    graph.set_master(Some(master_node));
+
     event_loop(ipc_in, ipc_client, graph, move |mut patch, a| { 
         // ROOT DISPATCH
         // n_id Node ID
@@ -182,23 +198,10 @@ fn main() -> Result<(), Box<error::Error>> {
         // op_id Module Operator ID (Dispatches to a cluster of nodes)
         // m_id Module ID (Key of operators)
 
-        eprintln!("ACTION {:?}", a);
         match a {
-            Action::LoopMode(n_id, _) |
-            Action::SetLoop(n_id, _, _) |
-            Action::Scrub(n_id, _) |
-            Action::GotoAt(n_id, _) |
-            Action::RecordAt(n_id, _, _) |
-            Action::MuteAt(n_id, _, _) |
-            Action::SoloAt(n_id, _, _) |
-            Action::MonitorAt(n_id, _, _) |
-            Action::NoteOnAt(n_id, _, _) | 
-            Action::NoteOffAt(n_id, _) |
-            Action::SetParam(n_id, _, _) |
-            Action::PlayAt(n_id) | 
-            Action::StopAt(n_id) => {
+            Action::At(n_id, action) => {
                 if let Some(id) = operators.get(&n_id) {
-                    patch[*id].dispatch(a)
+                    patch[*id].dispatch(*action)
                 }
             },
             Action::SetMeter(_, _) |
@@ -210,13 +213,6 @@ fn main() -> Result<(), Box<error::Error>> {
             Action::NoteOn(_,_) | Action::NoteOff(_) | Action::Octave(_) => {
                 if let Some(id) = operators.get(&104) {
                     patch[*id].dispatch(a)
-                }
-            },
-            Action::MoveRegion(m_id, r_id, track, offset) => {
-                if let Some(n_id) = operators.get(&m_id) {
-                    if let Some(node) = patch.node_mut(*n_id) {
-                        node.dispatch(a)
-                    }
                 }
             },
             Action::AddRoute(r_id) => {

@@ -33,6 +33,7 @@ use crate::synth;
 use crate::tape;
 use crate::chord;
 use crate::arpeggio;
+use crate::plugin;
 
 // SAMPLE FORMATS 
 pub type Output = f32; // PORTAUDIO
@@ -42,8 +43,8 @@ pub const CHANNELS: usize = 2;
 pub const SAMPLE_HZ: f64 = 48_000.0;
 pub const BUF_SIZE: usize = 24_000;
 pub const BIT_RATE: usize = 16;
+pub const FRAMES: u32 = 128;
 
-const FRAMES: u32 = 128;
 const DEBUG_KEY_PERIOD: u16 = 24100;
 const SCRUB_MAX: f64 = 4.0;
 const SCRUB_ACC: f64 = 0.01;
@@ -220,6 +221,7 @@ pub enum Module {
     Tape(tape::Store),
     Chord(chord::Store),
     Arpeggio(arpeggio::Store),
+    Plugin(plugin::Store),
 }
 
 impl Module {
@@ -240,6 +242,7 @@ impl Module {
                 }
             },
             Module::Arpeggio(ref mut store) => arpeggio::dispatch(store, a.clone()),
+            Module::Plugin(ref mut store) => plugin::dispatch(store, a.clone()),
             _ => {}
         };
     }
@@ -289,6 +292,7 @@ impl Module {
             Module::Chord(ref mut store) => chord::dispatch_requested(store),
             Module::Arpeggio(ref mut store) => arpeggio::dispatch_requested(store),
             Module::Synth(ref mut store) => synth::dispatch_requested(store),
+            Module::Plugin(ref mut store) => plugin::dispatch_requested(store),
             Module::Master => (None, None, None), // TODO: give master levels to client
             _ => (None, None, None)
         }
@@ -397,6 +401,9 @@ impl Node<[Output; CHANNELS]> for Module {
                     arpeggio::compute(store); a
                 });
             },
+            Module::Plugin(ref mut store) => {
+                plugin::compute_buf(store, buffer);
+            }
             _ => ()
         }
     }
@@ -431,17 +438,21 @@ fn walk_dispatch(mut ipc_client: &File, patch: &mut Graph<[Output; CHANNELS], Mo
             }
         }
         if let Some(client_a) = client_d {
-            for a in client_a.iter() {
-                let message = match a {
-                    Action::Tick(_) |
-                    Action::NoteOn(_,_) |
-                    Action::NoteOff(_) |
-                    Action::AddNote(_,_) |
-                    Action::AddRegion(_,_,_,_,_,_,_) => Some(a.to_string()),
-                    _ => None
+            let mut ins = patch.inputs(n);
+            let mut op_id = 0;
+            'search: while let Some(oid) = ins.next_node(&patch) {
+                match patch[oid] {
+                    Module::Operator(_, _, id) => { op_id = id; break 'search; },
+                    _ => {}
+                }
+            }
+            for action in client_a.iter() {
+                let filtered_direct = match action {
+                    Action::Noop => None,
+                    a => Some(Action::At(op_id, Box::new(a.to_owned()))),
                 };
-                if let Some(text) = message {
-                    ipc_client.write(text.as_bytes());
+                if let Some(a) = filtered_direct {
+                    ipc_client.write(a.to_string().as_bytes());
                 }
             }
         }
@@ -459,7 +470,9 @@ fn ipc_dispatch<F: 'static>(
         match action {
             Action::Exit => { return Action::Exit; },
             // Pass any other action to root
-            _ => { root_dispatch(patch, action.clone()); }
+            a => { 
+                root_dispatch(patch, a.clone()); 
+            }
         };
     }
     Action::Noop
@@ -475,7 +488,10 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
     while let Some(action_raw) = ipc_iter.next() {
         match action_raw.parse::<Action>() {
             Ok(Action::Noop) => (),
-            Ok(a) => events.push(a),
+            Ok(a) => {
+                eprintln!("ACTION {:?}", a);
+                events.push(a)
+            },
             Err(r) => (),
         };
     };

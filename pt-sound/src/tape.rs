@@ -12,11 +12,10 @@ use xmltree::Element;
 use hound;
 use object_pool::Pool;
 use chrono::prelude::*;
-use libcommon::{Action, Offset, Note, Key};
+use libcommon::{Action, Offset, Note, Key, Param, param_map, param_add, mark_map, mark_add};
 
 use crate::core::{SAMPLE_HZ, BUF_SIZE, CHANNELS, BIT_RATE};
 use crate::core::{SF, Output};
-use crate::document::{param_map, param_add, mark_map, mark_add};
 
 pub struct Region {
     pub id: u16,
@@ -35,10 +34,10 @@ pub struct Store {
     pub meter_beat: u16,
     pub meter_note: u16,
     pub loop_on: bool,
-    pub loop_in: u32,
-    pub loop_out: u32,
-    pub duration: u32,
-    pub playhead: u32, 
+    pub loop_in: Offset,
+    pub loop_out: Offset,
+    pub duration: Offset,
+    pub playhead: Offset, 
     pub regions: Vec<Region>,
     pub notes: Vec<Note>,
     pub velocity: f64,
@@ -51,7 +50,7 @@ pub struct Store {
     pub out_queue: Vec<Action>,
     pub note_queue: Vec<Note>,
     pub sample_rate: u32,
-    pub beat: u32,
+    pub beat: Offset,
     pub pool: Option<Pool<'static, Vec<[Output; CHANNELS]>>>,
     pub writer: Option<thread::JoinHandle<()>>,
     pub rec_region: Arc<RwLock<Option<Region>>>,
@@ -111,7 +110,7 @@ pub fn dispatch_requested(store: &mut Store) -> (
                     Some(ref mut _region) => {
                         // We are stopped and the worker is finished writing
                         if region_count as usize % BUF_SIZE == 0 {
-                            client_actions.push(Action::AddRegion(0,
+                            client_actions.push(Action::AddRegion(
                                 store.track_id, 
                                 _region.id, 
                                 _region.asset_id,
@@ -123,12 +122,7 @@ pub fn dispatch_requested(store: &mut Store) -> (
                         if store.velocity == 0.0 && region_count == _region.duration {
                             // Make a new guard to get rid of the region
                             let src = _region.asset_src.to_owned();
-                            // Ideally we would do this in the worker...
-                            /*
-                            let writer = hound::WavWriter::append(src.clone()).unwrap();
-                            writer.finalize();
-                            */
-                            client_actions.push(Action::AddRegion(0,
+                            client_actions.push(Action::AddRegion(
                                 store.track_id, 
                                 _region.id, 
                                 _region.asset_id, 
@@ -160,8 +154,8 @@ pub fn dispatch_requested(store: &mut Store) -> (
 
     for a in store.out_queue.iter() {
         match a {
-            Action::AddRegion(_, _, _, _, _, _, _) |
-            Action::AddNote(_, _) |
+            Action::AddRegion(_, _, _, _, _, _) |
+            Action::AddNote(_) |
             Action::Tick(_) => client_actions.push(a.clone()),
             _ => output_actions.push(a.clone())
         }
@@ -182,6 +176,7 @@ fn frame_with_offset(region: &Region, offset: usize) -> [Output; CHANNELS] {
     return region.buffer[index][offset - (BUF_SIZE * index)];
 }
 
+// Worker thread for writing to disk during record
 fn write_recording_region(source_region: Arc<RwLock<Option<Region>>>, source_count: Arc<AtomicU32>) {
     let wav_spec = hound::WavSpec {
         channels: CHANNELS as u16,
@@ -209,13 +204,16 @@ fn write_recording_region(source_region: Arc<RwLock<Option<Region>>>, source_cou
                                     _writer.write_sample((frame[1] * std::i16::MAX as f32) as i16);
                                     count += 1;
                                 }
-                                _writer.flush();
+                                if count % BUF_SIZE as u32 == 0 {
+                                    _writer.flush();
+                                }
                                 source_count.store(count, Ordering::SeqCst);
                             }
                         }
                     },
                     None => { 
-                        if let Some(_writer) = writer.take() {
+                        if let Some(mut _writer) = writer.take() {
+                            _writer.flush();
                             _writer.finalize();
                             writer = None;
                         }
@@ -231,10 +229,10 @@ fn write_recording_region(source_region: Arc<RwLock<Option<Region>>>, source_cou
 
 pub fn dispatch(store: &mut Store, a: Action) {
     match a {
-        Action::LoopMode(_, on) => {
+        Action::LoopMode(on) => {
             store.loop_on = on;
         },
-        Action::SetLoop(_, l_in, l_out) => {
+        Action::SetLoop(l_in, l_out) => {
             store.loop_in = l_in;
             store.loop_out = l_out;
         },
@@ -246,10 +244,10 @@ pub fn dispatch(store: &mut Store, a: Action) {
             store.meter_beat = beat;
             store.meter_note = note;
         },
-        Action::Scrub(_, dir) => {
+        Action::Scrub(dir) => {
             store.scrub = Some(dir);
         },
-        Action::PlayAt(_) => { 
+        Action::Play => { 
             store.velocity = 1.0; 
             store.scrub = None;
             if store.recording == 2 {
@@ -272,7 +270,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     asset_id: new_asset_id,
                     asset_src: new_src.clone(),
                 });
-                store.out_queue.push(Action::AddRegion(0,
+                store.out_queue.push(Action::AddRegion(
                     store.track_id, 
                     new_region_id, 
                     new_asset_id,
@@ -282,14 +280,14 @@ pub fn dispatch(store: &mut Store, a: Action) {
                 ));
             }
         },
-        Action::StopAt(_) => { 
+        Action::Stop => { 
             store.velocity = 0.0; 
             store.scrub = None;
             if store.loop_on {
                 store.playhead = store.loop_in;
             }
         },
-        Action::RecordAt(_, t_id, mode) => { 
+        Action::RecordTrack(t_id, mode) => { 
             if store.track_id == t_id {
                 store.recording = mode;
                 match mode {
@@ -321,23 +319,23 @@ pub fn dispatch(store: &mut Store, a: Action) {
                 }
             }
         },
-        Action::MuteAt(_, t_id, is_on) => { 
+        Action::MuteTrack(t_id, is_on) => { 
             if store.track_id == t_id {
                 store.mute = is_on;
             }
         },
-        Action::MonitorAt(_, t_id, is_on) => { 
+        Action::MonitorTrack(t_id, is_on) => { 
             if store.track_id == t_id {
                 store.monitor = is_on; 
             }
         },
-        Action::Loop(_, loop_in, loop_out) => { 
+        Action::Loop(loop_in, loop_out) => { 
             store.loop_in = loop_in; 
             store.loop_out = loop_out; 
             store.loop_on = true;
         },
-        Action::LoopOff(_) => { store.loop_on = false; },
-        Action::GotoAt(_, offset) => { 
+        Action::LoopOff => { store.loop_on = false; },
+        Action::Goto(offset) => { 
             store.note_queue.clear();
             store.playhead = offset; 
         },
@@ -370,7 +368,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
                         vel: on_note.vel,
                     };
                     store.out_queue.push(Action::AddNote(
-                        recorded_note.id, recorded_note.clone(),
+                        recorded_note.clone(),
                     ));
                     store.notes.push(recorded_note);
                 }
@@ -463,13 +461,13 @@ pub fn read(doc: &mut Element) -> Option<Store> {
     let (mut doc, mut params) = param_map(doc);
     let (mut doc, mut marks) = mark_map(doc);
 
-    store.bpm = (*params.get("bpm").unwrap_or(&127)).try_into().unwrap();
-    store.duration = (*marks.get("seq_out").unwrap_or(&48000) - 
-                   *marks.get("seq_in").unwrap_or(&0)).try_into().unwrap();
-    store.meter_beat = (*params.get("meter_beat").unwrap_or(&4)).try_into().unwrap();
-    store.meter_note = (*params.get("meter_note").unwrap_or(&4)).try_into().unwrap();
+    store.bpm = (*params.get("bpm").unwrap_or(&127.0)) as u16;
+    store.meter_beat = (*params.get("meter_beat").unwrap_or(&4.0)) as u16;
+    store.meter_note = (*params.get("meter_note").unwrap_or(&4.0)) as u16;
     store.loop_in = (*marks.get("loop_in").unwrap_or(&0)).try_into().unwrap();
     store.loop_out = (*marks.get("loop_out").unwrap_or(&0)).try_into().unwrap();
+    store.duration = (*marks.get("seq_out").unwrap_or(&48000) - 
+                      *marks.get("seq_in").unwrap_or(&0)).try_into().unwrap();
     store.beat = calculate_beat(store.sample_rate, store.bpm);
 
     for (name, value) in params.drain() {

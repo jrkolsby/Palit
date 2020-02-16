@@ -1,7 +1,7 @@
 pub type Key = u8;
 pub type Volume = f64;
 pub type Offset = u32;
-pub type Param = i16;
+pub type Param = f32;
 
 #[derive(Clone, Debug)]
 pub struct Route {
@@ -30,4 +30,8 @@ pub struct Note {
     pub t_out: Offset,
     pub note: Key,
     pub vel: Volume,
+}
+
+pub fn note_to_hz(note: Key) -> f32 {
+    440. * 2_f32.powf((note as f32 - 69.)/12.)
 }
