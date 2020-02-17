@@ -379,26 +379,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
                         **new_ui.params.get_mut("gate").unwrap() = 1.0;
                     }
                     store.voices[store.next_voice] = Some((new_voice, new_ui, new_ui_glue));
-                    // Find the next voice after us which either is_some() and gate = 0 
-                    // ... or is_none()
-                    'search: for (i, voice) in store.voices.iter()
-                            .skip(store.next_voice).enumerate() {
-                        if let Some((_, ui, _)) = voice {
-                            unsafe {
-                                // voice is inactive
-                                if **ui.params.get("gate").unwrap() == 0.0 {
-                                    store.next_voice = i;
-                                    break 'search;
-                                }
-                            }
-                        } else {
-                            store.next_voice = i;
-                            break 'search;
-                        }
-                    }
-                    eprintln!("ON NEW VOICE {}", store.next_voice);
                 } else {
-                    eprintln!("ON REUSING VOICE {}", store.next_voice);
                     if let Some(Some(ref mut voice)) = store.voices.get_mut(store.next_voice) {
                         unsafe { 
                             **voice.1.params.get_mut("freq").unwrap() = note_to_hz(key); 
@@ -407,23 +388,41 @@ pub fn dispatch(store: &mut Store, a: Action) {
                         }
                     }
                 };
+                // Find the next voice which is either None or whose gate == 0 
+                'search: for (i, voice) in store.voices.iter().enumerate() {
+                    if let Some((_, ui, _)) = voice {
+                        unsafe {
+                            // voice is inactive
+                            if **ui.params.get("gate").unwrap() == 0.0 {
+                                store.next_voice = i;
+                                break 'search;
+                            }
+                        }
+                    } else {
+                        store.next_voice = i;
+                        break 'search;
+                    }
+                }
             }
         },
         Action::NoteOff(key) => {
             if store.midi_enabled {
+                // Find the voice with NoteOff key and set next_voice 
                 'search: for (i, voice) in store.voices.iter_mut().enumerate() {
                     if let Some((_, ui, _)) = voice {
                         unsafe {
                             if **ui.params.get("freq").unwrap() == note_to_hz(key) {
                                **ui.params.get("gate").unwrap() = 0.0;
-                                store.next_voice = i;
+                                if i < store.next_voice {
+                                    store.next_voice = i;
+                                    break 'search;
+                                }
                             }
                         }
                     } else {
                         break 'search;
                     }
                 }
-                eprintln!("OFF NEXT VOICE {}", store.next_voice);
             }
         },
         Action::SetParam(key, val) => {
