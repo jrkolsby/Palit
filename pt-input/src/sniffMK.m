@@ -21,6 +21,7 @@
 //   b) run with '-mouse' for just mouse events or '-keyboard' for just key events
 //
 
+#include <stdio.h>
 #import <Carbon/Carbon.h>
 #import <Foundation/Foundation.h>
 #import <ApplicationServices/ApplicationServices.h>
@@ -186,72 +187,35 @@ CGEventRef eventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
     
     //key modify(ers)
     NSMutableString* keyModifiers = nil;
-
-    //dbg msg
-    printf("event: ");
     
     //what type?
     // ->pretty print
+
+    bool isUpEvent = false;
+
     switch(type)
     {
-        //left mouse down
-        case kCGEventLeftMouseDown:
-            printf("left mouse down\n");
-            break;
-            
-        //left mouse up
-        case kCGEventLeftMouseUp:
-            printf("left mouse up\n");
-            break;
-            
-        //right mouse down
-        case kCGEventRightMouseDown:
-            printf("right mouse down\n");
-            break;
-            
-        //right mouse up
-        case kCGEventRightMouseUp:
-            printf("right mouse up\n");
-            break;
-            
-        /*
-        case kCGEventMouseMoved:
-            printf("kCGEventMouseMoved\n");
-            break;
-        */
-            
-        //left mouse dragged
-        case kCGEventLeftMouseDragged:
-            printf("left mouse dragged\n");
-            break;
-            
-        //right mouse dragged
-        case kCGEventRightMouseDragged:
-            printf("right mouse dragged\n");
-            break;
-            
         //key down
         case kCGEventKeyDown:
             
             //get key modifiers
             keyModifiers = extractKeyModifiers(event);
-            
-            printf("key down\n");
+            isUpEvent = false;
             break;
             
         //key up
         case kCGEventKeyUp:
-            printf("key up\n");
+            isUpEvent = true;
             break;
         
         // event tap timeout
         case kCGEventTapDisabledByTimeout:
             CGEventTapEnable(eventTap, true);
-            printf("Event tap timed out: restarting tap");
+            //printf("Event tap timed out: restarting tap");
             return event;
         
         default:
-            printf("unknown (%d)\n", type);
+            break;
     }
     
     //for key presses
@@ -265,11 +229,83 @@ CGEventRef eventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
         if(0 != keyModifiers.length)
         {
             //dbg msg
-            printf("key modifiers: %s\n", keyModifiers.UTF8String);
+            //printf("key modifiers: %s\n", keyModifiers.UTF8String);
         }
         
         //dbg msg
-        printf("keycode: %#x/%d/%s\n\n", keyCode, keyCode, keyCodeToString(event, type).UTF8String);
+        //printf("keycode: %#x/%d/%s\n\n", keyCode, keyCode, keyCodeToString(event, type).UTF8String);
+        if (isUpEvent) {
+            switch(keyCode) {
+                case 0: fprintf(stderr, "NOTE_OFF:60 "); break; // a
+                case 13: fprintf(stderr, "NOTE_OFF:61 "); break; // w
+                case 1: fprintf(stderr, "NOTE_OFF:62 "); break; // s
+                case 14: fprintf(stderr, "NOTE_OFF:63 "); break; // e
+                case 2: fprintf(stderr, "NOTE_OFF:64 "); break; // d
+                case 3: fprintf(stderr, "NOTE_OFF:65 "); break; // f
+                case 17: fprintf(stderr, "NOTE_OFF:66 "); break; // t
+                case 5: fprintf(stderr, "NOTE_OFF:67 "); break; // g
+                case 16: fprintf(stderr, "NOTE_OFF:68 "); break; // y
+                case 4: fprintf(stderr, "NOTE_OFF:69 "); break; // h
+                case 32: fprintf(stderr, "NOTE_OFF:70 "); break; // u
+                case 38: fprintf(stderr, "NOTE_OFF:71 "); break; // j
+                case 40: fprintf(stderr, "NOTE_OFF:72 "); break; // k
+                case 31: fprintf(stderr, "NOTE_OFF:73 "); break; // o
+                case 37: fprintf(stderr, "NOTE_OFF:74 "); break; // l
+                case 35: fprintf(stderr, "NOTE_OFF:75 "); break; // p
+                case 15: // r
+                case 9: // v
+                case 46: // m
+                case 34: // i
+                case 49: // space
+                    printf("DESELECT ");
+                    break; 
+                default:
+                    break;
+            }
+        } else {
+            switch(keyCode) {
+                case 0: fprintf(stderr, "NOTE_ON:60:1 "); break; // a
+                case 13: fprintf(stderr, "NOTE_ON:61:1 "); break; // w
+                case 1: fprintf(stderr, "NOTE_ON:62:1 "); break; // s
+                case 14: fprintf(stderr, "NOTE_ON:63:1 "); break; // e
+                case 2: fprintf(stderr, "NOTE_ON:64:1 "); break; // d
+                case 3: fprintf(stderr, "NOTE_ON:65:1 "); break; // f
+                case 17: fprintf(stderr, "NOTE_ON:66:1 "); break; // t
+                case 5: fprintf(stderr, "NOTE_ON:67:1 "); break; // g
+                case 16: fprintf(stderr, "NOTE_ON:68:1 "); break; // y
+                case 4: fprintf(stderr, "NOTE_ON:69:1 "); break; // h
+                case 32: fprintf(stderr, "NOTE_ON:70:1 "); break; // u
+                case 38: fprintf(stderr, "NOTE_ON:71:1 "); break; // j
+                case 40: fprintf(stderr, "NOTE_ON:72:1 "); break; // k
+                case 31: fprintf(stderr, "NOTE_ON:73:1 "); break; // o
+                case 37: fprintf(stderr, "NOTE_ON:74:1 "); break; // l
+                case 35: fprintf(stderr, "NOTE_ON:75:1 "); break; // p
+                case 33: printf("PLAY "); break; // [
+                case 30: printf("STOP "); break; // ]
+                case 18: printf("1 "); break; // 1
+                case 19: printf("2 "); break; // 2
+                case 48: printf("ROUTE "); break; // tab
+                case 27: fprintf(stderr, "OCTAVE:0 "); // -
+                         printf("OCTAVE:0 "); break; 
+                case 24: fprintf(stderr, "OCTAVE:1 "); // -
+                         printf("OCTAVE:1 "); break; 
+                case 15: printf("R "); break; // r
+                case 9: printf("V "); break; // v
+                case 46: printf("M "); break; // m
+                case 34: printf("I "); break; // i
+                case 49: printf("SPC "); break; // space
+                case 12: printf("EXIT "); break; // q
+                case 126: printf("UP "); break; // up
+                case 125: printf("DN "); break; // down
+                case 123: printf("LT "); break; // left
+                case 124: printf("RT "); break; // right
+                default:
+                    fprintf(stderr, "UNKNOWN:%d ", keyCode);
+                    break;
+            }
+        }
+
+        fflush(stdout);
     }
     
     //for mouse
@@ -280,7 +316,7 @@ CGEventRef eventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
         location = CGEventGetLocation(event);
         
         //dbg msg
-        printf("(x: %f, y: %f)\n\n", location.x, location.y);
+        //printf("(x: %f, y: %f)\n\n", location.x, location.y);
     }
     
     return event;
@@ -301,14 +337,14 @@ int main(int argc, const char * argv[])
     @autoreleasepool
     {
         //dbg msg
-        printf("mouse/keyboard sniffer\nbased on code from amit singh (http://osxbook.com)\n\n");
+        //printf("mouse/keyboard sniffer\nbased on code from amit singh (http://osxbook.com)\n\n");
         
         //gotta be r00t
         // unless this program has been added to 'Security & Privacy' -> 'Accessibility'
         if(0 != geteuid())
         {
             //err msg/bail
-            printf("ERROR: run as root\n\n");
+            printf("ERROR ");
             goto bail;
         }
         
@@ -318,7 +354,7 @@ int main(int argc, const char * argv[])
             (0 == strcmp(argv[1], "-mouse")) )
         {
             //dbg msg
-            printf("initializing event mask for 'mouse' events\n");
+            //printf("initializing event mask for 'mouse' events\n");
             
             //init event mask with mouse events
             // ->add 'CGEventMaskBit(kCGEventMouseMoved)' if you want to also capture (noisy) mouse move events
@@ -333,7 +369,7 @@ int main(int argc, const char * argv[])
                  (0 == strcmp(argv[1], "-keyboard")) )
         {
             //dbg msg
-            printf("initializing event mask for 'keyboard' events\n");
+            //printf("initializing event mask for 'keyboard' events\n");
             
             //init event mask with mouse events
             // ->add 'CGEventMaskBit(kCGEventMouseMoved)' for mouse move events
@@ -345,7 +381,7 @@ int main(int argc, const char * argv[])
         else
         {
             //dbg msg
-            printf("initializing event mask for both 'mouse' and 'keyboard' events\n");
+            //printf("initializing event mask for both 'mouse' and 'keyboard' events\n");
             
             //init event with mouse events & key presses
             eventMask = CGEventMaskBit(kCGEventLeftMouseDown) | CGEventMaskBit(kCGEventLeftMouseUp) | CGEventMaskBit(kCGEventRightMouseDown) | CGEventMaskBit(kCGEventRightMouseUp) |
@@ -357,13 +393,13 @@ int main(int argc, const char * argv[])
         eventTap = CGEventTapCreate(kCGSessionEventTap, kCGHeadInsertEventTap, 0, eventMask, eventCallback, NULL);
         if(NULL == eventTap)
         {
-            //err msg/bail
-            printf("ERROR: failed to create event tap\n");
+            //err msg/bail (failed to create event tap)
+            printf("ERROR ");
             goto bail;
         }
         
         //dbg msg
-        printf("created event tap\n");
+        //printf("created event tap\n");
         
         //run loop source
         runLoopSource = CFMachPortCreateRunLoopSource(kCFAllocatorDefault, eventTap, 0);
@@ -375,7 +411,7 @@ int main(int argc, const char * argv[])
         CGEventTapEnable(eventTap, true);
         
         //dbg msg
-        printf("enabled event tap to commence sniffing\n\n");
+        //printf("enabled event tap to commence sniffing\n\n");
         
         //go, go, go
         CFRunLoopRun();
