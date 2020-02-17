@@ -381,9 +381,11 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     store.voices[store.next_voice] = Some((new_voice, new_ui, new_ui_glue));
                     // Find the next voice after us which either is_some() and gate = 0 
                     // ... or is_none()
-                    'search: for (i, voice) in store.voices.iter().enumerate() {
+                    'search: for (i, voice) in store.voices.iter()
+                            .skip(store.next_voice).enumerate() {
                         if let Some((_, ui, _)) = voice {
                             unsafe {
+                                // voice is inactive
                                 if **ui.params.get("gate").unwrap() == 0.0 {
                                     store.next_voice = i;
                                     break 'search;
@@ -394,7 +396,9 @@ pub fn dispatch(store: &mut Store, a: Action) {
                             break 'search;
                         }
                     }
+                    eprintln!("ON NEW VOICE {}", store.next_voice);
                 } else {
+                    eprintln!("ON REUSING VOICE {}", store.next_voice);
                     if let Some(Some(ref mut voice)) = store.voices.get_mut(store.next_voice) {
                         unsafe { 
                             **voice.1.params.get_mut("freq").unwrap() = note_to_hz(key); 
@@ -419,6 +423,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
                         break 'search;
                     }
                 }
+                eprintln!("OFF NEXT VOICE {}", store.next_voice);
             }
         },
         Action::SetParam(key, val) => {

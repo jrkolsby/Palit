@@ -4,11 +4,11 @@ prod: linux
 
 .PHONY : dev
 dev: darwin-optimal
-	./target/x86_64-apple-darwin/release/pt-sound
+	sudo ./target/x86_64-apple-darwin/release/pt-sound
 
 .PHONY : debug
 debug: darwin
-	./target/x86_64-apple-darwin/debug/pt-sound
+	sudo ./target/x86_64-apple-darwin/debug/pt-sound
 
 darwin-optimal:
 	cargo build --release --target x86_64-apple-darwin 

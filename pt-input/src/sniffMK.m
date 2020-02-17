@@ -257,57 +257,68 @@ CGEventRef eventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
                 case 46: // m
                 case 34: // i
                 case 49: // space
-                    printf("DESELECT ");
+                    fprintf(stdout, "DESELECT ");
                     break; 
                 default:
                     break;
             }
         } else {
-            switch(keyCode) {
-                case 0: fprintf(stderr, "NOTE_ON:60:1 "); break; // a
-                case 13: fprintf(stderr, "NOTE_ON:61:1 "); break; // w
-                case 1: fprintf(stderr, "NOTE_ON:62:1 "); break; // s
-                case 14: fprintf(stderr, "NOTE_ON:63:1 "); break; // e
-                case 2: fprintf(stderr, "NOTE_ON:64:1 "); break; // d
-                case 3: fprintf(stderr, "NOTE_ON:65:1 "); break; // f
-                case 17: fprintf(stderr, "NOTE_ON:66:1 "); break; // t
-                case 5: fprintf(stderr, "NOTE_ON:67:1 "); break; // g
-                case 16: fprintf(stderr, "NOTE_ON:68:1 "); break; // y
-                case 4: fprintf(stderr, "NOTE_ON:69:1 "); break; // h
-                case 32: fprintf(stderr, "NOTE_ON:70:1 "); break; // u
-                case 38: fprintf(stderr, "NOTE_ON:71:1 "); break; // j
-                case 40: fprintf(stderr, "NOTE_ON:72:1 "); break; // k
-                case 31: fprintf(stderr, "NOTE_ON:73:1 "); break; // o
-                case 37: fprintf(stderr, "NOTE_ON:74:1 "); break; // l
-                case 35: fprintf(stderr, "NOTE_ON:75:1 "); break; // p
-                case 33: printf("PLAY "); break; // [
-                case 30: printf("STOP "); break; // ]
-                case 18: printf("1 "); break; // 1
-                case 19: printf("2 "); break; // 2
-                case 48: printf("ROUTE "); break; // tab
-                case 27: fprintf(stderr, "OCTAVE:0 "); // -
-                         printf("OCTAVE:0 "); break; 
-                case 24: fprintf(stderr, "OCTAVE:1 "); // -
-                         printf("OCTAVE:1 "); break; 
-                case 15: printf("R "); break; // r
-                case 9: printf("V "); break; // v
-                case 46: printf("M "); break; // m
-                case 34: printf("I "); break; // i
-                case 49: printf("SPC "); break; // space
-                case 12: printf("EXIT "); break; // q
-                case 126: printf("UP "); break; // up
-                case 125: printf("DN "); break; // down
-                case 123: printf("LT "); break; // left
-                case 124: printf("RT "); break; // right
-                default:
-                    fprintf(stderr, "UNKNOWN:%d ", keyCode);
-                    break;
+            if (keyCode != *(CGKeyCode *)refcon) {
+                switch(keyCode) {
+                    case 0: fprintf(stderr, "NOTE_ON:60:1 "); break; // a
+                    case 13: fprintf(stderr, "NOTE_ON:61:1 "); break; // w
+                    case 1: fprintf(stderr, "NOTE_ON:62:1 "); break; // s
+                    case 14: fprintf(stderr, "NOTE_ON:63:1 "); break; // e
+                    case 2: fprintf(stderr, "NOTE_ON:64:1 "); break; // d
+                    case 3: fprintf(stderr, "NOTE_ON:65:1 "); break; // f
+                    case 17: fprintf(stderr, "NOTE_ON:66:1 "); break; // t
+                    case 5: fprintf(stderr, "NOTE_ON:67:1 "); break; // g
+                    case 16: fprintf(stderr, "NOTE_ON:68:1 "); break; // y
+                    case 4: fprintf(stderr, "NOTE_ON:69:1 "); break; // h
+                    case 32: fprintf(stderr, "NOTE_ON:70:1 "); break; // u
+                    case 38: fprintf(stderr, "NOTE_ON:71:1 "); break; // j
+                    case 40: fprintf(stderr, "NOTE_ON:72:1 "); break; // k
+                    case 31: fprintf(stderr, "NOTE_ON:73:1 "); break; // o
+                    case 37: fprintf(stderr, "NOTE_ON:74:1 "); break; // l
+                    case 35: fprintf(stderr, "NOTE_ON:75:1 "); break; // p
+                    case 33: fprintf(stdout, "PLAY "); break; // [
+                    case 30: fprintf(stdout, "STOP "); break; // ]
+                    case 18: fprintf(stdout, "1 "); break; // 1
+                    case 19: fprintf(stdout, "2 "); break; // 2
+                    case 48: fprintf(stdout, "ROUTE "); break; // tab
+                    case 27: fprintf(stderr, "OCTAVE:0 "); // -
+                            fprintf(stdout, "OCTAVE:0 "); break; 
+                    case 24: fprintf(stderr, "OCTAVE:1 "); // -
+                            fprintf(stdout, "OCTAVE:1 "); break; 
+                    case 15: fprintf(stdout, "R "); break; // r
+                    case 9: fprintf(stdout, "V "); break; // v
+                    case 46: fprintf(stdout, "M "); break; // m
+                    case 34: fprintf(stdout, "I "); break; // i
+                    case 49: fprintf(stdout, "SPC "); break; // space
+                    case 12: fprintf(stderr, "EXIT "); 
+                            fprintf(stdout, "EXIT "); break; // q
+                    case 126: fprintf(stdout, "UP "); break; // up
+                    case 125: fprintf(stdout, "DN "); break; // down
+                    case 123: fprintf(stdout, "LT "); break; // left
+                    case 124: fprintf(stdout, "RT "); break; // right
+                    case 6: fprintf(stdout, "INSTRUMENT "); break; // right
+                    default:
+                        fprintf(stderr, "UNKNOWN:%d ", keyCode);
+                        break;
+                }
             }
+        }
+        if (isUpEvent && keyCode == *(CGKeyCode *)refcon) {
+            *(CGKeyCode *)refcon = -1;
+        } else {
+            *(CGKeyCode *)refcon = keyCode;
         }
 
         fflush(stdout);
+        fflush(stderr);
+
     }
-    
+
     //for mouse
     // ->print location
     else
@@ -344,7 +355,7 @@ int main(int argc, const char * argv[])
         if(0 != geteuid())
         {
             //err msg/bail
-            printf("ERROR ");
+            fprintf(stdout, "ERROR ");
             goto bail;
         }
         
@@ -390,11 +401,12 @@ int main(int argc, const char * argv[])
         }
         
         //create event tap
-        eventTap = CGEventTapCreate(kCGSessionEventTap, kCGHeadInsertEventTap, 0, eventMask, eventCallback, NULL);
+        CGKeyCode lastKeyCode = 0; 
+        eventTap = CGEventTapCreate(kCGSessionEventTap, kCGHeadInsertEventTap, 0, eventMask, eventCallback, &lastKeyCode);
         if(NULL == eventTap)
         {
             //err msg/bail (failed to create event tap)
-            printf("ERROR ");
+            fprintf(stdout, "ERROR ");
             goto bail;
         }
         
