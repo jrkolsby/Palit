@@ -73,12 +73,10 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 ### MARCH 1 ( v1.0 )
 
-- [ ] SOUND-16: VST audio host (Steinberg API)
-- [ ] SOUND-3: Faust synth compilation (faust2vst)
-- [ ] SOUND-17: VST client host (XML UI to text layout)
+- [X] SOUND-3: Faust synth compilation (faust2vst)
 
-- [ ] INF-10: Faust UI generation (faust2vst)
-- [ ] INF-12: Sound actions are sent to correct modules
+- [X] INF-10: Faust UI generation (faust2vst)
+- [X] INF-12: Sound actions are sent to correct modules
 - [X] INF-13: Common Lib
 
 - [ ] UI-23: Project serialization & save 
@@ -107,6 +105,9 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [ ] INF-5: Unicode Support in linux TTY with KMSCON
 
 ### MAY 1
+
+- [ ] SOUND-16: VST audio host (Steinberg API)
+- [ ] SOUND-17: VST client host (XML UI to text layout)
 
 - [ ] SOUND-7: Send midi events from pt-client
 - [ ] SOUND-8: Fix audio underruns
