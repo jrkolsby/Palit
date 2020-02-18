@@ -5,10 +5,10 @@ use xmltree::Element;
 use termion::cursor;
 use libcommon::{Action, Anchor, Note, Param};
 
-use crate::components::{tempo, button, ruler, region, roll};
+use crate::components::{tempo, button, ruler, region_midi, region_audio, roll};
 use crate::common::{ID, VOID_ID, FocusType};
 use crate::common::{MultiFocus, render_focii, shift_focus, generate_partial_waveform};
-use crate::common::{Screen, Asset, Region, Track, Window};
+use crate::common::{Screen, Asset, AudioRegion, MidiRegion, Track, Window};
 use crate::common::{char_offset, offset_char, generate_waveforms};
 use crate::modules::timeline;
 use crate::views::{Layer};
@@ -35,7 +35,8 @@ pub struct TimelineState {
     pub sample_rate: u32,
     pub tracks: HashMap<u16, Track>,
     pub assets: HashMap<u16, Asset>,
-    pub regions: HashMap<u16, Region>,
+    pub regions: HashMap<u16, AudioRegion>,
+    pub midi_regions: HashMap<u16, MidiRegion>,
     pub notes: Vec<Note>,
 
     // Ephemeral variables
@@ -63,7 +64,7 @@ static VOID_TRANSFORM: fn(Action, ID, &TimelineState) -> Action =
     |_, _, _| Action::Noop;
 
 fn generate_focii(tracks: &HashMap<u16, Track>, 
-                  regions: &HashMap<u16, Region>) -> Vec<Vec<MultiFocus<TimelineState>>> {
+                  regions: &HashMap<u16, AudioRegion>) -> Vec<Vec<MultiFocus<TimelineState>>> {
     let mut focii: Vec<Vec<MultiFocus<TimelineState>>> = vec![vec![
         MultiFocus::<TimelineState> {
             r_id: (FocusType::Button, 0),
@@ -330,12 +331,12 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
         ]);
     };
 
-    let mut region_vec: Vec<(&u16, &Region)> = regions.iter().collect();
+    let mut region_vec: Vec<(&u16, &AudioRegion)> = regions.iter().collect();
     region_vec.sort_by(|(_, a), (_, b)| a.offset.cmp(&b.offset));
 
     for (region_id, region) in region_vec.iter() {
         focii[region.track as usize].push(
-            region::new(**region_id)
+            region_audio::new(**region_id)
         )
     }
 
@@ -447,7 +448,7 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         regions: match action.clone() {
             Action::AddRegion(t_id, r_id, asset_id, offset, duration, src) => {
                 let mut new_regions = state.regions.clone();
-                new_regions.insert(r_id, Region {
+                new_regions.insert(r_id, AudioRegion {
                     asset_id,
                     asset_in: 0,
                     asset_out: duration,
@@ -464,6 +465,19 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
                 new_regions
             },
             _ => state.regions.clone(),
+        },
+        midi_regions: match action.clone() {
+            Action::AddMidiRegion(t_id, r_id, offset, duration) => {
+                let mut new_regions = state.midi_regions.clone();
+                new_regions.insert(r_id, MidiRegion {
+                    duration,
+                    offset,
+                    track: t_id,
+                    notes: vec![]
+                });
+                new_regions
+            },
+            _ => state.midi_regions
         },
         notes: match action.clone() {
             Action::AddNote(note) => {
@@ -557,19 +571,6 @@ impl Layer for Timeline {
             self.state.zoom,
             self.state.scroll_x,
             playhead_offset);
-
-        roll::render(out,
-            Window { 
-                x: win.x + REGIONS_X, 
-                y: win.y + TIMELINE_Y,
-                w: win.w - REGIONS_X,
-                h: win.h - TIMELINE_Y,
-            },
-            self.state.scroll_x.into(),
-            self.state.sample_rate,
-            self.state.tempo,
-            self.state.zoom,
-            &self.state.notes);
 
         if let Some(t) = self.state.temp_tempo {
             write!(out, "{}Generating waveforms...", cursor::Goto(

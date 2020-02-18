@@ -21,6 +21,7 @@ pub fn render(out: &mut Screen,
         Note {
             note: n.note + 1,
             id: n.id,
+            r_id: n.r_id,
             t_in: n.t_in,
             t_out: n.t_out,
             vel: n.vel,

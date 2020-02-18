@@ -6,7 +6,7 @@ use xmltree::Element;
 
 use crate::views::TimelineState;
 use crate::views::Timeline;
-use crate::common::{Region, Track, Asset};
+use crate::common::{AudioRegion, MidiRegion, Track, Asset};
 
 pub fn write(state: TimelineState) -> Element {
     Element::new("param")
@@ -30,6 +30,7 @@ pub fn read(mut doc: Element) -> TimelineState {
         tracks: HashMap::new(),
         assets: HashMap::new(),
         regions: HashMap::new(),
+        midi_regions: HashMap::new(),
         notes: vec![],
 
         loop_mode: false,
@@ -68,7 +69,7 @@ pub fn read(mut doc: Element) -> TimelineState {
             let a_in: &str = region.attributes.get("in").unwrap();
             let a_out: &str = region.attributes.get("out").unwrap();
 
-            state.regions.insert(r_id.parse::<u16>().unwrap(), Region {
+            state.regions.insert(r_id.parse::<u16>().unwrap(), AudioRegion {
                 asset_id: a_id.parse().unwrap(),
                 asset_in: a_in.parse().unwrap(),
                 asset_out: a_out.parse().unwrap(),

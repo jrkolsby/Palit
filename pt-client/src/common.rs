@@ -14,7 +14,8 @@ pub use pcm::generate_partial_waveform;
 pub use pcm::char_offset;
 pub use pcm::offset_char;
 pub use pcm::Asset;
-pub use pcm::Region;
+pub use pcm::AudioRegion;
+pub use pcm::MidiRegion;
 pub use pcm::Track;
 
 pub use color::Color;
