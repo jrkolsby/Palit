@@ -31,7 +31,6 @@ pub fn read(mut doc: Element) -> TimelineState {
         assets: HashMap::new(),
         regions: HashMap::new(),
         midi_regions: HashMap::new(),
-        notes: vec![],
 
         loop_mode: false,
         tick: true,

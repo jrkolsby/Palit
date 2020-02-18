@@ -155,7 +155,7 @@ fn main() -> std::io::Result<()> {
     // Blocked by pt-sound reader
     // If a process writes to stdout and nobody 
     // is around to read it, should it continue?
-    println!("Waiting for pt-sound...");
+    eprintln!("Waiting for pt-sound...");
 
     let mut ipc_sound = OpenOptions::new()
         .write(true)

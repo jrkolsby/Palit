@@ -400,7 +400,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
                         let on_note = midi_region.note_queue.remove(on_index);
                         let recorded_note = Note {
                             id: on_note.id,
-                            r_id: on_note.id,
+                            r_id: on_note.r_id,
                             t_in: on_note.t_in,
                             t_out: store.playhead,
                             note: on_note.note,
