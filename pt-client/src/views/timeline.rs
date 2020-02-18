@@ -16,8 +16,6 @@ use crate::views::{Layer};
 use crate::common::{REGIONS_X, TIMELINE_Y};
 
 static TRACKS_X: u16 = 3;
-static SCROLL_R: u16 = 40;
-static SCROLL_L: u16 = 20;
 static ASSET_PREFIX: &str = "storage/";
 
 #[derive(Clone, Debug)]
@@ -43,6 +41,7 @@ pub struct TimelineState {
     // Ephemeral variables
     pub tick: bool,
     pub playhead: u32,
+    pub scroll_mid: u16,
     pub scroll_x: u16,
     pub scroll_y: u16,
     pub focus: (usize, usize),
@@ -83,26 +82,6 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
 
             w: VOID_RENDER,
             w_id: VOID_ID.clone(),
-
-            p_id: VOID_ID.clone(),
-            p: VOID_RENDER,
-            p_t: VOID_TRANSFORM,
-
-            g_id: VOID_ID.clone(),
-            g: VOID_RENDER,
-            g_t: VOID_TRANSFORM,
-
-            y_id: VOID_ID.clone(),
-            y: VOID_RENDER,
-            y_t: VOID_TRANSFORM,
-
-            b_id: VOID_ID.clone(),
-            b: VOID_RENDER,
-            b_t: VOID_TRANSFORM,
-
-            active: None,
-        },
-        MultiFocus::<TimelineState> {
             g_id: (FocusType::Button, 0),
             g: |out, window, id, state, focus| {
                 let offset_out = char_offset(
@@ -164,7 +143,44 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                     _ => Action::Noop 
                 }
             },
-            
+
+            y_id: VOID_ID.clone(),
+            y: VOID_RENDER,
+            y_t: VOID_TRANSFORM,
+
+            b_id: VOID_ID.clone(),
+            b: VOID_RENDER,
+            b_t: VOID_TRANSFORM,
+
+            active: None,
+        },
+        MultiFocus::<TimelineState> {
+            p_id: VOID_ID.clone(),
+            p: VOID_RENDER,
+            p_t: VOID_TRANSFORM,
+
+            g_id: (FocusType::Param, 0),
+            g: |out, window, id, state, focus| {
+                let zoom = if let Some(z) = state.temp_zoom { z } else { state.zoom };
+                write!(out, "{} {}X ", cursor::Goto(
+                    window.x+window.w - 19, 2
+                ), zoom).unwrap();
+            },
+            g_t: |a, id, state| {
+                let zoom = if let Some(z) = state.temp_zoom { z } else { state.zoom };
+                match a {
+                    Action::Up => Action::Zoom(zoom + 1),
+                    Action::Down => {
+                        if zoom > 0 {
+                            Action::Zoom(zoom - 1)
+                        } else {
+                            Action::Noop
+                        }
+                    },
+                    _ => Action::Noop,
+                }
+            },
+
             r_id: (FocusType::Param, 0),
             r: |out, window, id, state, focus| {
                 let tempo = if let Some(t) = state.temp_tempo { t } else { state.tempo };
@@ -174,7 +190,11 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                 let tempo = if let Some(t) = state.temp_tempo { t } else { state.tempo };
                 match a {
                     Action::Up => Action::SetTempo(tempo + 1),
-                    Action::Down => Action::SetTempo(tempo - 1),
+                    Action::Down => if tempo > 0 {
+                        Action::SetTempo(tempo - 1)
+                    } else {
+                        Action::Noop
+                    },
                     _ => Action::Noop
                 }
             },
@@ -340,7 +360,7 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             _ => state.zoom
         },
         temp_zoom: match action.clone() {
-            // Action::Zoom(z) => Some(z)
+            Action::Zoom(z) => Some(z),
             _ => None
         },
         meter_beat: match action.clone() {
@@ -454,28 +474,29 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             _ => state.notes.clone()
         },
         tick: match action.clone() {
-            Action::Tick(_) => !state.tick,
+            Action::Tick => !state.tick,
             _ => state.tick
         },
         playhead: match action {
-            Action::Tick(o) => o,
+            Action::Goto(o) => o,
             _ => state.playhead
         },
         scroll_x: match action {
-            Action::Tick(o) => {
+            Action::Goto(o) => {
                 let playhead_offset = char_offset(
                     o,
                     state.sample_rate,
                     state.tempo,
                     state.zoom);
 
-                if playhead_offset > SCROLL_L {
-                    playhead_offset - SCROLL_L
+                if playhead_offset > state.scroll_mid {
+                    playhead_offset - state.scroll_mid
                 } else { 0 }
             },
             _ => state.scroll_x
         },
         scroll_y: state.scroll_y,
+        scroll_mid: state.scroll_mid,
         focus: state.focus,
     }
 }
@@ -488,6 +509,8 @@ impl Timeline {
 
         generate_waveforms(&mut initial_state.assets, initial_state.sample_rate,
                            initial_state.tempo, initial_state.zoom);
+
+        initial_state.scroll_mid = (width - REGIONS_X) / 2;
 
         Timeline {
             x,
@@ -570,7 +593,7 @@ impl Layer for Timeline {
                 self.focii = generate_focii(&self.state.tracks, &self.state.regions);
                 (self.state.focus, None)
             },
-            Action::Tick(time) => match multi_focus.w_id.0 {
+            Action::Goto(time) => match multi_focus.w_id.0 {
                 FocusType::Region => {
                     // Find selected region within selected track
                     let mut new_focus = self.state.focus.0;
@@ -647,6 +670,7 @@ impl Layer for Timeline {
                 }
                 (self.state.focus, Some(Action::ShowAnchors(anchors)))
             }
+            a @ Action::Zoom(_) |
             a @ Action::SetLoop(_,_) |
             a @ Action::LoopMode(_) |
             a @ Action::SetMeter(_,_) |

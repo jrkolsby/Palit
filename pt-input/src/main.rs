@@ -181,7 +181,7 @@ fn event_loop(mut ipc_client: File, mut ipc_sound: File) -> std::io::Result<()> 
                 Keys::KEY_L => "NOTE_ON:74:1 ",
                 Keys::KEY_P => "NOTE_ON:75:1 ",
 
-                _ => { eprintln!("{:?}", k); "" }
+                _ => { eprintln!("UNKNOWN:{:?}", k); "" }
             },
             (EventType::Release, k) => match k {
                 Keys::KEY_M |

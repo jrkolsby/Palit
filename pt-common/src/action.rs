@@ -55,7 +55,7 @@ pub enum Action {
     NoteOn(Key, Volume),
     NoteOff(Key),
     Goto(Offset),
-    Tick(Offset),
+    Tick,
     Octave(bool), // true = up
     Volume(bool), 
     SetTempo(u16),
@@ -92,6 +92,7 @@ pub enum Action {
     PatchOut(u16, u16, u16),
     PatchIn(u16, u16, u16),
     DelPatch(u16, u16, bool),
+    Zoom(usize),
     Noop,
     Error(String),
     Exit,
@@ -144,12 +145,13 @@ impl ToString for Action {
                 if *is_on { "1" } else { "0" }
             ),
             Action::Goto(playhead) => format!("GOTO:{}", playhead),
-            Action::Tick(offset) => format!("TICK:{}", offset),
+            Action::Tick => format!("TICK"),
             Action::Play => format!("PLAY"),
             Action::Stop => format!("STOP"),
             Action::OpenProject(name) => format!("OPEN_PROJECT:{}", name),
             Action::AddModule(id, name) => format!("ADD_MODULE:{}:{}", id, name),
             Action::DelModule(id) => format!("DEL_MODULE:{}", id),
+            Action::Zoom(factor) => format!("ZOOM:{}", factor),
             _ => "NOOP".to_string()
         })
     }
@@ -227,7 +229,7 @@ impl FromStr for Action {
             "DECLARE_ANCHORS" => Action::DeclareAnchors(
                 argv[1].parse().unwrap(),
                 argv[2].parse().unwrap()),
-            "GOTO" => Action::Goto(argv[2].parse().unwrap()),
+            "GOTO" => Action::Goto(argv[1].parse().unwrap()),
             "SET_TEMPO" => Action::SetTempo(argv[1].parse().unwrap()),
             "SET_METER" => Action::SetMeter(
                 argv[1].parse().unwrap(),
@@ -240,7 +242,7 @@ impl FromStr for Action {
                 argv[1].parse().unwrap(),
                 argv[2].to_string()),
             "DEL_MODULE" => Action::DelModule(argv[1].parse().unwrap()),
-            "TICK" => Action::Tick(argv[1].parse().unwrap()),
+            "TICK" => Action::Tick,
             "NOTE_ADD" => Action::AddNote(Note {
                 id: argv[1].parse().unwrap(),
                 note: argv[2].parse().unwrap(),
@@ -255,6 +257,7 @@ impl FromStr for Action {
                 argv[4].parse().unwrap(),
                 argv[5].parse().unwrap(),
                 argv[6].to_string()),
+            "ZOOM" => Action::Zoom( argv[1].parse().unwrap()),
             _ => return Err(raw.to_string())
         };
         Ok(if is_direct { Action::At(

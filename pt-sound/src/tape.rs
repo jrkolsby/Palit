@@ -51,6 +51,7 @@ pub struct Store {
     pub note_queue: Vec<Note>,
     pub sample_rate: u32,
     pub beat: Offset,
+    pub zoom: Offset,
     pub pool: Option<Pool<'static, Vec<[Output; CHANNELS]>>>,
     pub writer: Option<thread::JoinHandle<()>>,
     pub rec_region: Arc<RwLock<Option<Region>>>,
@@ -84,6 +85,7 @@ pub fn init() -> Store {
         note_queue: vec![],
         sample_rate: SAMPLE_HZ as u32,
         beat: 0,
+        zoom: 1,
         // Make SURE not to clone these when implementing undo/redo
         pool: None,
         writer: None,
@@ -156,7 +158,8 @@ pub fn dispatch_requested(store: &mut Store) -> (
         match a {
             Action::AddRegion(_, _, _, _, _, _) |
             Action::AddNote(_) |
-            Action::Tick(_) => client_actions.push(a.clone()),
+            Action::Goto(_) |
+            Action::Tick => client_actions.push(a.clone()),
             _ => output_actions.push(a.clone())
         }
     }
@@ -377,6 +380,9 @@ pub fn dispatch(store: &mut Store, a: Action) {
                 store.out_queue.push(Action::NoteOff(note));
             }
         },
+        Action::Zoom(size) => {
+            store.zoom = if size >= 1 { size as Offset } else { 1 };
+        },
         _ => {}
     }
 }
@@ -411,9 +417,17 @@ pub fn compute(store: &mut Store) -> [Output; CHANNELS] {
         store.velocity = 0.0 
     }
 
-    // Metronome
-    if store.playhead % store.beat == 0 && store.track_id == 1 {
-        store.out_queue.push(Action::Tick(store.playhead));
+    // Only emit timing events from one track
+    if store.track_id == 1 {
+        // Metronome
+        if store.playhead % store.beat == 0 && store.track_id == 1 {
+            store.out_queue.push(Action::Tick);
+        }
+        // Client Playhead
+        if store.playhead % (store.beat / store.zoom) == 0 {
+            store.out_queue.push(Action::Goto(store.playhead));
+        }
+
     }
 
     // Play direction

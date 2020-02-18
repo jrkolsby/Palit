@@ -37,12 +37,12 @@ pub struct Track {
 pub fn char_offset(sample_offset: u32, rate: u32, bpm: u16, zoom: usize) -> u16 {
     // return how many beats passed based on a given sample rate
     let samples_per_beat = (60 * rate) / (bpm as u32);
-    (zoom as u32 * (sample_offset / samples_per_beat)) as u16
+    (zoom as f32 * (sample_offset as f32 / samples_per_beat as f32)) as u16
 }
 
 pub fn offset_char(beats: u16, rate: u32, bpm: u16, zoom: usize) -> u32 {
     let samples_per_beat = (60 * rate) / (bpm as u32);
-    beats as u32 * samples_per_beat
+    beats as u32 * samples_per_beat / zoom as u32
 }
 
 pub fn generate_partial_waveform(mut file: String, tail_len: u32, rate: u32, tempo: u16, zoom: usize) -> Vec<(u8, u8)> {

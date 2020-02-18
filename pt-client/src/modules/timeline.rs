@@ -38,6 +38,7 @@ pub fn read(mut doc: Element) -> TimelineState {
         zoom: 1,
         scroll_x: 0,
         scroll_y: 0,
+        scroll_mid: 0,
         temp_tempo: None,
         temp_zoom: None,
         focus: (0,0),

@@ -22,8 +22,8 @@ pub fn render(out: &mut Screen,
                 write!(out, "{}|", cursor::Goto(origin_x+i, origin_y+j)).unwrap();
             }
         }
-        if i % _zoom == 0 {
-            let glyph = if (beat+scroll+1) % meter_beat as u16 == 0 { "!" } else { "." };
+        if (i + scroll) % _zoom == 0 {
+            let glyph = if (i + scroll + 1) % meter_beat as u16 == 0 { "!" } else { "." };
             write!(out, "{}{}",
                 cursor::Goto(origin_x+i, origin_y),
                 glyph).unwrap();

@@ -127,6 +127,7 @@ fn add_module(
                 ), DEFAULT_ROUTE_ID);
             }
         },
+        a @ "chord" => { eprintln!("Unimplemented module {}", a); },
         plugin => {
             let cmd = format!("sudo make plugin name={} &> /dev/null", plugin);
             // Run make as arg to sh in parent directory
@@ -136,7 +137,7 @@ fn add_module(
                 add_layer(a, Box::new(Plugin::new(1, 1, size.0, size.1, (el).to_owned())), id)
             } else {
                 // Make sure that plugin.so exists by the time we leave this function, or panic
-                panic!("Failed to compile plugin")
+                panic!("Failed to make plugin name={}", plugin);
                 //add_layer(a, Box::new(Plugin::new(1, 1, size.0, size.1, (el).to_owned())), id)
             }
         }
