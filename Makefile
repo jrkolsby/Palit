@@ -1,7 +1,7 @@
 homedir = /usr/local/palit
 
 .PHONY : dev
-dev:
+dev: ipc
 	tmux split-window -v "tail -f /tmp/pt-debug" && tmux split-window -v "cd pt-sound && make dev" && tmux split-window -v "cd pt-input && make dev" && cd pt-client/ && sudo cargo run --release 2> /tmp/pt-debug
 
 .PHONY : demo

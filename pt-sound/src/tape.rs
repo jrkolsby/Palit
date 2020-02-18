@@ -299,8 +299,8 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     ));
                 },
                 1 => {
-                    let mut new_region_id = store.audio_regions.iter().fold(0, |max, r| 
-                        if r.id > max {r.id} else {max}) + 1;
+                    let new_region_id = (store.audio_regions.len() + store.midi_regions.len()) as u16;
+                    
                     store.rec_region_midi = Some(MidiRegion {
                         id: new_region_id,
                         notes: vec![],
@@ -321,6 +321,16 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::Stop => { 
             store.velocity = 0.0; 
             store.scrub = None;
+            if let Some(midi_region) = &store.rec_region_midi {
+                store.midi_regions.push(MidiRegion {
+                    id: midi_region.id,
+                    notes: midi_region.notes.to_owned(),
+                    note_queue: vec![],
+                    offset: midi_region.offset,
+                    duration: midi_region.duration,
+                });
+                store.rec_region_midi = None;
+            }
             if store.loop_on {
                 store.playhead = store.loop_in;
             }
