@@ -342,7 +342,6 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
     let mut audio_i: usize = 0;
     let mut midi_i: usize = 0;
 
-    eprintln!("GENERATING FOCII");
     loop {
         let maybe_audio = sorted_audio_regions.get(audio_i);
         let maybe_midi = sorted_midi_regions.get(midi_i);
@@ -352,13 +351,11 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
             let (midi_r_id, midi_region) = maybe_midi.unwrap();
 
             if (audio_region.offset < midi_region.offset) {
-                eprintln!("AUDIO FOCUS {}", audio_r_id);
                 focii[audio_region.track as usize].push(
                     region_audio::new(**audio_r_id)
                 );
                 audio_i += 1;
             } else {
-                eprintln!("MIDI_FOCUS {}", midi_r_id);
                 focii[midi_region.track as usize].push(
                     region_midi::new(**midi_r_id)
                 );
@@ -368,14 +365,12 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
         }
         if maybe_audio.is_some() {
             let (audio_r_id, audio_region) = maybe_audio.unwrap();
-            eprintln!("MIDI_FOCUS {}", audio_r_id);
             focii[audio_region.track as usize].push(
                 region_audio::new(**audio_r_id)
             );
             audio_i += 1;
         } else if maybe_midi.is_some() {
             let (midi_r_id, midi_region) = maybe_midi.unwrap();
-            eprintln!("MIDI_FOCUS {}", midi_r_id);
             focii[midi_region.track as usize].push(
                 region_midi::new(**midi_r_id)
             );
@@ -513,20 +508,24 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         },
         midi_regions: match action.clone() {
             Action::AddNote(note) => {
-                eprintln!("NEW NOTE FOR REGION {}", note.r_id);
                 let mut new_regions = state.midi_regions.clone();
                 new_regions.get_mut(&note.r_id).unwrap().notes.push(note.clone());
                 new_regions
             },
             Action::AddMidiRegion(t_id, r_id, offset, duration) => {
-                eprintln!("NEW MIDI REGION {}", r_id);
                 let mut new_regions = state.midi_regions.clone();
-                new_regions.insert(r_id, MidiRegion {
-                    duration,
-                    offset,
-                    track: t_id,
-                    notes: vec![]
-                });
+                // If we try adding a midi region which already exists, it's because
+                // ... it just terminated, just update duration for focii navigation
+                if let Some(old_region) = new_regions.get_mut(&r_id) {
+                    old_region.duration = duration;
+                } else {
+                    new_regions.insert(r_id, MidiRegion {
+                        duration,
+                        offset,
+                        track: t_id,
+                        notes: vec![]
+                    });
+                }
                 new_regions
             },
             _ => state.midi_regions

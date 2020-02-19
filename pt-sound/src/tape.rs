@@ -322,13 +322,20 @@ pub fn dispatch(store: &mut Store, a: Action) {
             store.velocity = 0.0; 
             store.scrub = None;
             if let Some(midi_region) = &store.rec_region_midi {
+                let duration = store.playhead - midi_region.offset;
                 store.midi_regions.push(MidiRegion {
                     id: midi_region.id,
                     notes: midi_region.notes.to_owned(),
                     note_queue: vec![],
                     offset: midi_region.offset,
-                    duration: midi_region.duration,
+                    duration,
                 });
+                store.out_queue.push(Action::AddMidiRegion(
+                    store.track_id, 
+                    midi_region.id, 
+                    midi_region.offset, 
+                    duration, 
+                ));
                 store.rec_region_midi = None;
             }
             if store.loop_on {
@@ -446,14 +453,16 @@ pub fn compute(store: &mut Store) -> [Output; CHANNELS] {
     }
     for region in store.midi_regions.iter() {
         if store.playhead >= region.offset && 
-            store.playhead - region.offset < region.duration {
+            store.playhead < region.offset + region.duration {
             for note in region.notes.iter() {
-                if (store.velocity > 0.0 && note.t_in == store.playhead ||
-                    store.velocity < 0.0 && note.t_out == store.playhead) {
+                if (store.velocity > 0.0 && note.t_in == store.playhead) ||
+                    (store.velocity < 0.0 && note.t_out == store.playhead) {
+                    eprintln!("NOTE ON");
                     store.out_queue.push(Action::NoteOn(note.note, note.vel));
                 }
-                if (store.velocity > 0.0 && note.t_out == store.playhead ||
-                    store.velocity < 0.0 && note.t_in == store.playhead) {
+                if (store.velocity > 0.0 && note.t_out == store.playhead) ||
+                    (store.velocity < 0.0 && note.t_in == store.playhead) {
+                    eprintln!("NOTE OFF");
                     store.out_queue.push(Action::NoteOff(note.note));
                 }
             }
