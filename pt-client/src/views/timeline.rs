@@ -247,6 +247,12 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
                 }
                 new_regions
             },
+            Action::SplitRegion(id, _) |
+            Action::DelRegion(id) => {
+                let mut new_regions = state.regions.clone();
+                new_regions.remove(&id);
+                new_regions
+            },
             _ => state.regions.clone(),
         },
         midi_regions: match action.clone() {
@@ -282,6 +288,12 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
                         notes: vec![]
                     });
                 }
+                new_regions
+            },
+            Action::SplitRegion(id, _) |
+            Action::DelRegion(id) => {
+                let mut new_regions = state.midi_regions.clone();
+                new_regions.remove(&id);
                 new_regions
             },
             _ => state.midi_regions

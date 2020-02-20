@@ -36,7 +36,11 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
         }, 
 
         r_id: void_id.clone(),
-        r_t: void_transform,
+        r_t: |action, id, state| match action {
+            Action::SelectR => Action::LoopRegion(id.1),
+            a @ Action::AddMidiRegion(_,_,_,_) => a,
+            _ => Action::Noop,
+        },
         r: |mut out, window, id, state, focus| {
             if focus {
                 let region = state.midi_regions.get(&id.1).unwrap();
@@ -51,7 +55,7 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                 let label_x = window.x + 15 + REGIONS_X + timeline_offset;
                 let label_y = window.y + 2 + TIMELINE_Y + (2 * region.track);
 
-                write!(out, "{} DUPE ",
+                write!(out, "{} LOOP ",
                     cursor::Goto(label_x, label_y)).unwrap();
             }
         },
@@ -91,7 +95,10 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
         },
 
         y_id: void_id.clone(),
-        y_t: void_transform,
+        y_t: |action, id, state| match action {
+            Action::SelectY => Action::SplitRegion(id.1, state.playhead),
+            _ => Action::Noop
+        },
         y: |mut out, window, id, state, focus| {
             if focus {
                 let region = state.midi_regions.get(&id.1).unwrap();
@@ -106,13 +113,16 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                 let label_x = window.x + 7 + REGIONS_X + timeline_offset;
                 let label_y = window.y + 2 + TIMELINE_Y + (2 * region.track);
 
-                write!(out, "{} SLICE ",
+                write!(out, "{} SPLIT ",
                     cursor::Goto(label_x, label_y)).unwrap();
             }
         }, 
 
         p_id: void_id.clone(),
-        p_t: void_transform,
+        p_t: |action, id, state| match action {
+            Action::SelectP => Action::DelRegion(id.1),
+            _ => Action::Noop
+        },
         p: |mut out, window, id, state, focus| {
             if focus {
                 let region = state.midi_regions.get(&id.1).unwrap();

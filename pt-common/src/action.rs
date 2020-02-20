@@ -80,7 +80,6 @@ pub enum Action {
     MonitorTrack(u16, bool),
     RecordTrack(u16, u8), // Track ID, mode (0 off, 1 midi, 2 audio)
     SetMeter(u16, u16),
-    MoveRegion(u16, u16, Offset), // region ID, new track, new offset
     // Track ID, Region ID, Asset ID, offset, duration, wav_dest
     AddRegion(u16, u16, u16, Offset, Offset, String),
     // Track ID, Region ID, offset, duration
@@ -95,6 +94,10 @@ pub enum Action {
     PatchIn(u16, u16, u16),
     DelPatch(u16, u16, bool),
     Zoom(usize),
+    MoveRegion(u16, u16, Offset), // region ID, new track, new offset
+    DelRegion(u16),
+    SplitRegion(u16, Offset),
+    LoopRegion(u16),
     Noop,
     Error(String),
     Exit,
@@ -160,6 +163,9 @@ impl ToString for Action {
             Action::Zoom(factor) => format!("ZOOM:{}", factor),
             Action::MoveRegion(r_id, t_id, offset) => format!("MOVE_REGION:{}:{}:{}",
                 r_id, t_id, offset),
+            Action::DelRegion(r_id) => format!("DEL_REGION:{}", r_id),
+            Action::SplitRegion(r_id, offset) => format!("SPLIT_REGION:{}:{}", r_id, offset),
+            Action::LoopRegion(r_id) => format!("LOOP_REGION:{}", r_id),
             _ => "NOOP".to_string()
         })
     }
@@ -276,6 +282,11 @@ impl FromStr for Action {
                 argv[1].parse().unwrap(),
                 argv[2].parse().unwrap(),
                 argv[3].parse().unwrap()),
+            "DEL_REGION" => Action::DelRegion(argv[1].parse().unwrap()),
+            "SPLIT_REGION" => Action::SplitRegion(
+                argv[1].parse().unwrap(),
+                argv[2].parse().unwrap()),
+            "LOOP_REGION" => Action::LoopRegion(argv[1].parse().unwrap()),
             _ => return Err(raw.to_string())
         };
         Ok(if is_direct { Action::At(

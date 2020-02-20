@@ -269,7 +269,6 @@ pub fn dispatch(store: &mut Store, a: Action) {
             store.scrub = None;
         },
         Action::Record => { 
-            eprintln!("RECORD");
             store.velocity = 1.0; 
             store.scrub = None;
             let new_region_id = (store.audio_regions.len() + store.midi_regions.len()) as u16;
@@ -456,7 +455,65 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     region.offset = offset;
                 }
             }
-        }
+        },
+        Action::DelRegion(r_id) => {
+            store.audio_regions.retain(|r| r.id != r_id);
+            store.midi_regions.retain(|r| r.id != r_id);
+        },
+        Action::SplitRegion(r_id, offset) => {
+            let new_region_id = (store.audio_regions.len() + store.midi_regions.len()) as u16;
+            if let Some(first_region) = store.midi_regions.iter_mut().find(|r| r.id == r_id) {
+                let mut second_region = MidiRegion {
+                    id: new_region_id,
+                    notes: vec![],
+                    note_queue: vec![],
+                    offset, // Starts at split, duration of original out offset - split
+                    duration: first_region.offset + first_region.duration - offset,
+                };
+                first_region.duration = offset - first_region.offset;
+                for note in first_region.notes.iter_mut() {
+                    // Copy notes after the split to second_region
+                    if note.t_in >= offset {
+                        second_region.notes.push(Note {
+                            id: note.id,
+                            r_id: second_region.id,
+                            t_in: note.t_in,
+                            t_out: note.t_out,
+                            note: note.note, 
+                            vel: note.vel,
+                        });
+                    }
+                    // Clip note endings which overlap the split
+                    if note.t_in < offset && note.t_out >= offset {
+                        note.t_out = offset;
+                    }
+                }
+                // Only keep notes before the split in first_region
+                first_region.notes.retain(|n| n.t_in < offset);
+                store.out_queue.push(Action::AddMidiRegion(
+                    store.track_id, 
+                    first_region.id, 
+                    first_region.offset, 
+                    first_region.duration, 
+                ));
+                for note in first_region.notes.iter() {
+                    store.out_queue.push(Action::AddNote(note.clone()))
+                }
+                store.out_queue.push(Action::AddMidiRegion(
+                    store.track_id, 
+                    second_region.id, 
+                    second_region.offset, 
+                    second_region.duration, 
+                ));
+                for note in second_region.notes.iter() {
+                    store.out_queue.push(Action::AddNote(note.clone()))
+                }
+            }
+            if let Some(audio_region) = store.audio_regions.iter_mut().find(|r| r.id == r_id) {
+                // Clip buffer at split and create new region and buffer for trimmings
+            }
+        },
+        Action::LoopRegion(r_id) => {},
         _ => {}
     }
 }
