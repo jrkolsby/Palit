@@ -86,7 +86,7 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [ ] UI-27: Track dB faders (gain control)
 - [ ] UI-28: Help view
 - [ ] UI-29: Error view
-- [ ] UI-30: Midi Region
+- [X] UI-30: Midi Region
 - [ ] UI-31: Move, split, trim, duplicate, delete audio and midi region
 
 ### APRIL 1

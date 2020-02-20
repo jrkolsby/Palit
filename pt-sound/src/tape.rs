@@ -63,7 +63,7 @@ pub struct Store {
     pub writer: Option<thread::JoinHandle<()>>,
     pub rec_region: Arc<RwLock<Option<AudioRegion>>>,
     pub written: Arc<AtomicU32>, 
-    pub rec_region_midi: Option<MidiRegion>,
+    pub rec_region_midi: Option<usize>,
 }
 
 fn calculate_beat(sample_rate: u32, bpm: u16) -> u32 {
@@ -172,7 +172,6 @@ pub fn dispatch_requested(store: &mut Store) -> (
             Action::AddNote(_) |
             Action::Goto(_) |
             Action::Tick => {
-                eprintln!("{:?}", a);
                 client_actions.push(a.clone());
             },
             _ => output_actions.push(a.clone())
@@ -265,15 +264,19 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::Scrub(dir) => {
             store.scrub = Some(dir);
         },
-        Action::Play => { 
+        Action::Play => {
             store.velocity = 1.0; 
             store.scrub = None;
+        },
+        Action::Record => { 
+            eprintln!("RECORD");
+            store.velocity = 1.0; 
+            store.scrub = None;
+            let new_region_id = (store.audio_regions.len() + store.midi_regions.len()) as u16;
             match store.recording { 
                 2 => {
                     let mut new_asset_id = store.audio_regions.iter().fold(0, |max, r| 
                         if r.asset_id > max {r.asset_id} else {max}) + 1;
-                    let mut new_region_id = store.audio_regions.iter().fold(0, |max, r| 
-                        if r.id > max {r.id} else {max}) + 1;
                     let timestamp = chrono::offset::Local::now().format("%s").to_string();
                     let new_src = format!("/usr/local/palit/assets/{}_{}.wav", 
                         timestamp, store.track_id);
@@ -299,15 +302,15 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     ));
                 },
                 1 => {
-                    let new_region_id = (store.audio_regions.len() + store.midi_regions.len()) as u16;
-                    
-                    store.rec_region_midi = Some(MidiRegion {
+                    let new_region = MidiRegion {
                         id: new_region_id,
                         notes: vec![],
                         note_queue: vec![],
                         duration: 0,
                         offset: store.playhead,
-                    });
+                    };
+                    store.rec_region_midi = Some(store.midi_regions.len());
+                    store.midi_regions.push(new_region);
                     store.out_queue.push(Action::AddMidiRegion(
                         store.track_id, 
                         new_region_id, 
@@ -321,20 +324,13 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::Stop => { 
             store.velocity = 0.0; 
             store.scrub = None;
-            if let Some(midi_region) = &store.rec_region_midi {
-                let duration = store.playhead - midi_region.offset;
-                store.midi_regions.push(MidiRegion {
-                    id: midi_region.id,
-                    notes: midi_region.notes.to_owned(),
-                    note_queue: vec![],
-                    offset: midi_region.offset,
-                    duration,
-                });
+            if let Some(index) = &store.rec_region_midi {
+                let midi_region = &store.midi_regions[*index];
                 store.out_queue.push(Action::AddMidiRegion(
                     store.track_id, 
                     midi_region.id, 
                     midi_region.offset, 
-                    duration, 
+                    midi_region.duration, 
                 ));
                 store.rec_region_midi = None;
             }
@@ -397,7 +393,8 @@ pub fn dispatch(store: &mut Store, a: Action) {
             // Push a new note to the end of store.notes 
             // ... and redistribute the t_in and t_out 
             // ... based on the rate and samples per bar
-            if let Some(ref mut midi_region) = store.rec_region_midi {
+            if let Some(index) = store.rec_region_midi {
+                let mut midi_region = &mut store.midi_regions[index];
                 midi_region.note_queue.push(Note {
                     id: (midi_region.notes.len() + midi_region.note_queue.len()) as u16,
                     r_id: midi_region.id,
@@ -406,13 +403,19 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     note, 
                     vel,
                 });
+                // We need to expand the midi region unless notes will
+                // ... not be played which were recorded during looping
+                if midi_region.offset > store.playhead {
+                    midi_region.offset = store.playhead;
+                }
             }
             if store.monitor {
                 store.out_queue.push(Action::NoteOn(note, vel));
             }
         },
         Action::NoteOff(note) => {
-            if let Some(ref mut midi_region) = store.rec_region_midi {
+            if let Some(index) = store.rec_region_midi {
+                let mut midi_region = &mut store.midi_regions[index];
                 if let Some(on_index) = midi_region.note_queue.iter().position(|n| n.note == note) {
                         let on_note = midi_region.note_queue.remove(on_index);
                         let recorded_note = Note {
@@ -427,6 +430,9 @@ pub fn dispatch(store: &mut Store, a: Action) {
                             recorded_note.clone(),
                         ));
                         midi_region.notes.push(recorded_note);
+                        if midi_region.duration < store.playhead - midi_region.offset {
+                            midi_region.duration = store.playhead - midi_region.offset;
+                        }
                 }
             }
             if store.monitor {

@@ -152,6 +152,7 @@ impl ToString for Action {
             Action::Goto(playhead) => format!("GOTO:{}", playhead),
             Action::Tick => format!("TICK"),
             Action::Play => format!("PLAY"),
+            Action::Record => format!("RECORD"),
             Action::Stop => format!("STOP"),
             Action::OpenProject(name) => format!("OPEN_PROJECT:{}", name),
             Action::AddModule(id, name) => format!("ADD_MODULE:{}:{}", id, name),

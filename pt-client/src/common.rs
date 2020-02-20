@@ -31,6 +31,7 @@ pub use multifocus::FocusType;
 pub use multifocus::ID;
 pub use multifocus::VOID_ID;
 
+pub use layout::TRACKS_X;
 pub use layout::REGIONS_X;
 pub use layout::TIMELINE_Y;
 pub use layout::MARGIN_D0;

@@ -34,6 +34,9 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                 state.zoom,
                 &region.notes);
         }, 
+
+        r_id: void_id.clone(),
+        r_t: void_transform,
         r: |mut out, window, id, state, focus| {
             if focus {
                 let region = state.midi_regions.get(&id.1).unwrap();
@@ -45,33 +48,15 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                     region_offset - state.scroll_x
                 } else { 0 };
 
-                let region_x = window.x + 7 + REGIONS_X + timeline_offset;
-                let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
+                let label_x = window.x + 15 + REGIONS_X + timeline_offset;
+                let label_y = window.y + 2 + TIMELINE_Y + (2 * region.track);
 
-                write!(out, "{} TRIM ",
-                    cursor::Goto(region_x, region_y)).unwrap();
+                write!(out, "{} DUPE ",
+                    cursor::Goto(label_x, label_y)).unwrap();
             }
         },
-        r_t: void_transform,
-        r_id: void_id.clone(),
-        g: |mut out, window, id, state, focus| {
-            if focus {
-                let region = state.midi_regions.get(&id.1).unwrap();
 
-                let region_offset = char_offset(region.offset,
-                    state.sample_rate, state.tempo, state.zoom);
-
-                let timeline_offset = if region_offset >= state.scroll_x {
-                    region_offset - state.scroll_x
-                } else { 0 };
-
-                let region_x = window.x + REGIONS_X + timeline_offset;
-                let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
-
-                write!(out, "{} MOVE ",
-                    cursor::Goto(region_x, region_y)).unwrap();
-            }
-        },
+        g_id: void_id.clone(),
         g_t: |action, id, state| match action {
             Action::Right => { 
                 let r = state.midi_regions.get(&id.1).unwrap();
@@ -86,7 +71,27 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
             },
             _ => Action::Noop,
         },
-        g_id: void_id.clone(),
+        g: |mut out, window, id, state, focus| {
+            if focus {
+                let region = state.midi_regions.get(&id.1).unwrap();
+
+                let region_offset = char_offset(region.offset,
+                    state.sample_rate, state.tempo, state.zoom);
+
+                let timeline_offset = if region_offset >= state.scroll_x {
+                    region_offset - state.scroll_x
+                } else { 0 };
+
+                let label_x = window.x + REGIONS_X + timeline_offset;
+                let label_y = window.y + 2 + TIMELINE_Y + (2 * region.track);
+
+                write!(out, "{} MOVE ",
+                    cursor::Goto(label_x, label_y)).unwrap();
+            }
+        },
+
+        y_id: void_id.clone(),
+        y_t: void_transform,
         y: |mut out, window, id, state, focus| {
             if focus {
                 let region = state.midi_regions.get(&id.1).unwrap();
@@ -98,22 +103,55 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                     region_offset - state.scroll_x
                 } else { 0 };
 
-                let region_x = window.x + 14 + REGIONS_X + timeline_offset;
-                let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
+                let label_x = window.x + 7 + REGIONS_X + timeline_offset;
+                let label_y = window.y + 2 + TIMELINE_Y + (2 * region.track);
 
-                write!(out, "{} SPLIT ",
-                    cursor::Goto(region_x, region_y)).unwrap();
+                write!(out, "{} SLICE ",
+                    cursor::Goto(label_x, label_y)).unwrap();
             }
         }, 
 
-        y_t: void_transform,
-        y_id: void_id.clone(),
-        p: void_render, 
-        p_t: void_transform,
         p_id: void_id.clone(),
-        b: void_render, 
-        b_t: void_transform,
+        p_t: void_transform,
+        p: |mut out, window, id, state, focus| {
+            if focus {
+                let region = state.midi_regions.get(&id.1).unwrap();
+
+                let region_offset = char_offset(region.offset,
+                    state.sample_rate, state.tempo, state.zoom);
+
+                let timeline_offset = if region_offset >= state.scroll_x {
+                    region_offset - state.scroll_x
+                } else { 0 };
+
+                let label_x = window.x + 22 + REGIONS_X + timeline_offset;
+                let label_y = window.y + 2 + TIMELINE_Y + (2 * region.track);
+
+                write!(out, "{} DEL ",
+                    cursor::Goto(label_x, label_y)).unwrap();
+            }
+        }, 
+
         b_id: void_id.clone(),
+        b_t: void_transform,
+        b: |mut out, window, id, state, focus| {
+            if focus {
+                let region = state.midi_regions.get(&id.1).unwrap();
+
+                let region_offset = char_offset(region.offset,
+                    state.sample_rate, state.tempo, state.zoom);
+
+                let timeline_offset = if region_offset >= state.scroll_x {
+                    region_offset - state.scroll_x
+                } else { 0 };
+
+                let label_x = window.x + 28 + REGIONS_X + timeline_offset;
+                let label_y = window.y + 2 + TIMELINE_Y + (2 * region.track);
+
+                write!(out, "{} EDIT ",
+                    cursor::Goto(label_x, label_y)).unwrap();
+            }
+        }, 
 
         active: None,
     }

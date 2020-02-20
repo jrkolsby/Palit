@@ -72,6 +72,9 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
             waveform::render(out, wave_slice, region_x, region_y)
         }, 
+
+        r_id: void_id.clone(),
+        r_t: void_transform,
         r: |mut out, window, id, state, focus| {
             if focus {
                 let region = state.regions.get(&id.1).unwrap();
@@ -90,8 +93,22 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                     cursor::Goto(region_x, region_y)).unwrap();
             }
         },
-        r_t: void_transform,
-        r_id: void_id.clone(),
+
+        g_id: void_id.clone(),
+        g_t: |action, id, state| match action {
+            Action::Right => { 
+                let r = state.regions.get(&id.1).unwrap();
+                let d_offset = offset_char(1, state.sample_rate, state.tempo, state.zoom);
+                Action::MoveRegion(id.1, r.track, r.offset + d_offset) 
+            },
+            Action::Left => { 
+                let r = state.regions.get(&id.1).unwrap();
+                let d_offset = offset_char(1, state.sample_rate, state.tempo, state.zoom);
+                Action::MoveRegion(id.1, r.track, 
+                    if r.offset < d_offset { 0 } else { r.offset - d_offset })  
+            },
+            _ => Action::Noop,
+        },
         g: |mut out, window, id, state, focus| {
             if focus {
                 let region = state.regions.get(&id.1).unwrap();
@@ -110,21 +127,9 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                     cursor::Goto(region_x, region_y)).unwrap();
             }
         },
-        g_t: |action, id, state| match action {
-            Action::Right => { 
-                let r = state.regions.get(&id.1).unwrap();
-                let d_offset = offset_char(1, state.sample_rate, state.tempo, state.zoom);
-                Action::MoveRegion(id.1, r.track, r.offset + d_offset) 
-            },
-            Action::Left => { 
-                let r = state.regions.get(&id.1).unwrap();
-                let d_offset = offset_char(1, state.sample_rate, state.tempo, state.zoom);
-                Action::MoveRegion(id.1, r.track, 
-                    if r.offset < d_offset { 0 } else { r.offset - d_offset })  
-            },
-            _ => Action::Noop,
-        },
-        g_id: void_id.clone(),
+
+        y_id: void_id.clone(),
+        y_t: void_transform,
         y: |mut out, window, id, state, focus| {
             if focus {
                 let region = state.regions.get(&id.1).unwrap();
@@ -144,14 +149,13 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
             }
         }, 
 
-        y_t: void_transform,
-        y_id: void_id.clone(),
-        p: void_render, 
-        p_t: void_transform,
         p_id: void_id.clone(),
-        b: void_render, 
-        b_t: void_transform,
+        p_t: void_transform,
+        p: void_render, 
+
         b_id: void_id.clone(),
+        b_t: void_transform,
+        b: void_render, 
 
         active: None,
     }
