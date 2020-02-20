@@ -436,6 +436,21 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::Zoom(size) => {
             store.zoom = if size >= 1 { size as Offset } else { 1 };
         },
+        Action::MoveRegion(r_id, t_id, offset) => {
+            if store.track_id == t_id {
+                if let Some(mut region) = store.midi_regions.iter_mut().find(|r| r.id == r_id) {
+                    let diff: i32 = offset as i32 - region.offset as i32;
+                    for note in region.notes.iter_mut() {
+                        note.t_in = (note.t_in as i32 + diff) as Offset;
+                        note.t_out = (note.t_out as i32 + diff) as Offset;
+                    }
+                    region.offset = offset;
+                }
+                if let Some(mut region) = store.audio_regions.iter_mut().find(|r| r.id == r_id) {
+                    region.offset = offset;
+                }
+            }
+        }
         _ => {}
     }
 }
@@ -457,12 +472,10 @@ pub fn compute(store: &mut Store) -> [Output; CHANNELS] {
             for note in region.notes.iter() {
                 if (store.velocity > 0.0 && note.t_in == store.playhead) ||
                     (store.velocity < 0.0 && note.t_out == store.playhead) {
-                    eprintln!("NOTE ON");
                     store.out_queue.push(Action::NoteOn(note.note, note.vel));
                 }
                 if (store.velocity > 0.0 && note.t_out == store.playhead) ||
                     (store.velocity < 0.0 && note.t_in == store.playhead) {
-                    eprintln!("NOTE OFF");
                     store.out_queue.push(Action::NoteOff(note.note));
                 }
             }

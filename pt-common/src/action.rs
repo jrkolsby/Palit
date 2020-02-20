@@ -157,6 +157,8 @@ impl ToString for Action {
             Action::AddModule(id, name) => format!("ADD_MODULE:{}:{}", id, name),
             Action::DelModule(id) => format!("DEL_MODULE:{}", id),
             Action::Zoom(factor) => format!("ZOOM:{}", factor),
+            Action::MoveRegion(r_id, t_id, offset) => format!("MOVE_REGION:{}:{}:{}",
+                r_id, t_id, offset),
             _ => "NOOP".to_string()
         })
     }
@@ -269,6 +271,10 @@ impl FromStr for Action {
                 argv[3].parse().unwrap(),
                 argv[4].parse().unwrap()),
             "ZOOM" => Action::Zoom(argv[1].parse().unwrap()),
+            "MOVE_REGION" => Action::MoveRegion(
+                argv[1].parse().unwrap(),
+                argv[2].parse().unwrap(),
+                argv[3].parse().unwrap()),
             _ => return Err(raw.to_string())
         };
         Ok(if is_direct { Action::At(

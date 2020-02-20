@@ -40,6 +40,11 @@ type UIAddBargraph = extern "C" fn (*mut PluginUI,
 type UIAddSoundFile = extern "C" fn (*mut PluginUI, *const c_char, *const c_char, *const *const SoundFile);
 type UIDeclare = extern "C" fn (*mut PluginUI, *mut c_float, *const c_char, *const c_char);
 
+// Remove illegal chars from a param title
+fn sanitize(s: String) -> String {
+    s.replace(&[' ', ':'][..], "")
+}
+
 extern "C" fn openTabBox(ui: *mut PluginUI, label: *const c_char) { 
     //eprintln!("openHorizontalBox {:?}", label);
 }
@@ -57,9 +62,10 @@ extern "C" fn addButton(ui: *mut PluginUI, label: *const c_char, param: *mut c_f
         let label_str = CStr::from_ptr(label).to_str().unwrap();
         let mut params = &mut (*ui).params;
         let mut declarations = &mut (*ui).declarations;
-        params.insert(label_str.to_string(), param);
+        let safe_label = sanitize(label_str.to_string());
+        params.insert(safe_label.clone(), param);
         declarations.push(Action::DeclareParam(
-            label_str.to_string(),
+            safe_label,
             0.0,
             0.0,
             1.0,
@@ -81,9 +87,10 @@ extern "C" fn addVerticalSlider(ui: *mut PluginUI,
         let label_str = CStr::from_ptr(label).to_str().unwrap();
         let mut params = &mut (*ui).params;
         let mut declarations = &mut (*ui).declarations;
-        params.insert(label_str.to_string(), param);
+        let safe_label = sanitize(label_str.to_string());
+        params.insert(safe_label.clone(), param);
         declarations.push(Action::DeclareParam(
-            label_str.to_string(),
+            safe_label,
             init as f32,
             min as f32,
             max as f32,
@@ -102,9 +109,10 @@ extern "C" fn addHorizontalSlider(ui: *mut PluginUI,
         let label_str = CStr::from_ptr(label).to_str().unwrap();
         let mut params = &mut (*ui).params;
         let mut declarations = &mut (*ui).declarations;
-        params.insert(label_str.to_string(), param);
+        let safe_label = sanitize(label_str.to_string());
+        params.insert(safe_label.clone(), param);
         declarations.push(Action::DeclareParam(
-            label_str.to_string(),
+            safe_label,
             init as f32,
             min as f32,
             max as f32,
@@ -281,10 +289,14 @@ pub fn init(lib_src: String) -> Store {
     let num_outputs = (vtable.getNumOutputs)(voice0) as usize;
     declarations.push(Action::DeclareAnchors(num_inputs, num_outputs));
 
-    // Add UI declarations and free voice from C land
+    // Add UI declarations 
     (vtable.buildUserInterface)(voice0, &mut *uiGlue);
-    declarations.extend(ui.declarations);
-    (vtable.delete)(voice0);
+    declarations.extend(ui.declarations.clone());
+
+    // Initialize first voice
+    let mut voices: [Option<(*mut Voice, Box<PluginUI>, Box<UIGlue>)>; MAX_VOICES] = Default::default();
+    voices[0] = Some((voice0, ui, uiGlue));
+    //(vtable.delete)(voice0);
 
     // Find these params in the declarations
     let midi_enabled = (declarations.iter().find(|&a| match a { 
@@ -297,7 +309,7 @@ pub fn init(lib_src: String) -> Store {
     let store = Store {
         lib,
         vtable,
-        voices: Default::default(),
+        voices,
         declarations,
         midi_enabled,
         // Make sure we are not allocating this in tight loop (see below)
@@ -352,6 +364,8 @@ pub fn compute_buf(store: &mut Store, buffer: &mut [[Output; CHANNELS]]) {
                     store.buffer_sum[i][j] += store.buffer[i][j];
                 }
             }
+        } else {
+            break;
         }
     }
 

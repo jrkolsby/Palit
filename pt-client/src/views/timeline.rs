@@ -3,7 +3,7 @@ use std::collections::HashMap;
 
 use xmltree::Element;
 use termion::cursor;
-use libcommon::{Action, Anchor, Note, Param};
+use libcommon::{Action, Anchor, Note, Param, Offset};
 
 use crate::components::{tempo, button, ruler, region_midi, region_audio, roll};
 use crate::common::{ID, VOID_ID, FocusType};
@@ -376,6 +376,7 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
             );
             midi_i += 1;
         } else {
+            // No more regions of any type
             break;
         }
     }
@@ -499,9 +500,10 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             },
             Action::MoveRegion(id, t_id, offset) => {
                 let mut new_regions = state.regions.clone();
-                let r = new_regions.get_mut(&id).unwrap();
-                r.track = t_id;
-                r.offset = offset;
+                if let Some(mut r) = new_regions.get_mut(&id) {
+                    r.offset = offset;
+                    r.track = t_id;
+                }
                 new_regions
             },
             _ => state.regions.clone(),
@@ -512,12 +514,25 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
                 new_regions.get_mut(&note.r_id).unwrap().notes.push(note.clone());
                 new_regions
             },
+            Action::MoveRegion(id, t_id, offset) => {
+                let mut new_regions = state.midi_regions.clone();
+                if let Some(mut r) = new_regions.get_mut(&id) {
+                    let diff: i32 = offset as i32 - r.offset as i32;
+                    for mut note in r.notes.iter_mut() {
+                        note.t_in = (note.t_in as i32 + diff) as Offset;
+                        note.t_out = (note.t_out as i32 + diff) as Offset;
+                    }
+                    r.offset = offset;
+                }
+                new_regions
+            },
             Action::AddMidiRegion(t_id, r_id, offset, duration) => {
                 let mut new_regions = state.midi_regions.clone();
                 // If we try adding a midi region which already exists, it's because
                 // ... it just terminated, just update duration for focii navigation
                 if let Some(old_region) = new_regions.get_mut(&r_id) {
                     old_region.duration = duration;
+                    old_region.offset = offset;
                 } else {
                     new_regions.insert(r_id, MidiRegion {
                         duration,
@@ -539,12 +554,28 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             _ => state.playhead
         },
         scroll_x: match action {
+            Action::Deselect => {
+                if let Some(z) = state.temp_zoom { 
+                    let playhead_offset = char_offset(
+                        state.playhead,
+                        state.sample_rate,
+                        state.tempo,
+                        z);
+
+                    if playhead_offset > state.scroll_mid {
+                        playhead_offset - state.scroll_mid
+                    } else { 0 }
+                } else {
+                    state.scroll_x
+                }
+            },
             Action::Goto(o) => {
                 let playhead_offset = char_offset(
                     o,
                     state.sample_rate,
                     state.tempo,
-                    state.zoom);
+                    state.zoom
+                );
 
                 if playhead_offset > state.scroll_mid {
                     playhead_offset - state.scroll_mid
@@ -731,6 +762,7 @@ impl Layer for Timeline {
                 }
                 (self.state.focus, Some(Action::ShowAnchors(anchors)))
             }
+            a @ Action::MoveRegion(_,_,_) |
             a @ Action::Zoom(_) |
             a @ Action::SetLoop(_,_) |
             a @ Action::LoopMode(_) |
