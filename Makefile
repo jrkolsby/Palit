@@ -1,17 +1,17 @@
 homedir = /usr/local/palit
 
 .PHONY : dev
-dev:
+dev: ipc
 	tmux split-window -v "tail -f /tmp/pt-debug" && tmux split-window -v "cd pt-sound && make dev" && tmux split-window -v "cd pt-input && make dev" && cd pt-client/ && sudo cargo run --release 2> /tmp/pt-debug
 
 .PHONY : demo
-demo:
-	cd pt-input && make dev &
-	cd pt-sound && make dev &
-	cd pt-client && cargo run --release 2> /dev/null
+demo: ipc
+	cd pt-input && make dev &> /tmp/pt-debug &
+	cd pt-sound && make dev &> /tmp/pt-debug &
+	cd pt-client && cargo run --release 2> /tmp/pt-debut
 
 .PHONY : debug
-debug:
+debug: ipc
 	tmux split-window -v "tail -f /tmp/pt-debug" && tmux split-window -v "cd pt-sound && sudo RUST_BACKTRACE=1 make debug" && tmux split-window -v "cd pt-input && RUST_BACKTRACE=1 cargo run" && cd pt-client/ && sudo RUST_BACKTRACE=1 cargo run 2> /tmp/pt-debug
 
 .PHONY : prod
@@ -35,3 +35,13 @@ plugin:
 	rm $(homedir)/modules/_plugin_part.c;
 	rm $(homedir)/modules/_plugin.c;
 	rm $(homedir)/modules/_plugin.o;
+
+.PHONY : ipc
+ipc : 
+	rm -f /tmp/pt-client
+	rm -f /tmp/pt-sound
+	rm -f /tmp/pt-debug
+	mkfifo /tmp/pt-client
+	mkfifo /tmp/pt-sound
+	mkfifo /tmp/pt-debug
+

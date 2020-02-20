@@ -93,8 +93,8 @@ impl Piano {
         };
 
         Piano {
-            x: x + (width / 2) - (SIZE.0 / 2),
-            y: y + height - SIZE.1,
+            x: x + if SIZE.0 > width { 0 } else { (width / 2) - (SIZE.0 / 2) } ,
+            y: y + if SIZE.1 > height { 0 } else { height - SIZE.1 },
             width: width,
             height: height,
             state: initial_state,

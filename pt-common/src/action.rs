@@ -55,7 +55,7 @@ pub enum Action {
     NoteOn(Key, Volume),
     NoteOff(Key),
     Goto(Offset),
-    Tick(Offset),
+    Tick,
     Octave(bool), // true = up
     Volume(bool), 
     SetTempo(u16),
@@ -81,8 +81,10 @@ pub enum Action {
     RecordTrack(u16, u8), // Track ID, mode (0 off, 1 midi, 2 audio)
     SetMeter(u16, u16),
     MoveRegion(u16, u16, Offset), // region ID, new track, new offset
-    // Track ID, Region ID, offset, duration, wav_dest
+    // Track ID, Region ID, Asset ID, offset, duration, wav_dest
     AddRegion(u16, u16, u16, Offset, Offset, String),
+    // Track ID, Region ID, offset, duration
+    AddMidiRegion(u16, u16, Offset, Offset),
     ShowAnchors(Vec<Anchor>), 
     PatchAnchor(u16),
     PatchRoute(u16),
@@ -92,6 +94,7 @@ pub enum Action {
     PatchOut(u16, u16, u16),
     PatchIn(u16, u16, u16),
     DelPatch(u16, u16, bool),
+    Zoom(usize),
     Noop,
     Error(String),
     Exit,
@@ -103,11 +106,14 @@ impl ToString for Action {
             Action::At(n_id, action) => format!("{}@{}", n_id, action.to_string()),
             Action::NoteOn(key, vel) => format!("NOTE_ON:{}:{}", key, vel),
             Action::NoteOff(key) => format!("NOTE_OFF:{}", key),
-            Action::AddNote(n) => format!("NOTE_ADD:{}:{}:{}:{}:{}",
-                n.id, n.note, n.vel, n.t_in, n.t_out),
+            Action::AddNote(n) => format!("NOTE_ADD:{}:{}:{}:{}:{}:{}",
+                n.id, n.note, n.vel, n.r_id, n.t_in, n.t_out),
             Action::AddRegion(t_id, r_id, a_id, offset, duration, source) => 
                 format!("REGION_ADD:{}:{}:{}:{}:{}:{}",
                     t_id, r_id, a_id, offset, duration, source),
+            Action::AddMidiRegion(t_id, r_id, offset, duration) =>
+                format!("MIDI_REGION_ADD:{}:{}:{}:{}",
+                    t_id, r_id, offset, duration),
             Action::Scrub(dir) => format!("SCRUB:{}",
                 if *dir { "1" } else { "0" }),
             Action::MuteTrack(t_id, is_on) => format!("MUTE_TRACK:{}:{}", 
@@ -144,12 +150,15 @@ impl ToString for Action {
                 if *is_on { "1" } else { "0" }
             ),
             Action::Goto(playhead) => format!("GOTO:{}", playhead),
-            Action::Tick(offset) => format!("TICK:{}", offset),
+            Action::Tick => format!("TICK"),
             Action::Play => format!("PLAY"),
             Action::Stop => format!("STOP"),
             Action::OpenProject(name) => format!("OPEN_PROJECT:{}", name),
             Action::AddModule(id, name) => format!("ADD_MODULE:{}:{}", id, name),
             Action::DelModule(id) => format!("DEL_MODULE:{}", id),
+            Action::Zoom(factor) => format!("ZOOM:{}", factor),
+            Action::MoveRegion(r_id, t_id, offset) => format!("MOVE_REGION:{}:{}:{}",
+                r_id, t_id, offset),
             _ => "NOOP".to_string()
         })
     }
@@ -227,7 +236,7 @@ impl FromStr for Action {
             "DECLARE_ANCHORS" => Action::DeclareAnchors(
                 argv[1].parse().unwrap(),
                 argv[2].parse().unwrap()),
-            "GOTO" => Action::Goto(argv[2].parse().unwrap()),
+            "GOTO" => Action::Goto(argv[1].parse().unwrap()),
             "SET_TEMPO" => Action::SetTempo(argv[1].parse().unwrap()),
             "SET_METER" => Action::SetMeter(
                 argv[1].parse().unwrap(),
@@ -240,13 +249,14 @@ impl FromStr for Action {
                 argv[1].parse().unwrap(),
                 argv[2].to_string()),
             "DEL_MODULE" => Action::DelModule(argv[1].parse().unwrap()),
-            "TICK" => Action::Tick(argv[1].parse().unwrap()),
+            "TICK" => Action::Tick,
             "NOTE_ADD" => Action::AddNote(Note {
                 id: argv[1].parse().unwrap(),
                 note: argv[2].parse().unwrap(),
                 vel: argv[3].parse().unwrap(),
-                t_in: argv[4].parse().unwrap(),
-                t_out: argv[5].parse().unwrap(),
+                r_id: argv[4].parse().unwrap(),
+                t_in: argv[5].parse().unwrap(),
+                t_out: argv[6].parse().unwrap(),
             }),
             "REGION_ADD" => Action::AddRegion(
                 argv[1].parse().unwrap(),
@@ -255,6 +265,16 @@ impl FromStr for Action {
                 argv[4].parse().unwrap(),
                 argv[5].parse().unwrap(),
                 argv[6].to_string()),
+            "MIDI_REGION_ADD" => Action::AddMidiRegion(
+                argv[1].parse().unwrap(),
+                argv[2].parse().unwrap(),
+                argv[3].parse().unwrap(),
+                argv[4].parse().unwrap()),
+            "ZOOM" => Action::Zoom(argv[1].parse().unwrap()),
+            "MOVE_REGION" => Action::MoveRegion(
+                argv[1].parse().unwrap(),
+                argv[2].parse().unwrap(),
+                argv[3].parse().unwrap()),
             _ => return Err(raw.to_string())
         };
         Ok(if is_direct { Action::At(

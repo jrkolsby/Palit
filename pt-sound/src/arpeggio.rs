@@ -51,6 +51,7 @@ pub fn dispatch(store: &mut Store, action: Action) {
             // ... based on the rate and samples per bar
             store.notes.push(Note {
                 id: 0,
+                r_id: 0,
                 t_in: 0,
                 t_out: 0,
                 note, 

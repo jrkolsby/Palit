@@ -26,6 +26,7 @@ pub struct Module {
 #[derive(Debug, Clone)]
 pub struct Note {
     pub id: u16,
+    pub r_id: u16,
     pub t_in: Offset,
     pub t_out: Offset,
     pub note: Key,

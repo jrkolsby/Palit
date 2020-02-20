@@ -80,23 +80,22 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [X] INF-13: Common Lib
 
 - [ ] UI-23: Project serialization & save 
-- [ ] UI-24: Timeline zoom
+- [X] UI-24: Timeline zoom
 - [ ] UI-25: Monitor control
-- [ ] UI-26: Proper metronome tick
+- [X] UI-26: Proper metronome tick
 - [ ] UI-27: Track dB faders (gain control)
 - [ ] UI-28: Help view
 - [ ] UI-29: Error view
 - [ ] UI-30: Midi Region
 - [ ] UI-31: Move, split, trim, duplicate, delete audio and midi region
-- [ ] UI-32: Undo Redo Client
-
-- [ ] SOUND-23: Undo Redo Sound
 
 ### APRIL 1
 
 - [ ] UI-14: Network setup
 - [ ] UI-22: Snap to grid
+- [ ] UI-32: Undo Redo Client
 
+- [ ] SOUND-23: Undo Redo Sound
 - [ ] SOUND-4: ALSA input module
 - [ ] SOUND-18: Radio module and directory API
 - [ ] SOUND-20: Import audio file to timeline

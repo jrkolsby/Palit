@@ -3,12 +3,12 @@ use std::collections::HashMap;
 
 use xmltree::Element;
 use termion::cursor;
-use libcommon::{Action, Anchor, Note, Param};
+use libcommon::{Action, Anchor, Note, Param, Offset};
 
-use crate::components::{tempo, button, ruler, region, roll};
+use crate::components::{tempo, button, ruler, region_midi, region_audio, roll};
 use crate::common::{ID, VOID_ID, FocusType};
 use crate::common::{MultiFocus, render_focii, shift_focus, generate_partial_waveform};
-use crate::common::{Screen, Asset, Region, Track, Window};
+use crate::common::{Screen, Asset, AudioRegion, MidiRegion, Track, Window};
 use crate::common::{char_offset, offset_char, generate_waveforms};
 use crate::modules::timeline;
 use crate::views::{Layer};
@@ -16,8 +16,6 @@ use crate::views::{Layer};
 use crate::common::{REGIONS_X, TIMELINE_Y};
 
 static TRACKS_X: u16 = 3;
-static SCROLL_R: u16 = 40;
-static SCROLL_L: u16 = 20;
 static ASSET_PREFIX: &str = "storage/";
 
 #[derive(Clone, Debug)]
@@ -37,12 +35,13 @@ pub struct TimelineState {
     pub sample_rate: u32,
     pub tracks: HashMap<u16, Track>,
     pub assets: HashMap<u16, Asset>,
-    pub regions: HashMap<u16, Region>,
-    pub notes: Vec<Note>,
+    pub regions: HashMap<u16, AudioRegion>,
+    pub midi_regions: HashMap<u16, MidiRegion>,
 
     // Ephemeral variables
     pub tick: bool,
     pub playhead: u32,
+    pub scroll_mid: u16,
     pub scroll_x: u16,
     pub scroll_y: u16,
     pub focus: (usize, usize),
@@ -64,7 +63,8 @@ static VOID_TRANSFORM: fn(Action, ID, &TimelineState) -> Action =
     |_, _, _| Action::Noop;
 
 fn generate_focii(tracks: &HashMap<u16, Track>, 
-                  regions: &HashMap<u16, Region>) -> Vec<Vec<MultiFocus<TimelineState>>> {
+                  audio_regions: &HashMap<u16, AudioRegion>,
+                  midi_regions: &HashMap<u16, MidiRegion>) -> Vec<Vec<MultiFocus<TimelineState>>> {
     let mut focii: Vec<Vec<MultiFocus<TimelineState>>> = vec![vec![
         MultiFocus::<TimelineState> {
             r_id: (FocusType::Button, 0),
@@ -83,26 +83,6 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
 
             w: VOID_RENDER,
             w_id: VOID_ID.clone(),
-
-            p_id: VOID_ID.clone(),
-            p: VOID_RENDER,
-            p_t: VOID_TRANSFORM,
-
-            g_id: VOID_ID.clone(),
-            g: VOID_RENDER,
-            g_t: VOID_TRANSFORM,
-
-            y_id: VOID_ID.clone(),
-            y: VOID_RENDER,
-            y_t: VOID_TRANSFORM,
-
-            b_id: VOID_ID.clone(),
-            b: VOID_RENDER,
-            b_t: VOID_TRANSFORM,
-
-            active: None,
-        },
-        MultiFocus::<TimelineState> {
             g_id: (FocusType::Button, 0),
             g: |out, window, id, state, focus| {
                 let offset_out = char_offset(
@@ -164,7 +144,44 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                     _ => Action::Noop 
                 }
             },
-            
+
+            y_id: VOID_ID.clone(),
+            y: VOID_RENDER,
+            y_t: VOID_TRANSFORM,
+
+            b_id: VOID_ID.clone(),
+            b: VOID_RENDER,
+            b_t: VOID_TRANSFORM,
+
+            active: None,
+        },
+        MultiFocus::<TimelineState> {
+            p_id: VOID_ID.clone(),
+            p: VOID_RENDER,
+            p_t: VOID_TRANSFORM,
+
+            g_id: (FocusType::Param, 0),
+            g: |out, window, id, state, focus| {
+                let zoom = if let Some(z) = state.temp_zoom { z } else { state.zoom };
+                write!(out, "{} {}X ", cursor::Goto(
+                    window.x+window.w - 19, 2
+                ), zoom).unwrap();
+            },
+            g_t: |a, id, state| {
+                let zoom = if let Some(z) = state.temp_zoom { z } else { state.zoom };
+                match a {
+                    Action::Up => Action::Zoom(zoom + 1),
+                    Action::Down => {
+                        if zoom > 0 {
+                            Action::Zoom(zoom - 1)
+                        } else {
+                            Action::Noop
+                        }
+                    },
+                    _ => Action::Noop,
+                }
+            },
+
             r_id: (FocusType::Param, 0),
             r: |out, window, id, state, focus| {
                 let tempo = if let Some(t) = state.temp_tempo { t } else { state.tempo };
@@ -174,7 +191,11 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
                 let tempo = if let Some(t) = state.temp_tempo { t } else { state.tempo };
                 match a {
                     Action::Up => Action::SetTempo(tempo + 1),
-                    Action::Down => Action::SetTempo(tempo - 1),
+                    Action::Down => if tempo > 0 {
+                        Action::SetTempo(tempo - 1)
+                    } else {
+                        Action::Noop
+                    },
                     _ => Action::Noop
                 }
             },
@@ -310,13 +331,54 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
         ]);
     };
 
-    let mut region_vec: Vec<(&u16, &Region)> = regions.iter().collect();
-    region_vec.sort_by(|(_, a), (_, b)| a.offset.cmp(&b.offset));
+    // Push audio and midi regions to their track vector
+    let mut sorted_audio_regions: Vec<(&u16, &AudioRegion)> = audio_regions.iter().collect();
+    sorted_audio_regions.sort_by(|(_, a), (_, b)| a.offset.cmp(&b.offset));
 
-    for (region_id, region) in region_vec.iter() {
-        focii[region.track as usize].push(
-            region::new(**region_id)
-        )
+    let mut sorted_midi_regions: Vec<(&u16, &MidiRegion)> = midi_regions.iter().collect();
+    sorted_midi_regions.sort_by(|(_, a), (_, b)| a.offset.cmp(&b.offset));
+
+    // Track current position in both arrays and push with global offset ordering
+    let mut audio_i: usize = 0;
+    let mut midi_i: usize = 0;
+
+    loop {
+        let maybe_audio = sorted_audio_regions.get(audio_i);
+        let maybe_midi = sorted_midi_regions.get(midi_i);
+
+        if maybe_audio.is_some() && maybe_midi.is_some() {
+            let (audio_r_id, audio_region) = maybe_audio.unwrap();
+            let (midi_r_id, midi_region) = maybe_midi.unwrap();
+
+            if (audio_region.offset < midi_region.offset) {
+                focii[audio_region.track as usize].push(
+                    region_audio::new(**audio_r_id)
+                );
+                audio_i += 1;
+            } else {
+                focii[midi_region.track as usize].push(
+                    region_midi::new(**midi_r_id)
+                );
+                midi_i += 1;
+            }
+            continue;
+        }
+        if maybe_audio.is_some() {
+            let (audio_r_id, audio_region) = maybe_audio.unwrap();
+            focii[audio_region.track as usize].push(
+                region_audio::new(**audio_r_id)
+            );
+            audio_i += 1;
+        } else if maybe_midi.is_some() {
+            let (midi_r_id, midi_region) = maybe_midi.unwrap();
+            focii[midi_region.track as usize].push(
+                region_midi::new(**midi_r_id)
+            );
+            midi_i += 1;
+        } else {
+            // No more regions of any type
+            break;
+        }
     }
 
     return focii
@@ -340,7 +402,7 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             _ => state.zoom
         },
         temp_zoom: match action.clone() {
-            // Action::Zoom(z) => Some(z)
+            Action::Zoom(z) => Some(z),
             _ => None
         },
         meter_beat: match action.clone() {
@@ -427,7 +489,7 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         regions: match action.clone() {
             Action::AddRegion(t_id, r_id, asset_id, offset, duration, src) => {
                 let mut new_regions = state.regions.clone();
-                new_regions.insert(r_id, Region {
+                new_regions.insert(r_id, AudioRegion {
                     asset_id,
                     asset_in: 0,
                     asset_out: duration,
@@ -438,44 +500,91 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             },
             Action::MoveRegion(id, t_id, offset) => {
                 let mut new_regions = state.regions.clone();
-                let r = new_regions.get_mut(&id).unwrap();
-                r.track = t_id;
-                r.offset = offset;
+                if let Some(mut r) = new_regions.get_mut(&id) {
+                    r.offset = offset;
+                    r.track = t_id;
+                }
                 new_regions
             },
             _ => state.regions.clone(),
         },
-        notes: match action.clone() {
+        midi_regions: match action.clone() {
             Action::AddNote(note) => {
-                let mut new_notes = state.notes.clone();
-                new_notes.push(note);
-                new_notes
+                let mut new_regions = state.midi_regions.clone();
+                new_regions.get_mut(&note.r_id).unwrap().notes.push(note.clone());
+                new_regions
             },
-            _ => state.notes.clone()
+            Action::MoveRegion(id, t_id, offset) => {
+                let mut new_regions = state.midi_regions.clone();
+                if let Some(mut r) = new_regions.get_mut(&id) {
+                    let diff: i32 = offset as i32 - r.offset as i32;
+                    for mut note in r.notes.iter_mut() {
+                        note.t_in = (note.t_in as i32 + diff) as Offset;
+                        note.t_out = (note.t_out as i32 + diff) as Offset;
+                    }
+                    r.offset = offset;
+                }
+                new_regions
+            },
+            Action::AddMidiRegion(t_id, r_id, offset, duration) => {
+                let mut new_regions = state.midi_regions.clone();
+                // If we try adding a midi region which already exists, it's because
+                // ... it just terminated, just update duration for focii navigation
+                if let Some(old_region) = new_regions.get_mut(&r_id) {
+                    old_region.duration = duration;
+                    old_region.offset = offset;
+                } else {
+                    new_regions.insert(r_id, MidiRegion {
+                        duration,
+                        offset,
+                        track: t_id,
+                        notes: vec![]
+                    });
+                }
+                new_regions
+            },
+            _ => state.midi_regions
         },
         tick: match action.clone() {
-            Action::Tick(_) => !state.tick,
+            Action::Tick => !state.tick,
             _ => state.tick
         },
         playhead: match action {
-            Action::Tick(o) => o,
+            Action::Goto(o) => o,
             _ => state.playhead
         },
         scroll_x: match action {
-            Action::Tick(o) => {
+            Action::Deselect => {
+                if let Some(z) = state.temp_zoom { 
+                    let playhead_offset = char_offset(
+                        state.playhead,
+                        state.sample_rate,
+                        state.tempo,
+                        z);
+
+                    if playhead_offset > state.scroll_mid {
+                        playhead_offset - state.scroll_mid
+                    } else { 0 }
+                } else {
+                    state.scroll_x
+                }
+            },
+            Action::Goto(o) => {
                 let playhead_offset = char_offset(
                     o,
                     state.sample_rate,
                     state.tempo,
-                    state.zoom);
+                    state.zoom
+                );
 
-                if playhead_offset > SCROLL_L {
-                    playhead_offset - SCROLL_L
+                if playhead_offset > state.scroll_mid {
+                    playhead_offset - state.scroll_mid
                 } else { 0 }
             },
             _ => state.scroll_x
         },
         scroll_y: state.scroll_y,
+        scroll_mid: state.scroll_mid,
         focus: state.focus,
     }
 }
@@ -489,12 +598,17 @@ impl Timeline {
         generate_waveforms(&mut initial_state.assets, initial_state.sample_rate,
                            initial_state.tempo, initial_state.zoom);
 
+        initial_state.scroll_mid = (width - REGIONS_X) / 2;
+
         Timeline {
             x,
             y,
             width,
             height,
-            focii: generate_focii(&initial_state.tracks, &initial_state.regions),
+            focii: generate_focii(
+                &initial_state.tracks, 
+                &initial_state.regions, 
+                &initial_state.midi_regions),
             state: initial_state,
         }
     }
@@ -535,19 +649,6 @@ impl Layer for Timeline {
             self.state.scroll_x,
             playhead_offset);
 
-        roll::render(out,
-            Window { 
-                x: win.x + REGIONS_X, 
-                y: win.y + TIMELINE_Y,
-                w: win.w - REGIONS_X,
-                h: win.h - TIMELINE_Y,
-            },
-            self.state.scroll_x.into(),
-            self.state.sample_rate,
-            self.state.tempo,
-            self.state.zoom,
-            &self.state.notes);
-
         if let Some(t) = self.state.temp_tempo {
             write!(out, "{}Generating waveforms...", cursor::Goto(
                 win.x + (win.w / 2) - 10, win.y
@@ -566,19 +667,30 @@ impl Layer for Timeline {
         // Actions which affect focii
         let (focus, default) = match _action.clone() {
             // Move focus to intersecting region on Tick
+            Action::AddMidiRegion(_, _, _, _) |
             Action::AddRegion(_, _, _, _, _, _) => {
-                self.focii = generate_focii(&self.state.tracks, &self.state.regions);
+                self.focii = generate_focii(
+                    &self.state.tracks, 
+                    &self.state.regions, 
+                    &self.state.midi_regions);
                 (self.state.focus, None)
             },
-            Action::Tick(time) => match multi_focus.w_id.0 {
+            Action::Goto(time) => match multi_focus.w_id.0 {
                 FocusType::Region => {
                     // Find selected region within selected track
                     let mut new_focus = self.state.focus.0;
                     for (i, focus) in self.focii[self.state.focus.1].iter().enumerate() {
-                        let region = self.state.regions.get(&focus.w_id.1).unwrap();
-                        let duration = region.asset_out - region.asset_in;
-                        if time >= region.offset && time < region.offset + duration {
-                            new_focus = i;
+                        // This id could be a midi region or an audio region
+                        if let Some(audio_region) = self.state.regions.get(&focus.w_id.1) {
+                            let duration = audio_region.asset_out - audio_region.asset_in;
+                            if time >= audio_region.offset && time < audio_region.offset + duration {
+                                new_focus = i;
+                            }
+                        }
+                        if let Some(midi_region) = self.state.midi_regions.get(&focus.w_id.1) {
+                            if time >= midi_region.offset && time < midi_region.offset + midi_region.duration {
+                                new_focus = i;
+                            }
                         }
                     }
                     ((new_focus, self.state.focus.1), Some(Action::Noop))
@@ -606,7 +718,10 @@ impl Layer for Timeline {
                 let current_id = self.focii[self.state.focus.1][self.state.focus.0].w_id.clone();
                 match current_id.0 {
                     FocusType::Region => {
-                        self.focii = generate_focii(&self.state.tracks, &self.state.regions);
+                        self.focii = generate_focii(
+                            &self.state.tracks, 
+                            &self.state.regions, 
+                            &self.state.midi_regions);
                         let mut new_focus: (usize, usize) = self.state.focus;
 
                         'search: for (j, col) in self.focii.iter().enumerate() {
@@ -647,6 +762,8 @@ impl Layer for Timeline {
                 }
                 (self.state.focus, Some(Action::ShowAnchors(anchors)))
             }
+            a @ Action::MoveRegion(_,_,_) |
+            a @ Action::Zoom(_) |
             a @ Action::SetLoop(_,_) |
             a @ Action::LoopMode(_) |
             a @ Action::SetMeter(_,_) |

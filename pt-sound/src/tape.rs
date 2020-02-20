@@ -17,7 +17,7 @@ use libcommon::{Action, Offset, Note, Key, Param, param_map, param_add, mark_map
 use crate::core::{SAMPLE_HZ, BUF_SIZE, CHANNELS, BIT_RATE};
 use crate::core::{SF, Output};
 
-pub struct Region {
+pub struct AudioRegion {
     pub id: u16,
     pub buffer: Vec<Vec<[Output; CHANNELS]>>,
     pub offset: Offset,
@@ -29,6 +29,14 @@ pub struct Region {
     pub asset_src: String,
 }
 
+pub struct MidiRegion {
+    pub id: u16,
+    pub notes: Vec<Note>,
+    pub note_queue: Vec<Note>,
+    pub offset: Offset,
+    pub duration: Offset,
+}
+
 pub struct Store {
     pub bpm: u16,
     pub meter_beat: u16,
@@ -38,8 +46,8 @@ pub struct Store {
     pub loop_out: Offset,
     pub duration: Offset,
     pub playhead: Offset, 
-    pub regions: Vec<Region>,
-    pub notes: Vec<Note>,
+    pub audio_regions: Vec<AudioRegion>,
+    pub midi_regions: Vec<MidiRegion>,
     pub velocity: f64,
     pub scrub: Option<bool>,
     pub recording: u8,
@@ -48,13 +56,14 @@ pub struct Store {
     pub solo: bool,
     pub track_id: u16,
     pub out_queue: Vec<Action>,
-    pub note_queue: Vec<Note>,
     pub sample_rate: u32,
     pub beat: Offset,
+    pub zoom: Offset,
     pub pool: Option<Pool<'static, Vec<[Output; CHANNELS]>>>,
     pub writer: Option<thread::JoinHandle<()>>,
-    pub rec_region: Arc<RwLock<Option<Region>>>,
+    pub rec_region: Arc<RwLock<Option<AudioRegion>>>,
     pub written: Arc<AtomicU32>, 
+    pub rec_region_midi: Option<MidiRegion>,
 }
 
 fn calculate_beat(sample_rate: u32, bpm: u16) -> u32 {
@@ -77,18 +86,19 @@ pub fn init() -> Store {
         mute: false,
         solo: false,
         recording: 0,
-        regions: vec![],
-        notes: vec![],
+        audio_regions: vec![],
+        midi_regions: vec![],
         track_id: 0,
         out_queue: vec![],
-        note_queue: vec![],
         sample_rate: SAMPLE_HZ as u32,
         beat: 0,
+        zoom: 1,
         // Make SURE not to clone these when implementing undo/redo
         pool: None,
         writer: None,
         rec_region: Arc::new(RwLock::new(None)),
         written: Arc::new(AtomicU32::new(0)),
+        rec_region_midi: None,
     }
 }
 
@@ -101,62 +111,70 @@ pub fn dispatch_requested(store: &mut Store) -> (
 
     // Check if we can join the writer and 
     // ... finalize our recorded region :D
-    if store.recording == 2 {
-        let region_count = store.written.load(Ordering::SeqCst);
-        let region_guard = store.rec_region.write();
-        match region_guard {
-            Ok(mut option_region) => {
-                match option_region.deref_mut() {
-                    Some(ref mut _region) => {
-                        // We are stopped and the worker is finished writing
-                        if region_count as usize % BUF_SIZE == 0 {
-                            client_actions.push(Action::AddRegion(
-                                store.track_id, 
-                                _region.id, 
-                                _region.asset_id,
-                                _region.offset, 
-                                _region.duration, 
-                                _region.asset_src.clone()
-                            ));
-                        }
-                        if store.velocity == 0.0 && region_count == _region.duration {
-                            // Make a new guard to get rid of the region
-                            let src = _region.asset_src.to_owned();
-                            client_actions.push(Action::AddRegion(
-                                store.track_id, 
-                                _region.id, 
-                                _region.asset_id, 
-                                _region.offset, 
-                                _region.duration, 
-                                _region.asset_src.clone()
-                            ));
-                            store.regions.push(Region {
-                                id: _region.id,
-                                offset: _region.offset,
-                                buffer: _region.buffer.to_owned(),
-                                asset_id: _region.asset_id,
-                                asset_out: _region.asset_out,
-                                asset_in: _region.asset_in,
-                                asset_src: src,
-                                duration: _region.duration,
-                                gain: _region.gain,
-                            });
-                            *option_region = None;
-                            store.written.store(0, Ordering::SeqCst);
-                        }
-                    },
-                    None => {}
-                }
-            },
-            Err(_) => {}
-        }
+    match store.recording { 
+        2 => {
+            let region_count = store.written.load(Ordering::SeqCst);
+            let region_guard = store.rec_region.write();
+            match region_guard {
+                Ok(mut option_region) => {
+                    match option_region.deref_mut() {
+                        Some(ref mut _region) => {
+                            // We are stopped and the worker is finished writing
+                            if region_count as usize % BUF_SIZE == 0 {
+                                client_actions.push(Action::AddRegion(
+                                    store.track_id, 
+                                    _region.id, 
+                                    _region.asset_id,
+                                    _region.offset, 
+                                    _region.duration, 
+                                    _region.asset_src.clone()
+                                ));
+                            }
+                            if store.velocity == 0.0 && region_count == _region.duration {
+                                // Make a new guard to get rid of the region
+                                let src = _region.asset_src.to_owned();
+                                client_actions.push(Action::AddRegion(
+                                    store.track_id, 
+                                    _region.id, 
+                                    _region.asset_id, 
+                                    _region.offset, 
+                                    _region.duration, 
+                                    _region.asset_src.clone()
+                                ));
+                                store.audio_regions.push(AudioRegion {
+                                    id: _region.id,
+                                    offset: _region.offset,
+                                    buffer: _region.buffer.to_owned(),
+                                    asset_id: _region.asset_id,
+                                    asset_out: _region.asset_out,
+                                    asset_in: _region.asset_in,
+                                    asset_src: src,
+                                    duration: _region.duration,
+                                    gain: _region.gain,
+                                });
+                                *option_region = None;
+                                store.written.store(0, Ordering::SeqCst);
+                            }
+                        },
+                        None => {}
+                    }
+                },
+                Err(_) => {}
+            }
+        },
+        _ => {}
     }
 
     for a in store.out_queue.iter() {
         match a {
+            Action::AddMidiRegion(_, _, _, _) |
             Action::AddRegion(_, _, _, _, _, _) |
             Action::AddNote(_) |
-            Action::Tick(_) => client_actions.push(a.clone()),
+            Action::Goto(_) |
+            Action::Tick => {
+                eprintln!("{:?}", a);
+                client_actions.push(a.clone());
+            },
             _ => output_actions.push(a.clone())
         }
     }
@@ -171,13 +189,13 @@ pub fn dispatch_requested(store: &mut Store) -> (
 }
 
 // Indexes via an offset into the two dimensional region buffer 
-fn frame_with_offset(region: &Region, offset: usize) -> [Output; CHANNELS] {
+fn frame_with_offset(region: &AudioRegion, offset: usize) -> [Output; CHANNELS] {
     let index = offset / BUF_SIZE;
     return region.buffer[index][offset - (BUF_SIZE * index)];
 }
 
 // Worker thread for writing to disk during record
-fn write_recording_region(source_region: Arc<RwLock<Option<Region>>>, source_count: Arc<AtomicU32>) {
+fn write_recording_region(source_region: Arc<RwLock<Option<AudioRegion>>>, source_count: Arc<AtomicU32>) {
     let wav_spec = hound::WavSpec {
         channels: CHANNELS as u16,
         sample_rate: SAMPLE_HZ as u32,
@@ -250,39 +268,76 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::Play => { 
             store.velocity = 1.0; 
             store.scrub = None;
-            if store.recording == 2 {
-                let mut new_asset_id = store.regions.iter().fold(0, |max, r| 
-                    if r.asset_id > max {r.asset_id} else {max}) + 1;
-                let mut new_region_id = store.regions.iter().fold(0, |max, r| 
-                    if r.id > max {r.id} else {max}) + 1;
-                let timestamp = chrono::offset::Local::now().format("%s").to_string();
-                let new_src = format!("/usr/local/palit/assets/{}_{}.wav", 
-                    timestamp, store.track_id);
-                let mut region_guard = store.rec_region.write().unwrap();
-                *region_guard = Some(Region {
-                    id: new_region_id,
-                    offset: store.playhead,
-                    buffer: vec![],
-                    duration: 0,
-                    asset_in: 0,
-                    asset_out: 0,
-                    gain: 1.0,
-                    asset_id: new_asset_id,
-                    asset_src: new_src.clone(),
-                });
-                store.out_queue.push(Action::AddRegion(
-                    store.track_id, 
-                    new_region_id, 
-                    new_asset_id,
-                    store.playhead, 
-                    0, 
-                    new_src,
-                ));
+            match store.recording { 
+                2 => {
+                    let mut new_asset_id = store.audio_regions.iter().fold(0, |max, r| 
+                        if r.asset_id > max {r.asset_id} else {max}) + 1;
+                    let mut new_region_id = store.audio_regions.iter().fold(0, |max, r| 
+                        if r.id > max {r.id} else {max}) + 1;
+                    let timestamp = chrono::offset::Local::now().format("%s").to_string();
+                    let new_src = format!("/usr/local/palit/assets/{}_{}.wav", 
+                        timestamp, store.track_id);
+                    let mut region_guard = store.rec_region.write().unwrap();
+                    *region_guard = Some(AudioRegion {
+                        id: new_region_id,
+                        offset: store.playhead,
+                        buffer: vec![],
+                        duration: 0,
+                        asset_in: 0,
+                        asset_out: 0,
+                        gain: 1.0,
+                        asset_id: new_asset_id,
+                        asset_src: new_src.clone(),
+                    });
+                    store.out_queue.push(Action::AddRegion(
+                        store.track_id, 
+                        new_region_id, 
+                        new_asset_id,
+                        store.playhead, 
+                        0, 
+                        new_src,
+                    ));
+                },
+                1 => {
+                    let new_region_id = (store.audio_regions.len() + store.midi_regions.len()) as u16;
+                    
+                    store.rec_region_midi = Some(MidiRegion {
+                        id: new_region_id,
+                        notes: vec![],
+                        note_queue: vec![],
+                        duration: 0,
+                        offset: store.playhead,
+                    });
+                    store.out_queue.push(Action::AddMidiRegion(
+                        store.track_id, 
+                        new_region_id, 
+                        store.playhead, 
+                        0, 
+                    ));
+                },
+                _ => {}
             }
         },
         Action::Stop => { 
             store.velocity = 0.0; 
             store.scrub = None;
+            if let Some(midi_region) = &store.rec_region_midi {
+                let duration = store.playhead - midi_region.offset;
+                store.midi_regions.push(MidiRegion {
+                    id: midi_region.id,
+                    notes: midi_region.notes.to_owned(),
+                    note_queue: vec![],
+                    offset: midi_region.offset,
+                    duration,
+                });
+                store.out_queue.push(Action::AddMidiRegion(
+                    store.track_id, 
+                    midi_region.id, 
+                    midi_region.offset, 
+                    duration, 
+                ));
+                store.rec_region_midi = None;
+            }
             if store.loop_on {
                 store.playhead = store.loop_in;
             }
@@ -336,16 +391,16 @@ pub fn dispatch(store: &mut Store, a: Action) {
         },
         Action::LoopOff => { store.loop_on = false; },
         Action::Goto(offset) => { 
-            store.note_queue.clear();
             store.playhead = offset; 
         },
         Action::NoteOn(note, vel) => {
             // Push a new note to the end of store.notes 
             // ... and redistribute the t_in and t_out 
             // ... based on the rate and samples per bar
-            if store.recording == 1 && store.velocity > 0.0 {
-                store.note_queue.push(Note {
-                    id: store.notes.len() as u16,
+            if let Some(ref mut midi_region) = store.rec_region_midi {
+                midi_region.note_queue.push(Note {
+                    id: (midi_region.notes.len() + midi_region.note_queue.len()) as u16,
+                    r_id: midi_region.id,
                     t_in: store.playhead,
                     t_out: 0,
                     note, 
@@ -357,26 +412,45 @@ pub fn dispatch(store: &mut Store, a: Action) {
             }
         },
         Action::NoteOff(note) => {
-            if let Some(on_index) = store.note_queue.iter().position(|n| n.note == note) {
-                if store.recording == 1 && store.velocity != 0.0 {
-                    let on_note = store.note_queue.remove(on_index);
-                    let recorded_note = Note {
-                        id: on_note.id,
-                        t_in: on_note.t_in,
-                        t_out: store.playhead,
-                        note: on_note.note,
-                        vel: on_note.vel,
-                    };
-                    store.out_queue.push(Action::AddNote(
-                        recorded_note.clone(),
-                    ));
-                    store.notes.push(recorded_note);
+            if let Some(ref mut midi_region) = store.rec_region_midi {
+                if let Some(on_index) = midi_region.note_queue.iter().position(|n| n.note == note) {
+                        let on_note = midi_region.note_queue.remove(on_index);
+                        let recorded_note = Note {
+                            id: on_note.id,
+                            r_id: on_note.r_id,
+                            t_in: on_note.t_in,
+                            t_out: store.playhead,
+                            note: on_note.note,
+                            vel: on_note.vel,
+                        };
+                        store.out_queue.push(Action::AddNote(
+                            recorded_note.clone(),
+                        ));
+                        midi_region.notes.push(recorded_note);
                 }
             }
             if store.monitor {
                 store.out_queue.push(Action::NoteOff(note));
             }
         },
+        Action::Zoom(size) => {
+            store.zoom = if size >= 1 { size as Offset } else { 1 };
+        },
+        Action::MoveRegion(r_id, t_id, offset) => {
+            if store.track_id == t_id {
+                if let Some(mut region) = store.midi_regions.iter_mut().find(|r| r.id == r_id) {
+                    let diff: i32 = offset as i32 - region.offset as i32;
+                    for note in region.notes.iter_mut() {
+                        note.t_in = (note.t_in as i32 + diff) as Offset;
+                        note.t_out = (note.t_out as i32 + diff) as Offset;
+                    }
+                    region.offset = offset;
+                }
+                if let Some(mut region) = store.audio_regions.iter_mut().find(|r| r.id == r_id) {
+                    region.offset = offset;
+                }
+            }
+        }
         _ => {}
     }
 }
@@ -384,7 +458,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
 pub fn compute(store: &mut Store) -> [Output; CHANNELS] {
     let mut z: [Output; CHANNELS] = [0.0, 0.0];
     if store.velocity == 0.0 { return z; }
-    for region in store.regions.iter_mut() {
+    for region in store.audio_regions.iter() {
         if store.playhead >= region.offset && 
             store.playhead - region.offset < region.duration {
             let offset = (store.playhead - region.offset) as usize;
@@ -392,12 +466,19 @@ pub fn compute(store: &mut Store) -> [Output; CHANNELS] {
             z = [x[0] * region.gain, x[1] * region.gain];
         }
     }
-    for note in store.notes.iter_mut() {
-        if note.t_in == store.playhead {
-            store.out_queue.push(Action::NoteOn(note.note, note.vel));
-        }
-        if note.t_out == store.playhead {
-            store.out_queue.push(Action::NoteOff(note.note));
+    for region in store.midi_regions.iter() {
+        if store.playhead >= region.offset && 
+            store.playhead < region.offset + region.duration {
+            for note in region.notes.iter() {
+                if (store.velocity > 0.0 && note.t_in == store.playhead) ||
+                    (store.velocity < 0.0 && note.t_out == store.playhead) {
+                    store.out_queue.push(Action::NoteOn(note.note, note.vel));
+                }
+                if (store.velocity > 0.0 && note.t_out == store.playhead) ||
+                    (store.velocity < 0.0 && note.t_in == store.playhead) {
+                    store.out_queue.push(Action::NoteOff(note.note));
+                }
+            }
         }
     }
     // Prevent speaker damage
@@ -411,9 +492,17 @@ pub fn compute(store: &mut Store) -> [Output; CHANNELS] {
         store.velocity = 0.0 
     }
 
-    // Metronome
-    if store.playhead % store.beat == 0 && store.track_id == 1 {
-        store.out_queue.push(Action::Tick(store.playhead));
+    // Only emit timing events from one track
+    if store.track_id == 1 {
+        // Metronome
+        if store.playhead % store.beat == 0 && store.track_id == 1 {
+            store.out_queue.push(Action::Tick);
+        }
+        // Client Playhead
+        if store.playhead % (store.beat / store.zoom) == 0 {
+            store.out_queue.push(Action::Goto(store.playhead));
+        }
+
     }
 
     // Play direction
@@ -443,7 +532,7 @@ pub fn write(s: Store, doc: Option<Element>) -> Element {
     mark_add(&mut el, 0, "seq_in".to_string());
 
     let track = Element::new("track");
-    for region in s.regions.iter() {
+    for region in s.audio_regions.iter() {
         let r = Element::new("region");
     }
 
@@ -542,15 +631,15 @@ pub fn read(doc: &mut Element) -> Option<Store> {
                 }
             }
 
-            store.regions.push(Region {
+            store.audio_regions.push(AudioRegion {
                 id: _r_id,
                 offset: offset.parse().unwrap(),
-                gain: 1.0,
                 duration: _a_out - _a_in,
                 asset_id: _a_id,
                 asset_in: _a_in,
                 asset_out: _a_out,
                 asset_src: _src.unwrap(),
+                gain: 1.0,
                 buffer,
             });
         }
