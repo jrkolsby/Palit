@@ -474,7 +474,7 @@ pub fn compute(store: &mut Store) -> [Output; CHANNELS] {
     }
     for region in store.midi_regions.iter() {
         if store.playhead >= region.offset && 
-            store.playhead < region.offset + region.duration {
+            store.playhead <= region.offset + region.duration {
             for note in region.notes.iter() {
                 if (store.velocity > 0.0 && note.t_in == store.playhead) ||
                     (store.velocity < 0.0 && note.t_out == store.playhead) {
