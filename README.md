@@ -71,7 +71,7 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [X] SOUND-19: Timeline audio recording
 - [X] SOUND-21: Timeline scrubbing
 
-### MARCH 1 ( v1.0 )
+### MARCH 1 ( alpha v1.0 )
 
 - [X] SOUND-3: Faust synth compilation (faust2vst)
 
@@ -81,21 +81,21 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 
 - [ ] UI-23: Project serialization & save 
 - [X] UI-24: Timeline zoom
-- [ ] UI-25: Monitor control
 - [X] UI-26: Proper metronome tick
-- [ ] UI-27: Track dB faders (gain control)
-- [ ] UI-28: Help view
 - [ ] UI-29: Error view
 - [X] UI-30: Midi Region
 - [ ] UI-31: Move, split, trim, duplicate, delete audio and midi region
 
-### APRIL 1
+- [ ] INF-6: Undo Redo
+
+### APRIL 1 ( alpha v2.0 )
 
 - [ ] UI-14: Network setup
+- [ ] UI-25: Monitor control
 - [ ] UI-22: Snap to grid
-- [ ] UI-32: Undo Redo Client
+- [ ] UI-27: Track dB faders (gain control)
+- [ ] UI-28: Help view
 
-- [ ] SOUND-23: Undo Redo Sound
 - [ ] SOUND-4: ALSA input module
 - [ ] SOUND-18: Radio module and directory API
 - [ ] SOUND-20: Import audio file to timeline

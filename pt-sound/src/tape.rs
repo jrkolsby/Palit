@@ -126,7 +126,8 @@ pub fn dispatch_requested(store: &mut Store) -> (
                                     _region.id, 
                                     _region.asset_id,
                                     _region.offset, 
-                                    _region.duration, 
+                                    _region.asset_in, 
+                                    _region.asset_out,
                                     _region.asset_src.clone()
                                 ));
                             }
@@ -138,7 +139,8 @@ pub fn dispatch_requested(store: &mut Store) -> (
                                     _region.id, 
                                     _region.asset_id, 
                                     _region.offset, 
-                                    _region.duration, 
+                                    _region.asset_in,
+                                    _region.asset_out, 
                                     _region.asset_src.clone()
                                 ));
                                 store.audio_regions.push(AudioRegion {
@@ -168,7 +170,7 @@ pub fn dispatch_requested(store: &mut Store) -> (
     for a in store.out_queue.iter() {
         match a {
             Action::AddMidiRegion(_, _, _, _) |
-            Action::AddRegion(_, _, _, _, _, _) |
+            Action::AddRegion(_, _, _, _, _, _, _) |
             Action::AddNote(_) |
             Action::Goto(_) |
             Action::Tick => {
@@ -297,6 +299,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
                         new_asset_id,
                         store.playhead, 
                         0, 
+                        0,
                         new_src,
                     ));
                 },
@@ -357,12 +360,6 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     // Mode 0 (OFF) or 1 (MIDI)
                     _ => {
                         store.pool = None;
-                        /*
-                        // take() vs to_owned() ?
-                        if let Some(_writer) = store.writer.take() {
-                            _writer.join();
-                        }
-                        */
                         store.writer = None;
                         store.written.store(0, Ordering::SeqCst);
                     },
@@ -510,7 +507,38 @@ pub fn dispatch(store: &mut Store, a: Action) {
                 }
                 store.midi_regions.push(second_region);
             }
-            if let Some(audio_region) = store.audio_regions.iter_mut().find(|r| r.id == r_id) {
+            if let Some(mut first_region) = store.audio_regions.iter_mut().find(|r| r.id == r_id) {
+                first_region.duration = offset - first_region.offset;
+                first_region.asset_out = first_region.asset_in + first_region.duration;
+                let mut second_region = AudioRegion {
+                    id: new_region_id,
+                    offset,
+                    duration: first_region.offset + first_region.duration - offset,
+                    asset_id: first_region.asset_id,
+                    asset_in: first_region.asset_out,
+                    asset_out: first_region.asset_out + first_region.offset + first_region.duration - offset,
+                    asset_src: first_region.asset_src.clone(),
+                    gain: first_region.gain,
+                    buffer: first_region.buffer.clone(),
+                };
+                store.out_queue.push(Action::AddRegion(
+                    store.track_id, 
+                    second_region.id, 
+                    second_region.asset_id, 
+                    second_region.offset, 
+                    second_region.asset_in, 
+                    second_region.asset_out,
+                    second_region.asset_src.clone()
+                ));
+                store.out_queue.push(Action::AddRegion(
+                    store.track_id, 
+                    first_region.id, 
+                    first_region.asset_id, 
+                    first_region.offset, 
+                    first_region.asset_in, 
+                    first_region.asset_out,
+                    first_region.asset_src.clone()
+                ));
                 // Clip buffer at split and create new region and buffer for trimmings
             }
         },

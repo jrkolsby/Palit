@@ -197,8 +197,9 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             new_tracks
         },
         assets: match action.clone() {
-            Action::AddRegion(_, _, asset_id, _, duration, src) => {
+            Action::AddRegion(_, _, asset_id, _, asset_in, asset_out, src) => {
                 let mut new_assets = state.assets.clone();
+                let duration = asset_out - asset_in;
                 new_assets.insert(asset_id, Asset {
                     src: src.clone(),
                     duration: duration.clone(),
@@ -227,12 +228,13 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             _ => state.assets.to_owned()
         },
         regions: match action.clone() {
-            Action::AddRegion(t_id, r_id, asset_id, offset, duration, src) => {
+            Action::AddRegion(t_id, r_id, asset_id, offset, asset_in, asset_out, src) => {
+                eprintln!("ADD REGION {} :{} -> {}", r_id, asset_in, asset_out);
                 let mut new_regions = state.regions.clone();
                 new_regions.insert(r_id, AudioRegion {
                     asset_id,
-                    asset_in: 0,
-                    asset_out: duration,
+                    asset_in,
+                    asset_out,
                     offset: offset,
                     track: t_id,
                 });
@@ -436,7 +438,7 @@ impl Layer for Timeline {
             },
             // Regenerate to make new regions visible 
             Action::AddMidiRegion(_, _, _, _) |
-            Action::AddRegion(_, _, _, _, _, _) => {
+            Action::AddRegion(_, _, _, _, _, _, _) => {
                 self.focii = generate_focii(
                     &self.state.tracks, 
                     &self.state.regions, 

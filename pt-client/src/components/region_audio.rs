@@ -129,7 +129,11 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
         },
 
         y_id: void_id.clone(),
-        y_t: void_transform,
+        y_t: |action, id, state| match action {
+            Action::SelectY => Action::SplitRegion(id.1, state.playhead),
+            a @ Action::AddRegion(_,_,_,_,_,_,_) => a,
+            _ => Action::Noop
+        },
         y: |mut out, window, id, state, focus| {
             if focus {
                 let region = state.regions.get(&id.1).unwrap();

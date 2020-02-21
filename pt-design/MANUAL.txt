@@ -1,0 +1,43 @@
+**********************************
+SONGARDEN ALPHA V1 - March 1, 2020
+**********************************
+
+Thank you for trying Songarden, that's pretty cool! 
+
+When you launch Songarden, you will be prompted to give
+admin permissions. This is only to allow realtime access to
+your computer keyboard while Songarden is running. We assure
+you that no sensitive data is stored locally or remotely. If
+you do not grant this permission then Songarden will not
+receive input from your keyboard and panic. 
+
+any audio assets, project
+files, or programmable modules will be written to the folder
+where Songarden lives. We have included some demo projects
+for you to get started with, 
+
+~| MODULES |~
+
+~| ROUTES |~
+
+MIDI and Audio coexist
+
+~| TIMELINE |~
+
+The timeline is the most important core module, and allows
+you to record MIDI and audio data on multiple tracks. One of
+the most 
+
+~| FEEDBACK |~
+
+Please note that this is an alpha release and you could
+experience errors and crashes at any time. Please save your
+work songs frequently.
+
+Please submit bug reports with steps to reproduce and any 
+textual output from Songarden to jrkolsby@mac.com. 
+
+We plan on adding many new features to Songarden for the
+beta release and are receptive to ideas or requests!
+
+(:set tw=60)
