@@ -23,7 +23,6 @@ pub struct AudioRegion {
     pub offset: Offset,
     pub duration: Offset,
     pub asset_in: Offset,
-    pub asset_out: Offset,
     pub gain: f32,
     pub asset_id: u16,
     pub asset_src: String,
@@ -126,8 +125,8 @@ pub fn dispatch_requested(store: &mut Store) -> (
                                     _region.id, 
                                     _region.asset_id,
                                     _region.offset, 
-                                    _region.asset_in, 
-                                    _region.asset_out,
+                                    _region.duration, 
+                                    _region.asset_in,
                                     _region.asset_src.clone()
                                 ));
                             }
@@ -139,8 +138,8 @@ pub fn dispatch_requested(store: &mut Store) -> (
                                     _region.id, 
                                     _region.asset_id, 
                                     _region.offset, 
+                                    _region.duration, 
                                     _region.asset_in,
-                                    _region.asset_out, 
                                     _region.asset_src.clone()
                                 ));
                                 store.audio_regions.push(AudioRegion {
@@ -148,7 +147,6 @@ pub fn dispatch_requested(store: &mut Store) -> (
                                     offset: _region.offset,
                                     buffer: _region.buffer.to_owned(),
                                     asset_id: _region.asset_id,
-                                    asset_out: _region.asset_out,
                                     asset_in: _region.asset_in,
                                     asset_src: src,
                                     duration: _region.duration,
@@ -288,7 +286,6 @@ pub fn dispatch(store: &mut Store, a: Action) {
                         buffer: vec![],
                         duration: 0,
                         asset_in: 0,
-                        asset_out: 0,
                         gain: 1.0,
                         asset_id: new_asset_id,
                         asset_src: new_src.clone(),
@@ -508,26 +505,24 @@ pub fn dispatch(store: &mut Store, a: Action) {
                 store.midi_regions.push(second_region);
             }
             if let Some(mut first_region) = store.audio_regions.iter_mut().find(|r| r.id == r_id) {
-                first_region.duration = offset - first_region.offset;
-                first_region.asset_out = first_region.asset_in + first_region.duration;
                 let mut second_region = AudioRegion {
                     id: new_region_id,
                     offset,
                     duration: first_region.offset + first_region.duration - offset,
                     asset_id: first_region.asset_id,
-                    asset_in: first_region.asset_out,
-                    asset_out: first_region.asset_out + first_region.offset + first_region.duration - offset,
+                    asset_in: first_region.asset_in + offset - first_region.offset,
                     asset_src: first_region.asset_src.clone(),
                     gain: first_region.gain,
                     buffer: first_region.buffer.clone(),
                 };
+                first_region.duration = offset - first_region.offset;
                 store.out_queue.push(Action::AddRegion(
                     store.track_id, 
                     second_region.id, 
                     second_region.asset_id, 
                     second_region.offset, 
+                    second_region.duration, 
                     second_region.asset_in, 
-                    second_region.asset_out,
                     second_region.asset_src.clone()
                 ));
                 store.out_queue.push(Action::AddRegion(
@@ -535,10 +530,11 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     first_region.id, 
                     first_region.asset_id, 
                     first_region.offset, 
+                    first_region.duration,
                     first_region.asset_in, 
-                    first_region.asset_out,
                     first_region.asset_src.clone()
                 ));
+                store.audio_regions.push(second_region);
                 // Clip buffer at split and create new region and buffer for trimmings
             }
         },
@@ -553,7 +549,7 @@ pub fn compute(store: &mut Store) -> [Output; CHANNELS] {
     for region in store.audio_regions.iter() {
         if store.playhead >= region.offset && 
             store.playhead - region.offset < region.duration {
-            let offset = (store.playhead - region.offset) as usize;
+            let offset = (store.playhead - region.offset + region.asset_in) as usize;
             let x = frame_with_offset(&region, offset);
             z = [x[0] * region.gain, x[1] * region.gain];
         }
@@ -676,13 +672,14 @@ pub fn read(doc: &mut Element) -> Option<Store> {
             let r_id: &str = region.attributes.get("id").unwrap();
             let a_id: &str = region.attributes.get("asset").unwrap();
             let offset: &str = region.attributes.get("offset").unwrap();
+            let duration: &str = region.attributes.get("duration").unwrap();
             let a_in: &str = region.attributes.get("in").unwrap();
-            let a_out: &str = region.attributes.get("out").unwrap();
 
             let _r_id: u16 = r_id.parse().unwrap();
             let _a_id: u16 = a_id.parse().unwrap();
-            let _a_in: u32 = a_in.parse().unwrap();
-            let _a_out: u32 = a_out.parse().unwrap();
+            let _a_in: Offset = a_in.parse().unwrap();
+            let _duration: Offset = duration.parse().unwrap();
+            let _offset: Offset = offset.parse().unwrap();
 
             let mut buffer = vec![];
             let mut _src: Option<String> = None;
@@ -725,11 +722,10 @@ pub fn read(doc: &mut Element) -> Option<Store> {
 
             store.audio_regions.push(AudioRegion {
                 id: _r_id,
-                offset: offset.parse().unwrap(),
-                duration: _a_out - _a_in,
                 asset_id: _a_id,
                 asset_in: _a_in,
-                asset_out: _a_out,
+                offset: _offset,
+                duration: _duration,
                 asset_src: _src.unwrap(),
                 gain: 1.0,
                 buffer,

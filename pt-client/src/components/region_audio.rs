@@ -22,17 +22,26 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
             let region = state.regions.get(&id.1).unwrap();
             let waveform = &state.assets.get(&region.asset_id).unwrap().waveform;
 
-            let region_offset = char_offset(region.offset,
-                state.sample_rate, state.tempo, state.zoom);
+            let region_offset = char_offset(
+                region.offset,
+                state.sample_rate, 
+                state.tempo, 
+                state.zoom);
 
-            let asset_start_offset = char_offset(region.asset_in,
-                state.sample_rate, state.tempo, state.zoom);
+            let asset_start_offset = char_offset(
+                region.asset_in,
+                state.sample_rate, 
+                state.tempo, 
+                state.zoom);
 
-            let asset_length_offset = char_offset(region.asset_out - region.asset_in,
-                state.sample_rate, state.tempo, state.zoom);
+            let asset_length_offset = char_offset(
+                region.duration,
+                state.sample_rate, 
+                state.tempo, 
+                state.zoom);
 
             // Region appears to left of timeline
-            if asset_length_offset + region_offset < state.scroll_x {
+            if region_offset + asset_length_offset < state.scroll_x {
                 return;
             } 
             // Region appears to right of timeline
@@ -42,7 +51,7 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
             // Region split by left edge of timeline
             let mut wave_in_i: usize = if region_offset < state.scroll_x {
-                (state.scroll_x - region_offset) as usize
+                (asset_start_offset + (state.scroll_x - region_offset)) as usize
             // Left edge of region appears unclipped
             } else {
                 asset_start_offset as usize
@@ -50,8 +59,8 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
             // Region split by right edge of timeline
             let mut wave_out_i: usize = if state.scroll_x + window.w < region_offset + asset_length_offset {
-                (asset_start_offset + asset_length_offset) as usize - 
-                (region_offset + asset_length_offset - (state.scroll_x + window.w)) as usize
+                (asset_start_offset - region_offset - (state.scroll_x + window.w)) as usize
+            // Right edge of region appears unclipped
             } else {
                 (asset_start_offset + asset_length_offset) as usize
             };

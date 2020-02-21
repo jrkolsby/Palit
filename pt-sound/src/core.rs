@@ -348,7 +348,6 @@ impl Node<[Output; CHANNELS]> for Module {
                                             }
                                             _region.buffer.last_mut().unwrap()[index] = *frame;
                                             _region.duration += 1;
-                                            _region.asset_out += 1;
                                         }
                                     },
                                     _ => {}

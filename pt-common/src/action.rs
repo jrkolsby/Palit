@@ -80,7 +80,7 @@ pub enum Action {
     MonitorTrack(u16, bool),
     RecordTrack(u16, u8), // Track ID, mode (0 off, 1 midi, 2 audio)
     SetMeter(u16, u16),
-    // Track ID, Region ID, Asset ID, offset, asset_in, asset_out, source
+    // Track ID, Region ID, Asset ID, offset, duration, asset_in, source
     AddRegion(u16, u16, u16, Offset, Offset, Offset, String),
     // Track ID, Region ID, offset, duration
     AddMidiRegion(u16, u16, Offset, Offset),
@@ -111,9 +111,9 @@ impl ToString for Action {
             Action::NoteOff(key) => format!("NOTE_OFF:{}", key),
             Action::AddNote(n) => format!("NOTE_ADD:{}:{}:{}:{}:{}:{}",
                 n.id, n.note, n.vel, n.r_id, n.t_in, n.t_out),
-            Action::AddRegion(t_id, r_id, a_id, offset, asset_in, asset_out, source) => 
+            Action::AddRegion(t_id, r_id, a_id, offset, duration, asset_in, source) => 
                 format!("REGION_ADD:{}:{}:{}:{}:{}:{}:{}",
-                    t_id, r_id, a_id, offset, asset_in, asset_out, source),
+                    t_id, r_id, a_id, offset, duration, asset_in, source),
             Action::AddMidiRegion(t_id, r_id, offset, duration) =>
                 format!("MIDI_REGION_ADD:{}:{}:{}:{}",
                     t_id, r_id, offset, duration),

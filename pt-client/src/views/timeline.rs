@@ -197,21 +197,34 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             new_tracks
         },
         assets: match action.clone() {
-            Action::AddRegion(_, _, asset_id, _, asset_in, asset_out, src) => {
+            Action::AddRegion(_, _, asset_id, _, duration, asset_in, src) => {
                 let mut new_assets = state.assets.clone();
-                let duration = asset_out - asset_in;
-                new_assets.insert(asset_id, Asset {
-                    src: src.clone(),
-                    duration: duration.clone(),
-                    channels: 2,
-                    waveform: generate_partial_waveform(
-                        src, 
-                        duration, 
-                        state.sample_rate, 
-                        state.tempo, 
-                        state.zoom
-                    ),
-                });
+                if let Some(mut old_asset) = new_assets.get_mut(&asset_id) {
+                    // Do not clip assets, only add to them
+                    if old_asset.duration < duration {
+                        old_asset.duration = duration.clone();
+                        old_asset.waveform = generate_partial_waveform(
+                            src, 
+                            duration, 
+                            state.sample_rate, 
+                            state.tempo, 
+                            state.zoom
+                        );
+                    }
+                } else {
+                    new_assets.insert(asset_id, Asset {
+                        src: src.clone(),
+                        duration: duration.clone(),
+                        channels: 2,
+                        waveform: generate_partial_waveform(
+                            src, 
+                            duration, 
+                            state.sample_rate, 
+                            state.tempo, 
+                            state.zoom
+                        ),
+                    });
+                }
                 new_assets
             },
             Action::Deselect  => {
@@ -228,14 +241,13 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             _ => state.assets.to_owned()
         },
         regions: match action.clone() {
-            Action::AddRegion(t_id, r_id, asset_id, offset, asset_in, asset_out, src) => {
-                eprintln!("ADD REGION {} :{} -> {}", r_id, asset_in, asset_out);
+            Action::AddRegion(t_id, r_id, asset_id, offset, duration, asset_in, src) => {
                 let mut new_regions = state.regions.clone();
                 new_regions.insert(r_id, AudioRegion {
                     asset_id,
                     asset_in,
-                    asset_out,
-                    offset: offset,
+                    duration,
+                    offset,
                     track: t_id,
                 });
                 new_regions
@@ -452,8 +464,7 @@ impl Layer for Timeline {
                     for (i, focus) in self.focii[self.state.focus.1].iter().enumerate() {
                         // This id could be a midi region or an audio region
                         if let Some(audio_region) = self.state.regions.get(&focus.w_id.1) {
-                            let duration = audio_region.asset_out - audio_region.asset_in;
-                            if time >= audio_region.offset && time < audio_region.offset + duration {
+                            if time >= audio_region.offset && time < audio_region.offset + audio_region.duration {
                                 new_focus = i;
                             }
                         }
