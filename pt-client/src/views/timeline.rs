@@ -213,7 +213,6 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
                 });
                 new_assets
             },
-            //Action::Zoom |
             Action::Deselect  => {
                 let zoom = if let Some(z) = state.temp_zoom { z } else { state.zoom };
                 let tempo = if let Some(t) = state.temp_tempo { t } else { state.tempo };
@@ -418,7 +417,24 @@ impl Layer for Timeline {
 
         // Actions which affect focii
         let (focus, default) = match _action.clone() {
-            // Move focus to intersecting region on Tick
+            // Move focus to the left when a region is deleted
+            a @ Action::DelRegion(_) |
+            a @ Action::SplitRegion(_,_) => {
+                self.focii = generate_focii(
+                    &self.state.tracks, 
+                    &self.state.regions, 
+                    &self.state.midi_regions);
+                ((self.state.focus.0 - 1, self.state.focus.1), Some(a))
+            },
+            // Regenerate to make new regions visible and default
+            a @ Action::LoopRegion(_) => {
+                self.focii = generate_focii(
+                    &self.state.tracks, 
+                    &self.state.regions, 
+                    &self.state.midi_regions);
+                (self.state.focus, Some(a))
+            },
+            // Regenerate to make new regions visible 
             Action::AddMidiRegion(_, _, _, _) |
             Action::AddRegion(_, _, _, _, _, _) => {
                 self.focii = generate_focii(

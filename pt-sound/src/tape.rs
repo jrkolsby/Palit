@@ -508,6 +508,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
                 for note in second_region.notes.iter() {
                     store.out_queue.push(Action::AddNote(note.clone()))
                 }
+                store.midi_regions.push(second_region);
             }
             if let Some(audio_region) = store.audio_regions.iter_mut().find(|r| r.id == r_id) {
                 // Clip buffer at split and create new region and buffer for trimmings
