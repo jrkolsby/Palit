@@ -103,7 +103,7 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
         y_id: void_id.clone(),
         y_t: |action, id, state| match action {
             Action::SelectY => {
-                let local_id = id.1 & REGIONS_PER_TRACK;
+                let local_id = id.1 % REGIONS_PER_TRACK;
                 let track_id = id.1 / REGIONS_PER_TRACK;
                 Action::SplitRegion(track_id, local_id, state.playhead)
             },

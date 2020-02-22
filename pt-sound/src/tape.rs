@@ -564,7 +564,64 @@ pub fn dispatch(store: &mut Store, a: Action) {
                 }
             }
         },
-        Action::LoopRegion(t_id, r_id) => {},
+        Action::LoopRegion(t_id, r_id) => {
+            if store.track_id == t_id {
+                let mut new_region_id = store.midi_regions.iter().fold(0, |max, r| 
+                    if r.id > max { r.id } else {max}) + 1;
+                new_region_id = store.audio_regions.iter().fold(new_region_id, |max, r| 
+                    if r.id > max {r.id} else {max}) + 1;
+                if let Some(midi_region) = store.midi_regions.iter_mut().find(|r| r.id == r_id) {
+                    let t_diff = midi_region.duration;
+                    let new_notes: Vec<Note> = midi_region.notes.clone().iter_mut().map(|n| {
+                        n.t_in += t_diff;
+                        n.t_out += t_diff;
+                        n.r_id = new_region_id;
+                        n.to_owned()
+                    }).collect();
+                    let new_region = MidiRegion {
+                        id: new_region_id,
+                        notes: new_notes,
+                        note_queue: vec![],
+                        offset: midi_region.offset + t_diff,
+                        duration: midi_region.duration,
+                    };
+                    store.out_queue.push(Action::AddMidiRegion(
+                        store.track_id, 
+                        new_region_id, 
+                        new_region.offset, 
+                        new_region.duration, 
+                    ));
+                    for note in new_region.notes.iter() {
+                        store.out_queue.push(Action::AddNote(store.track_id, note.clone()))
+                    }
+                    store.midi_regions.push(new_region);
+                }
+                if let Some(audio_region) = store.audio_regions.iter_mut().find(|r| r.id == r_id) {
+                    let t_diff = audio_region.duration;
+                    let new_region = AudioRegion {
+                        id: new_region_id,
+                        offset: audio_region.offset + t_diff,
+                        duration: audio_region.duration,
+                        asset_id: audio_region.asset_id,
+                        asset_in: audio_region.asset_in,
+                        asset_src: audio_region.asset_src.clone(),
+                        gain: audio_region.gain,
+                        buffer: audio_region.buffer.clone(),
+                    };
+                    store.out_queue.push(Action::AddRegion(
+                        store.track_id, 
+                        new_region.id, 
+                        new_region.asset_id, 
+                        new_region.offset, 
+                        new_region.duration, 
+                        new_region.asset_in, 
+                        new_region.asset_src.clone()
+                    ));
+                    store.audio_regions.push(new_region);
+                }
+
+            }
+        },
         _ => {}
     }
 }

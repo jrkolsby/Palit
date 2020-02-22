@@ -84,13 +84,12 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [X] UI-26: Proper metronome tick
 - [ ] UI-29: Error view
 - [X] UI-30: Midi Region
-- [ ] UI-31: Move, split, trim, duplicate, delete audio and midi region
+- [X] UI-31: Move, split, duplicate, delete audio and midi region
 
 - [ ] INF-6: Undo Redo
 
 ### APRIL 1 ( alpha v2.0 )
 
-- [ ] UI-14: Network setup
 - [ ] UI-25: Monitor control
 - [ ] UI-22: Snap to grid
 - [ ] UI-27: Track dB faders (gain control)
@@ -104,6 +103,8 @@ Palit is a music hardware project which seeks to upcycle outdated laptop models 
 - [ ] INF-5: Unicode Support in linux TTY with KMSCON
 
 ### MAY 1
+
+- [ ] UI-14: Network setup
 
 - [ ] SOUND-16: VST audio host (Steinberg API)
 - [ ] SOUND-17: VST client host (XML UI to text layout)

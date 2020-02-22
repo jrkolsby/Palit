@@ -308,7 +308,7 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
                     old_region.duration = duration;
                     old_region.offset = offset;
                 } else {
-                    new_regions.insert(r_id, MidiRegion {
+                    new_regions.insert(global_id, MidiRegion {
                         duration,
                         offset,
                         track: t_id,

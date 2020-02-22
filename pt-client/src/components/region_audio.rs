@@ -84,8 +84,33 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
         }, 
 
         r_id: void_id.clone(),
-        r_t: void_transform,
-        r: void_render,
+        r_t: |action, id, state| match action {
+            Action::SelectR => {
+                let local_id = id.1 % REGIONS_PER_TRACK;
+                let track_id = id.1 / REGIONS_PER_TRACK;
+                Action::LoopRegion(track_id, local_id)
+            },
+            a @ Action::AddRegion(_,_,_,_,_,_,_) => a,
+            _ => Action::Noop,
+        },
+        r: |mut out, window, id, state, focus| {
+            if focus {
+                let region = state.regions.get(&id.1).unwrap();
+
+                let region_offset = char_offset(region.offset,
+                    state.sample_rate, state.tempo, state.zoom);
+
+                let timeline_offset = if region_offset >= state.scroll_x {
+                    region_offset - state.scroll_x
+                } else { 0 };
+
+                let label_x = window.x + 15 + REGIONS_X + timeline_offset;
+                let label_y = window.y + 2 + TIMELINE_Y + (2 * region.track);
+
+                write!(out, "{} LOOP ",
+                    cursor::Goto(label_x, label_y)).unwrap();
+            }
+        },
 
         g_id: void_id.clone(),
         g_t: |action, id, state| match action {
