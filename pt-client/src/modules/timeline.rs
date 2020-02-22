@@ -69,7 +69,6 @@ pub fn read(mut doc: Element) -> TimelineState {
             let _r_id = r_id.parse::<u16>().unwrap();
             
             let global_r_id = _t_id * REGIONS_PER_TRACK + _r_id;
-            eprintln!("GLOBAL REGION {}", global_r_id);
 
             state.regions.insert(global_r_id, AudioRegion {
                 asset_id: a_id.parse().unwrap(),

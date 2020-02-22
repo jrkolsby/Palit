@@ -251,7 +251,6 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
                 // ... region id's unique to its own scope. We need a global ID to store
                 // ... in the timeline, so we must limit the number of regions per track 
                 let global_id = t_id * REGIONS_PER_TRACK + r_id;
-                eprintln!("ADDING {} {} {}", t_id, r_id, global_id);
                 new_regions.insert(global_id, AudioRegion {
                     asset_id,
                     asset_in,
@@ -273,7 +272,6 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             Action::DelRegion(t_id, r_id) => {
                 let mut new_regions = state.regions.clone();
                 let global_id = t_id * REGIONS_PER_TRACK + r_id;
-                eprintln!("DELETING {} {} {}", t_id, r_id, global_id);
                 new_regions.remove(&global_id);
                 new_regions
             },

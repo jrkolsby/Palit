@@ -454,7 +454,7 @@ pub fn dispatch(store: &mut Store, a: Action) {
         Action::Zoom(size) => {
             store.zoom = if size >= 1 { size as Offset } else { 1 };
         },
-        Action::MoveRegion(r_id, t_id, offset) => {
+        Action::MoveRegion(t_id, r_id, offset) => {
             if store.track_id == t_id {
                 if let Some(mut region) = store.midi_regions.iter_mut().find(|r| r.id == r_id) {
                     let diff: i32 = offset as i32 - region.offset as i32;
@@ -476,7 +476,6 @@ pub fn dispatch(store: &mut Store, a: Action) {
             }
         },
         Action::SplitRegion(t_id, r_id, offset) => {
-            eprintln!("SPLITTING {} {} {}", t_id, r_id, store.track_id);
             if store.track_id == t_id {
                 let mut new_region_id = store.midi_regions.iter().fold(0, |max, r| 
                     if r.id > max { r.id } else {max}) + 1;
