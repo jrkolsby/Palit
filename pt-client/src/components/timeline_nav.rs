@@ -24,7 +24,7 @@ pub fn new() -> MultiFocus::<TimelineState> {
             Action::SelectR => Action::Record,
             // Will be dispatched immediately after record is pressed
             a @ Action::AddMidiRegion(_,_,_,_) |
-            a @ Action::AddNote(_) => a,
+            a @ Action::AddNote(_,_) => a,
             _ => Action::Noop 
         },
         r: |out, window, id, state, focus| 

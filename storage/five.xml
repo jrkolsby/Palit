@@ -40,7 +40,7 @@
             <param value="127" name="bpm" />
             <asset id="0" size="14880000" src="/usr/local/palit/assets/september.wav" />
             <track id="1">
-                <region id="1" asset="0" in="0" out="14880000" offset="0" />
+                <region id="0" asset="0" in="0" duration="14880000" offset="0" />
             </track>
             <track id="4">
             </track>

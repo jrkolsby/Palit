@@ -42,7 +42,7 @@
             <asset id="1" size="529000" src="/usr/local/palit/assets/Drums.wav" />
             <asset id="2" size="529000" src="/usr/local/palit/assets/1580442100_1.wav" />
             <track id="1">
-                <region id="1" asset="1" in="0" out="529000" offset="0" />
+                <region id="0" asset="1" in="0" duration="529000" offset="0" />
             </track>
         </timeline>
 

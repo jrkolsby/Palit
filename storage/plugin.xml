@@ -24,7 +24,7 @@
             <param value="500" name="velocity" />
         </keyboard>
 
-        <plugin id="2" src="/usr/local/palit/modules/karplus.so" />
+        <karplus id="2" />
 
     </modules>
 </project>

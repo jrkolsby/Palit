@@ -4,8 +4,7 @@ use libcommon::{Param, param_map, mark_map};
 
 use xmltree::Element;
 
-use crate::views::TimelineState;
-use crate::views::Timeline;
+use crate::views::{Timeline, TimelineState, REGIONS_PER_TRACK};
 use crate::common::{AudioRegion, MidiRegion, Track, Asset};
 
 pub fn write(state: TimelineState) -> Element {
@@ -67,8 +66,12 @@ pub fn read(mut doc: Element) -> TimelineState {
             let offset: &str = region.attributes.get("offset").unwrap();
             let a_in: &str = region.attributes.get("in").unwrap();
             let duration: &str = region.attributes.get("duration").unwrap();
+            let _r_id = r_id.parse::<u16>().unwrap();
+            
+            let global_r_id = _t_id * REGIONS_PER_TRACK + _r_id;
+            eprintln!("GLOBAL REGION {}", global_r_id);
 
-            state.regions.insert(r_id.parse::<u16>().unwrap(), AudioRegion {
+            state.regions.insert(global_r_id, AudioRegion {
                 asset_id: a_id.parse().unwrap(),
                 asset_in: a_in.parse().unwrap(),
                 duration: duration.parse().unwrap(),

@@ -6,7 +6,7 @@ use crate::common::{Screen, MultiFocus, FocusType, ID, Window};
 use crate::common::{char_offset, offset_char};
 use crate::common::{REGIONS_X, TIMELINE_Y};
 use crate::components::{waveform, roll};
-use crate::views::TimelineState;
+use crate::views::{TimelineState, REGIONS_PER_TRACK};
 
 pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
@@ -37,7 +37,11 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
         r_id: void_id.clone(),
         r_t: |action, id, state| match action {
-            Action::SelectR => Action::LoopRegion(id.1),
+            Action::SelectR => {
+                let local_id = id.1 % REGIONS_PER_TRACK;
+                let track_id = id.1 / REGIONS_PER_TRACK;
+                Action::LoopRegion(track_id, local_id)
+            },
             a @ Action::AddMidiRegion(_,_,_,_) => a,
             _ => Action::Noop,
         },
@@ -65,12 +69,14 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
             Action::Right => { 
                 let r = state.midi_regions.get(&id.1).unwrap();
                 let d_offset = offset_char(1, state.sample_rate, state.tempo, state.zoom);
-                Action::MoveRegion(id.1, r.track, r.offset + d_offset) 
+                let local_id = id.1 % REGIONS_PER_TRACK;
+                Action::MoveRegion(r.track, local_id, r.offset + d_offset) 
             },
             Action::Left => { 
                 let r = state.midi_regions.get(&id.1).unwrap();
                 let d_offset = offset_char(1, state.sample_rate, state.tempo, state.zoom);
-                Action::MoveRegion(id.1, r.track,
+                let local_id = id.1 % REGIONS_PER_TRACK;
+                Action::MoveRegion(r.track, local_id,
                     if r.offset < d_offset { 0 } else { r.offset - d_offset })  
             },
             _ => Action::Noop,
@@ -96,9 +102,13 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
         y_id: void_id.clone(),
         y_t: |action, id, state| match action {
-            Action::SelectY => Action::SplitRegion(id.1, state.playhead),
+            Action::SelectY => {
+                let local_id = id.1 & REGIONS_PER_TRACK;
+                let track_id = id.1 / REGIONS_PER_TRACK;
+                Action::SplitRegion(track_id, local_id, state.playhead)
+            },
             a @ Action::AddMidiRegion(_,_,_,_) |
-            a @ Action::AddNote(_) => a,
+            a @ Action::AddNote(_,_) => a,
             _ => Action::Noop
         },
         y: |mut out, window, id, state, focus| {
@@ -122,7 +132,11 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
         p_id: void_id.clone(),
         p_t: |action, id, state| match action {
-            Action::SelectP => Action::DelRegion(id.1),
+            Action::SelectP => {
+                let local_id = id.1 & REGIONS_PER_TRACK;
+                let track_id = id.1 / REGIONS_PER_TRACK;
+                Action::DelRegion(track_id, local_id)
+            },
             _ => Action::Noop
         },
         p: |mut out, window, id, state, focus| {

@@ -6,7 +6,7 @@ use crate::common::{Screen, MultiFocus, FocusType, ID, Window};
 use crate::common::{char_offset, offset_char};
 use crate::common::{REGIONS_X, TIMELINE_Y};
 use crate::components::{waveform};
-use crate::views::TimelineState;
+use crate::views::{TimelineState, REGIONS_PER_TRACK};
 
 pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
@@ -59,6 +59,7 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
             // Region split by right edge of timeline
             let mut wave_out_i: usize = if state.scroll_x + window.w < region_offset + asset_length_offset {
+                // OVERFLOW ALERT
                 (asset_start_offset - region_offset - (state.scroll_x + window.w)) as usize
             // Right edge of region appears unclipped
             } else {
@@ -84,36 +85,21 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
         r_id: void_id.clone(),
         r_t: void_transform,
-        r: |mut out, window, id, state, focus| {
-            if focus {
-                let region = state.regions.get(&id.1).unwrap();
-
-                let region_offset = char_offset(region.offset,
-                    state.sample_rate, state.tempo, state.zoom);
-
-                let timeline_offset = if region_offset >= state.scroll_x {
-                    region_offset - state.scroll_x
-                } else { 0 };
-
-                let region_x = window.x + 7 + REGIONS_X + timeline_offset;
-                let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
-
-                write!(out, "{} TRIM ",
-                    cursor::Goto(region_x, region_y)).unwrap();
-            }
-        },
+        r: void_render,
 
         g_id: void_id.clone(),
         g_t: |action, id, state| match action {
             Action::Right => { 
                 let r = state.regions.get(&id.1).unwrap();
                 let d_offset = offset_char(1, state.sample_rate, state.tempo, state.zoom);
-                Action::MoveRegion(id.1, r.track, r.offset + d_offset) 
+                let local_id = id.1 % REGIONS_PER_TRACK;
+                Action::MoveRegion(r.track, local_id, r.offset + d_offset) 
             },
             Action::Left => { 
                 let r = state.regions.get(&id.1).unwrap();
                 let d_offset = offset_char(1, state.sample_rate, state.tempo, state.zoom);
-                Action::MoveRegion(id.1, r.track, 
+                let local_id = id.1 % REGIONS_PER_TRACK;
+                Action::MoveRegion(r.track, local_id,
                     if r.offset < d_offset { 0 } else { r.offset - d_offset })  
             },
             _ => Action::Noop,
@@ -139,7 +125,12 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
         y_id: void_id.clone(),
         y_t: |action, id, state| match action {
-            Action::SelectY => Action::SplitRegion(id.1, state.playhead),
+            Action::SelectY => {
+                let local_id = id.1 % REGIONS_PER_TRACK;
+                let track_id = id.1 / REGIONS_PER_TRACK;
+                eprintln!("SPLIT {}", id.1);
+                Action::SplitRegion(track_id, local_id, state.playhead)
+            },
             a @ Action::AddRegion(_,_,_,_,_,_,_) => a,
             _ => Action::Noop
         },
@@ -154,7 +145,7 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                     region_offset - state.scroll_x
                 } else { 0 };
 
-                let region_x = window.x + 14 + REGIONS_X + timeline_offset;
+                let region_x = window.x + 13 + REGIONS_X + timeline_offset;
                 let region_y = window.y + 2 + TIMELINE_Y + 2 * region.track;
 
                 write!(out, "{} SPLIT ",
@@ -163,8 +154,32 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
         }, 
 
         p_id: void_id.clone(),
-        p_t: void_transform,
-        p: void_render, 
+        p_t: |action, id, state| match action {
+            Action::SelectP => {
+                let local_id = id.1 % REGIONS_PER_TRACK;
+                let track_id = id.1 / REGIONS_PER_TRACK;
+                Action::DelRegion(track_id, local_id)
+            },
+            _ => Action::Noop
+        },
+        p: |mut out, window, id, state, focus| {
+            if focus {
+                let region = state.regions.get(&id.1).unwrap();
+
+                let region_offset = char_offset(region.offset,
+                    state.sample_rate, state.tempo, state.zoom);
+
+                let timeline_offset = if region_offset >= state.scroll_x {
+                    region_offset - state.scroll_x
+                } else { 0 };
+
+                let label_x = window.x + 7 + REGIONS_X + timeline_offset;
+                let label_y = window.y + 2 + TIMELINE_Y + (2 * region.track);
+
+                write!(out, "{} DEL ",
+                    cursor::Goto(label_x, label_y)).unwrap();
+            }
+        }, 
 
         b_id: void_id.clone(),
         b_t: void_transform,

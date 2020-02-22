@@ -59,7 +59,7 @@ pub enum Action {
     Octave(bool), // true = up
     Volume(bool), 
     SetTempo(u16),
-    AddNote(Note),
+    AddNote(u16, Note), // Track ID, note
     Scrub(bool),
     SetLoop(Offset, Offset),
     LoopMode(bool), // true = on
@@ -80,10 +80,6 @@ pub enum Action {
     MonitorTrack(u16, bool),
     RecordTrack(u16, u8), // Track ID, mode (0 off, 1 midi, 2 audio)
     SetMeter(u16, u16),
-    // Track ID, Region ID, Asset ID, offset, duration, asset_in, source
-    AddRegion(u16, u16, u16, Offset, Offset, Offset, String),
-    // Track ID, Region ID, offset, duration
-    AddMidiRegion(u16, u16, Offset, Offset),
     ShowAnchors(Vec<Anchor>), 
     PatchAnchor(u16),
     PatchRoute(u16),
@@ -94,10 +90,14 @@ pub enum Action {
     PatchIn(u16, u16, u16),
     DelPatch(u16, u16, bool),
     Zoom(usize),
-    MoveRegion(u16, u16, Offset), // region ID, new track, new offset
-    DelRegion(u16),
-    SplitRegion(u16, Offset),
-    LoopRegion(u16),
+    // Track ID, Region ID, Asset ID, offset, duration, asset_in, source
+    AddRegion(u16, u16, u16, Offset, Offset, Offset, String),
+    // Track ID, Region ID, offset, duration
+    AddMidiRegion(u16, u16, Offset, Offset),
+    MoveRegion(u16, u16, Offset), // Track ID, region ID, new offset
+    DelRegion(u16, u16), // Track ID, region ID
+    SplitRegion(u16, u16, Offset), // Track ID, region ID
+    LoopRegion(u16, u16), // Track ID, region ID
     Noop,
     Error(String),
     Exit,
@@ -109,8 +109,8 @@ impl ToString for Action {
             Action::At(n_id, action) => format!("{}@{}", n_id, action.to_string()),
             Action::NoteOn(key, vel) => format!("NOTE_ON:{}:{}", key, vel),
             Action::NoteOff(key) => format!("NOTE_OFF:{}", key),
-            Action::AddNote(n) => format!("NOTE_ADD:{}:{}:{}:{}:{}:{}",
-                n.id, n.note, n.vel, n.r_id, n.t_in, n.t_out),
+            Action::AddNote(t_id, n) => format!("NOTE_ADD:{}:{}:{}:{}:{}:{}:{}",
+                t_id, n.id, n.note, n.vel, n.r_id, n.t_in, n.t_out),
             Action::AddRegion(t_id, r_id, a_id, offset, duration, asset_in, source) => 
                 format!("REGION_ADD:{}:{}:{}:{}:{}:{}:{}",
                     t_id, r_id, a_id, offset, duration, asset_in, source),
@@ -161,11 +161,11 @@ impl ToString for Action {
             Action::AddModule(id, name) => format!("ADD_MODULE:{}:{}", id, name),
             Action::DelModule(id) => format!("DEL_MODULE:{}", id),
             Action::Zoom(factor) => format!("ZOOM:{}", factor),
-            Action::MoveRegion(r_id, t_id, offset) => format!("MOVE_REGION:{}:{}:{}",
-                r_id, t_id, offset),
-            Action::DelRegion(r_id) => format!("DEL_REGION:{}", r_id),
-            Action::SplitRegion(r_id, offset) => format!("SPLIT_REGION:{}:{}", r_id, offset),
-            Action::LoopRegion(r_id) => format!("LOOP_REGION:{}", r_id),
+            Action::MoveRegion(t_id, r_id, offset) => format!("MOVE_REGION:{}:{}:{}",
+                t_id, r_id, offset),
+            Action::DelRegion(t_id, r_id) => format!("DEL_REGION:{}:{}", t_id, r_id),
+            Action::SplitRegion(t_id, r_id, offset) => format!("SPLIT_REGION:{}:{}:{}", t_id, r_id, offset),
+            Action::LoopRegion(t_id, r_id) => format!("LOOP_REGION:{}:{}", t_id, r_id),
             _ => "NOOP".to_string()
         })
     }
@@ -257,14 +257,16 @@ impl FromStr for Action {
                 argv[2].to_string()),
             "DEL_MODULE" => Action::DelModule(argv[1].parse().unwrap()),
             "TICK" => Action::Tick,
-            "NOTE_ADD" => Action::AddNote(Note {
-                id: argv[1].parse().unwrap(),
-                note: argv[2].parse().unwrap(),
-                vel: argv[3].parse().unwrap(),
-                r_id: argv[4].parse().unwrap(),
-                t_in: argv[5].parse().unwrap(),
-                t_out: argv[6].parse().unwrap(),
-            }),
+            "NOTE_ADD" => Action::AddNote(
+                argv[1].parse().unwrap(), 
+                Note {
+                    id: argv[2].parse().unwrap(),
+                    note: argv[3].parse().unwrap(),
+                    vel: argv[4].parse().unwrap(),
+                    r_id: argv[5].parse().unwrap(),
+                    t_in: argv[6].parse().unwrap(),
+                    t_out: argv[7].parse().unwrap(),
+                }),
             "REGION_ADD" => Action::AddRegion(
                 argv[1].parse().unwrap(),
                 argv[2].parse().unwrap(),
@@ -283,11 +285,16 @@ impl FromStr for Action {
                 argv[1].parse().unwrap(),
                 argv[2].parse().unwrap(),
                 argv[3].parse().unwrap()),
-            "DEL_REGION" => Action::DelRegion(argv[1].parse().unwrap()),
-            "SPLIT_REGION" => Action::SplitRegion(
+            "DEL_REGION" => Action::DelRegion(
                 argv[1].parse().unwrap(),
                 argv[2].parse().unwrap()),
-            "LOOP_REGION" => Action::LoopRegion(argv[1].parse().unwrap()),
+            "SPLIT_REGION" => Action::SplitRegion(
+                argv[1].parse().unwrap(),
+                argv[2].parse().unwrap(),
+                argv[3].parse().unwrap()),
+            "LOOP_REGION" => Action::LoopRegion(
+                argv[1].parse().unwrap(),
+                argv[2].parse().unwrap()),
             _ => return Err(raw.to_string())
         };
         Ok(if is_direct { Action::At(

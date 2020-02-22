@@ -17,10 +17,10 @@ use crate::views::{Layer};
 use crate::common::{REGIONS_X, TIMELINE_Y};
 
 static ASSET_PREFIX: &str = "storage/";
+pub static REGIONS_PER_TRACK: u16 = 1000;
 
 #[derive(Clone, Debug)]
 pub struct TimelineState {
-    // Requires XML write/read
     pub tempo: u16,
     pub zoom: usize,
     pub temp_tempo: Option<u16>,
@@ -47,7 +47,7 @@ pub struct TimelineState {
     pub focus: (usize, usize),
 }
 
-// STATIC PROPERTIES THROUGHOUT VIEW'S LIFETIME
+// Properties which aren't changed on every action
 pub struct Timeline {
     x: u16,
     y: u16,
@@ -60,6 +60,7 @@ pub struct Timeline {
 fn generate_focii(tracks: &HashMap<u16, Track>, 
                   audio_regions: &HashMap<u16, AudioRegion>,
                   midi_regions: &HashMap<u16, MidiRegion>) -> Vec<Vec<MultiFocus<TimelineState>>> {
+    // Push header navigation and meter / zoom controls to first row
     let mut focii: Vec<Vec<MultiFocus<TimelineState>>> = vec![vec![
         timeline_nav::new(),
         timeline_meter::new()
@@ -68,6 +69,9 @@ fn generate_focii(tracks: &HashMap<u16, Track>,
     let mut track_vec: Vec<(&u16, &Track)> = tracks.iter().collect();
     track_vec.sort_by(|(_, a), (_, b)| a.index.cmp(&b.index));
 
+    // Push track headers onto new rows for each track. 
+    // ... There must be at least one focus present on
+    // ... each track or else DelRegion will panic
     for (t_id, track) in track_vec.iter() {
         focii.push(vec![track_header::new(**t_id)]);
     };
@@ -243,7 +247,12 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
         regions: match action.clone() {
             Action::AddRegion(t_id, r_id, asset_id, offset, duration, asset_in, src) => {
                 let mut new_regions = state.regions.clone();
-                new_regions.insert(r_id, AudioRegion {
+                // Because each tape module is an isolated instance, it can only generate
+                // ... region id's unique to its own scope. We need a global ID to store
+                // ... in the timeline, so we must limit the number of regions per track 
+                let global_id = t_id * REGIONS_PER_TRACK + r_id;
+                eprintln!("ADDING {} {} {}", t_id, r_id, global_id);
+                new_regions.insert(global_id, AudioRegion {
                     asset_id,
                     asset_in,
                     duration,
@@ -252,31 +261,37 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
                 });
                 new_regions
             },
-            Action::MoveRegion(id, t_id, offset) => {
+            Action::MoveRegion(t_id, r_id, offset) => {
                 let mut new_regions = state.regions.clone();
-                if let Some(mut r) = new_regions.get_mut(&id) {
+                let global_id = t_id * REGIONS_PER_TRACK + r_id;
+                if let Some(mut r) = new_regions.get_mut(&global_id) {
                     r.offset = offset;
-                    r.track = t_id;
                 }
                 new_regions
             },
-            Action::SplitRegion(id, _) |
-            Action::DelRegion(id) => {
+            Action::SplitRegion(t_id, r_id, _) |
+            Action::DelRegion(t_id, r_id) => {
                 let mut new_regions = state.regions.clone();
-                new_regions.remove(&id);
+                let global_id = t_id * REGIONS_PER_TRACK + r_id;
+                eprintln!("DELETING {} {} {}", t_id, r_id, global_id);
+                new_regions.remove(&global_id);
                 new_regions
             },
             _ => state.regions.clone(),
         },
         midi_regions: match action.clone() {
-            Action::AddNote(note) => {
+            Action::AddNote(t_id, note) => {
                 let mut new_regions = state.midi_regions.clone();
-                new_regions.get_mut(&note.r_id).unwrap().notes.push(note.clone());
+                let global_id = t_id * REGIONS_PER_TRACK + note.r_id;
+                if let Some(mut region) = new_regions.get_mut(&global_id){ 
+                    region.notes.push(note.clone()) 
+                };
                 new_regions
             },
-            Action::MoveRegion(id, t_id, offset) => {
+            Action::MoveRegion(t_id, r_id, offset) => {
                 let mut new_regions = state.midi_regions.clone();
-                if let Some(mut r) = new_regions.get_mut(&id) {
+                let global_id = t_id * REGIONS_PER_TRACK + r_id;
+                if let Some(mut r) = new_regions.get_mut(&global_id) {
                     let diff: i32 = offset as i32 - r.offset as i32;
                     for mut note in r.notes.iter_mut() {
                         note.t_in = (note.t_in as i32 + diff) as Offset;
@@ -288,9 +303,10 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             },
             Action::AddMidiRegion(t_id, r_id, offset, duration) => {
                 let mut new_regions = state.midi_regions.clone();
+                let global_id = t_id * REGIONS_PER_TRACK + r_id;
                 // If we try adding a midi region which already exists, it's because
-                // ... it just terminated, just update duration for focii navigation
-                if let Some(old_region) = new_regions.get_mut(&r_id) {
+                // ... it just finished recording, so update duration 
+                if let Some(old_region) = new_regions.get_mut(&global_id) {
                     old_region.duration = duration;
                     old_region.offset = offset;
                 } else {
@@ -303,10 +319,11 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
                 }
                 new_regions
             },
-            Action::SplitRegion(id, _) |
-            Action::DelRegion(id) => {
+            Action::SplitRegion(t_id, r_id, _) |
+            Action::DelRegion(t_id, r_id) => {
                 let mut new_regions = state.midi_regions.clone();
-                new_regions.remove(&id);
+                let global_id = t_id * REGIONS_PER_TRACK + r_id;
+                new_regions.remove(&global_id);
                 new_regions
             },
             _ => state.midi_regions
@@ -432,8 +449,8 @@ impl Layer for Timeline {
         // Actions which affect focii
         let (focus, default) = match _action.clone() {
             // Move focus to the left when a region is deleted
-            a @ Action::DelRegion(_) |
-            a @ Action::SplitRegion(_,_) => {
+            a @ Action::DelRegion(_,_) |
+            a @ Action::SplitRegion(_,_,_) => {
                 self.focii = generate_focii(
                     &self.state.tracks, 
                     &self.state.regions, 
@@ -441,7 +458,7 @@ impl Layer for Timeline {
                 ((self.state.focus.0 - 1, self.state.focus.1), Some(a))
             },
             // Regenerate to make new regions visible and default
-            a @ Action::LoopRegion(_) => {
+            a @ Action::LoopRegion(_,_) => {
                 self.focii = generate_focii(
                     &self.state.tracks, 
                     &self.state.regions, 
