@@ -25,9 +25,6 @@ use dsp::daggy::petgraph::Bfs;
 #[cfg(target_os = "macos")]
 use portaudio as pa;
 
-use sample::{Signal, signal, ring_buffer};
-use sample::interpolate::{Converter, Floor, Linear, Sinc};
-
 use crate::midi::{open_midi_dev, read_midi_event, connect_midi_source_ports};
 use crate::synth;
 use crate::tape;
@@ -46,8 +43,6 @@ pub const BIT_RATE: usize = 16;
 pub const FRAMES: u32 = 128;
 
 const DEBUG_KEY_PERIOD: u16 = 24100;
-const SCRUB_MAX: f64 = 4.0;
-const SCRUB_ACC: f64 = 0.01;
 
 #[derive(Debug, Clone)]
 pub struct Note {
@@ -308,83 +303,7 @@ impl Node<[Output; CHANNELS]> for Module {
                 dsp::slice::map_in_place(buffer, |_| synth::compute(store));
             },
             Module::Tape(ref mut store) => {
-                // Exponential velocity scrub (tape inertia)
-                let playback_rate = store.velocity.abs();
-                if let Some(dir) = store.scrub {
-                    let expo_vel = store.velocity + if dir { SCRUB_ACC } 
-                        else { -SCRUB_ACC };
-                    store.velocity = if expo_vel > SCRUB_MAX { SCRUB_MAX } 
-                        else if expo_vel < -SCRUB_MAX { -SCRUB_MAX } 
-                        else { expo_vel }
-                }
-                if playback_rate == 0.0 { 
-                    dsp::slice::map_in_place(buffer, |a| { if store.monitor { a } else { [0.0, 0.0] } });
-                } else if playback_rate == 1.0 && store.scrub.is_none() {
-                    // Audio Record Mode
-                    if store.recording == 2 {
-                        let (this_pool, this_region) = (
-                            store.pool.as_mut().unwrap(),
-                            store.rec_region.clone()
-                        );
-                        // option_region is of type RwLockGuard<Option<Region>>
-                        let region_guard = this_region.write();
-                        match region_guard {
-                            Ok(mut option_region) => {
-                                // When a RwLockGuard<> contains an optional, you can't do:
-                                // if let Some(x) = guard { ... }
-                                // but you can call methods on its inner object, so instead:
-                                match option_region.deref_mut() {
-                                    Some(_region) => {
-                                        for (i, frame) in buffer.iter().enumerate() {
-                                            let index = _region.duration as usize % BUF_SIZE;
-                                            if index == 0 {
-                                                if let Some(new_buf) = this_pool.try_pull() {
-                                                    _region.buffer.push(new_buf.to_vec());
-                                                } else {
-                                                    // Out of space! Stop record
-                                                    store.recording = 0;
-                                                    break;
-                                                }
-                                            }
-                                            _region.buffer.last_mut().unwrap()[index] = *frame;
-                                            _region.duration += 1;
-                                        }
-                                    },
-                                    _ => {}
-                                }
-                            }
-                            _ => {}
-                        }
-                    } 
-                    dsp::slice::map_in_place(buffer, |a| {
-                        let frame = tape::compute(store);
-                        [
-                            frame[0] + if store.monitor { a[0] } else { 0.0 },
-                            frame[1] + if store.monitor { a[1] } else { 0.0 }
-                        ] 
-                    });
-                } else {
-                    let thru = store.monitor;
-                    let mut source = signal::gen_mut(|| tape::compute(store) );
-                    let interp = Linear::from_source(&mut source);
-                    let mut resampled = source.scale_hz(interp, playback_rate);
-                    dsp::slice::map_in_place(buffer, |a| {
-                        let frame = resampled.next();
-                        [
-                            frame[0] + if thru { a[0] } else { 0.0 },
-                            frame[1] + if thru { a[1] } else { 0.0 }
-                        ] 
-                    });
-                }
-
-                /*
-                let frames = ring_buffer::Fixed::from(vec![[0.0]; 10]);
-                let interp = Sinc::new(frames);
-                let mut resampled = source.from_hz_to_hz(interp, 44100.0, 44100.0);
-                dsp::slice::map_in_place(buffer, |_| {
-                    Frame::from_fn(|_| resampled.next()[0])
-                });
-                */
+                tape::compute_buf(store, buffer);
             },
             // Modules which aren't sound-producing can still implement audio_requested
             // ... to keep time, such as envelopes or arpeggiators

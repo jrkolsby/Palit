@@ -20,7 +20,7 @@ pub struct Asset {
 pub struct AudioRegion {
     pub asset_id: u16,
     pub asset_in: Offset,
-    pub asset_out: Offset,
+    pub duration: Offset,
     pub offset: Offset,
     pub track: u16,
 }

@@ -68,7 +68,9 @@ fn render(stdout: &mut Screen, layers: &VecDeque<(u16, Box<Layer>)>) {
     }
 }
 
-fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
+// Clears and populates a mutable event queue
+fn ipc_action(mut ipc_in: &File, queue: &mut VecDeque<Action>) {
+    queue.clear();
     let mut buf: String = String::new();
 
     // FIXME: Err but still writes to buf?
@@ -77,17 +79,13 @@ fn ipc_action(mut ipc_in: &File) -> Vec<Action> {
     };
     let mut ipc_iter = buf.split(" ");
 
-    let mut events: Vec<Action> = Vec::new();
-
     while let Some(action_raw) = ipc_iter.next() {
         match action_raw.parse::<Action>() {
             Ok(Action::Noop) => (),
-            Ok(a) => events.push(a),
+            Ok(a) => queue.push_back(a),
             Err(a) => (),
         };
     };
-
-    events
 }
 fn add_layer(a: &mut VecDeque<(u16, Box<Layer>)>, b: Box<Layer>, id: u16) {
     a.push_back((id, b)); // End of layers is front of the screen
@@ -192,7 +190,7 @@ fn main() -> std::io::Result<()> {
     render(&mut out, &layers);
     out.deref_mut().flush().unwrap();
 
-    let mut events: Vec<Action> = Vec::new();
+    let mut events: VecDeque<Action> = VecDeque::new();
 
     'event: loop {
 
@@ -202,11 +200,11 @@ fn main() -> std::io::Result<()> {
 
         // If anybody else closes the pipe, halt TODO: Throw error
         if fds[0].revents & libc::POLLHUP == libc::POLLHUP { break 'event; }
-        let mut events: Vec<Action> = if fds[0].revents > 0 {
-            ipc_action(&mut ipc_in)
+        if fds[0].revents > 0 {
+            ipc_action(&mut ipc_in, &mut events);
         } else { continue; };
 
-        while let Some(next) = events.pop() {
+        while let Some(event) = events.pop_front() {
 
             // Target the top layer
             let num_views = layers.len();
@@ -222,7 +220,7 @@ fn main() -> std::io::Result<()> {
             };
 
             // Execute toplevel actions, capture default from view
-            let default: Action = match next {
+            let default: Action = match event {
                 Action::Exit => { 
                     break 'event;
                 },
@@ -431,7 +429,7 @@ fn main() -> std::io::Result<()> {
                     ipc_sound.write(Action::AddModule(new_id, name).to_string().as_bytes()).unwrap();
                     // Make sure modules view is still in front so it can Cancel
                     layers.swap(layers.len()-1, layers.len()-2);
-                    events.push(Action::Back);
+                    events.push_back(Action::Back);
                 },
                 Action::DelModule(id) => {
                     ipc_sound.write(Action::DelModule(id).to_string().as_bytes()).unwrap();

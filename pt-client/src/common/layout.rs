@@ -1,3 +1,4 @@
+pub static TRACKS_X: u16 = 3;
 pub static REGIONS_X: u16 = 13;
 pub static TIMELINE_Y: u16 = 4;
 
