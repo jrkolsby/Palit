@@ -1,34 +1,119 @@
-**********************************
-SONGARDEN ALPHA V1 - March 1, 2020
-**********************************
+           **********************************
+           SONGARDEN ALPHA V1 - March 1, 2020
+           **********************************
 
 Thank you for trying Songarden, that's pretty cool! 
 
-When you launch Songarden, you will be prompted to give
-admin permissions. This is only to allow realtime access to
-your computer keyboard while Songarden is running. We assure
-you that no sensitive data is stored locally or remotely. If
-you do not grant this permission then Songarden will not
-receive input from your keyboard and panic. 
+To start, please double click on songarden. You will be
+prompted to give your computer password to allow access to
+the keyboard. We will not log any sensitive data, promise.
 
-any audio assets, project
-files, or programmable modules will be written to the folder
-where Songarden lives. We have included some demo projects
-for you to get started with, 
+                    ~| CONTROLS |~
 
-~| MODULES |~
+Songarden is entirely keyboard-operated. Each focus in the
+UI will present you with up to five actions highlighted in
+YELLOW, BLUE, PINK, GREEN, and RED. To move between focii,
+use the arrow keys. To make a selection, use the following
+keys:
 
-~| ROUTES |~
+              R:YELLOW            I:GREEN
+              V:BLUE              M:PINK
+                       Space:RED
 
-MIDI and Audio coexist
+These keys were chosen to fit within the piano keyboard,
+which is mapped to the following keys:
 
-~| TIMELINE |~
+        W:C# E:D#      T:F# Y:G# U:A#      O:C# P:D#
+      A:C  S:D  D:E  F:F  G:G  H:A  J:B  K:C  L:D
 
-The timeline is the most important core module, and allows
-you to record MIDI and audio data on multiple tracks. One of
-the most 
+To change a parameter, please hold down the selection key 
+while using the arrow keys to change its value.
 
-~| FEEDBACK |~
+Now, try opening the demo project from the homescreen.
+
+                    ~| MODULES |~
+
+You will be dropped on the keyboard module. To navigate
+between modules, simply use the arrow keys to move past the
+top or bottom edge of the screen. 
+
+To delete a module, move past the left edge of the screen 
+and press RED to delete your selection. This cannot be
+undone.
+
+To add a module or to save the current project, press ENTER
+and press YELLOW BLUE GREEN PINK or RED to make your choice.
+
+                    ~| PATCHING |~
+
+The Songarden sound engine is entirely modular where any
+connection between an input and an output can carry a MIDI
+or audio signal. Press TAB to show the patch view. 
+
+Each route shown on the left can accept any number of
+inputs, and feed any number of outputs. All outputs will be
+given an identical signal, and all inputs will be mixed.
+
+To patch, simply select an input or output and press LEFT or
+RIGHT to connect it to a route. 
+
+To add a new route, move to the bottom of the screen and
+press RED. To remove the last route, press YELLOW.
+
+                    ~| TIMELINE |~
+
+The timeline is the heart of most projects, allowing you to 
+record and playback MIDI and audio data. 
+
+The patch view for the timeline enumerates one input and one
+output for each track. The output of one track can be
+patched into another track.
+
+To arm a track for MIDI recording, move to its track header 
+and press RED once. For audio recording, press RED again. To
+disarm, press RED one more time.
+
+        Disarmed:     MIDI Record:    Audio Record
+                      …               ∿
+        r             R               R
+
+To record, move to the top left and press RED. When finished
+press RIGHT BRACKET to stop. Press LEFT BRACKET to play.
+
+To navigate the timeline, move to a recorded region and
+press LEFT or RIGHT to scrub forward or backward. On first
+press, the playhead will move at quarter speed, press LEFT
+or RIGHT repeatedly to speed up or change direction.
+
+When an audio or MIDI region is selected, press YELLOW to
+split it into two regions about the playhead. Press and
+hold GREEN and use LEFT and RIGHT to move the region. Press 
+PINK to delete a region.
+
+At the moment is not possible to move regions between
+tracks.
+
+If you wish to edit at more precise scale, move to the top
+right then press and hold GREEN and use UP and DOWN to
+change the zoom level. 
+
+Changing the BPM and meter of the project will not affect
+the timing of the regions, only the grid and metronome.
+Change the BPM by holding RED and pressing UP and DOWN.
+Change the meter by holding YELLOW or BLUE et cetera.
+
+                    ~| WRITING MODULES |~
+
+Songarden gives users an extensible API for writing new
+instruments and effects in the Faust DSP language. To write
+a new module, create a new file named "mymodule.dsp" and place
+it in the "modules/" folder. By default we included a large
+library of examples, so take a look for inspiration.
+
+For more information about Faust, please go to 
+https://faust.grame.fr
+
+                    ~| FEEDBACK |~
 
 Please note that this is an alpha release and you could
 experience errors and crashes at any time. Please save your
@@ -39,5 +124,3 @@ textual output from Songarden to jrkolsby@mac.com.
 
 We plan on adding many new features to Songarden for the
 beta release and are receptive to ideas or requests!
-
-(:set tw=60)
