@@ -1,10 +1,11 @@
 use std::io::Write;
 use termion::cursor;
+use xmltree::Element;
 use libcommon::{Action, Anchor, Module};
 
 use crate::common::{Screen, Direction, FocusType, Window};
 use crate::common::{MultiFocus, ID, focus_dispatch, render_focii};
-use crate::components::{popup};
+use crate::components::{popup, button};
 use crate::views::{Layer};
 
 static PADDING: (u16, u16) = (3, 3);
@@ -74,8 +75,8 @@ fn generate_focii(modules: &Vec<Module>) -> Vec<Vec<MultiFocus<ProjectState>>> {
                     PADDING.1 + window.y + id.1 * 2,
                 ), displayName).unwrap();
             },
-            r_id: (FocusType::Void, 0),
-            r: |mut out, window, id, state, focus| {
+            p_id: (FocusType::Void, 0),
+            p: |mut out, window, id, state, focus| {
                 if focus {
                     let displayName = &state.modules[id.1 as usize].name;
                     let displayLen = displayName.len() as u16 + 1;
@@ -85,7 +86,7 @@ fn generate_focii(modules: &Vec<Module>) -> Vec<Vec<MultiFocus<ProjectState>>> {
                     )).unwrap()
                 }
             },
-            r_t: |a, id, state| match a {
+            p_t: |a, id, state| match a {
                 Action::SelectR |
                 Action::SelectG |
                 Action::SelectP |
@@ -96,9 +97,9 @@ fn generate_focii(modules: &Vec<Module>) -> Vec<Vec<MultiFocus<ProjectState>>> {
             g_id: (FocusType::Void, 0), 
             g: VOID_RENDER,
             g_t: |_, _, _| Action::Noop,
-            p_id:(FocusType::Void, 0), 
-            p: VOID_RENDER,
-            p_t: |_, _, _| Action::Noop,
+            r_id:(FocusType::Void, 0), 
+            r: VOID_RENDER,
+            r_t: |_, _, _| Action::Noop,
             y_id:(FocusType::Void, 0), 
             y: VOID_RENDER,
             y_t: |_, _, _| Action::Noop,
@@ -108,6 +109,34 @@ fn generate_focii(modules: &Vec<Module>) -> Vec<Vec<MultiFocus<ProjectState>>> {
             active: None,
         }])
     }
+
+    focii.push(vec![MultiFocus::<ProjectState> {
+        w_id: (FocusType::Void, 0),
+        w: VOID_RENDER,
+        p_id: (FocusType::Void, 0),
+        p: VOID_RENDER,
+        p_t: |_, _, _| Action::Noop,
+        g_id: (FocusType::Void, 0), 
+        g: VOID_RENDER,
+        g_t: |_, _, _| Action::Noop,
+        r_id:(FocusType::Button, 0), 
+        r: |mut out, window, id, state, focus| 
+            button::render(out,
+                PADDING.0 + window.x, 
+                window.y + window.h - PADDING.1 - 2,
+                window.w - (2 * PADDING.0),
+                "Save Project"
+            ),
+        r_t: |_, _, _| Action::Save,
+        y_id:(FocusType::Void, 0), 
+        y: VOID_RENDER,
+        y_t: |_, _, _| Action::Noop,
+        b_id: (FocusType::Void, 0), 
+        b: VOID_RENDER,
+        b_t: |_, _, _| Action::Noop,
+        active: None,
+    }]);
+
     focii
 }
 
@@ -141,20 +170,13 @@ impl Layer for Project {
             };
             match _default {
                 Action::Back => Action::Cancel,
+                a @ Action::Save |
                 a @ Action::DelModule(_) => a,
                 _ => Action::Noop,
             }
         } else { Action::Noop }
     }
-
-    fn undo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn redo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn alpha(&self) -> bool {
-        true
-    }
+    fn alpha(&self) -> bool { true }
+    fn save(&self) -> Option<Element> { None }
 
 }

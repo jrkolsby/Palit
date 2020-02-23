@@ -15,7 +15,7 @@ use std::{thread, time};
 use xmltree::Element;
 use termion::{clear, color, cursor, terminal_size};
 use termion::raw::{IntoRawMode, RawTerminal};
-use libcommon::{Action, Module, Anchor};
+use libcommon::{Action, Module, Anchor, PALIT_ROOT};
 
 // NOTE: These need to be here
 mod views;
@@ -28,7 +28,7 @@ use views::{Layer,
     Timeline, 
     Help, 
     Title, 
-    Piano, 
+    Hammond, 
     Routes, 
     Keyboard, 
     Arpeggio,
@@ -101,7 +101,7 @@ fn add_module(
         "timeline" => add_layer(a, 
             Box::new(Timeline::new(1, 1, size.0, size.1, (el).to_owned())), id),
         "hammond" => add_layer(a,
-            Box::new(Piano::new(5,5,size.0,size.1, (el).to_owned())), id),
+            Box::new(Hammond::new(5,5,size.0,size.1, (el).to_owned())), id),
         "keyboard" => add_layer(a,
             Box::new(Keyboard::new(1, 1, size.0, size.1, (el).to_owned())), id),
         "arpeggio" => add_layer(a,
@@ -265,9 +265,6 @@ fn main() -> std::io::Result<()> {
                         layers.push_front(current);
                     }
                 },
-                Action::InputTitle => {
-                    add_layer(&mut layers, Box::new(Title::new(23, 5, 36, 23)), 0);
-                },
                 a @ Action::Up | 
                 a @ Action::Down => {
                     // Make sure to pin {home|route|...|route?}
@@ -386,10 +383,10 @@ fn main() -> std::io::Result<()> {
                     if routes_index.is_none() {
                         add_layer(&mut layers, Box::new(
                             Routes::new(
-                                MARGIN_D0.0,
-                                MARGIN_D0.1,
-                                size.0 - (MARGIN_D0.0 * 2),
-                                size.1 - (MARGIN_D0.1 * 2), 
+                                MARGIN_D2.0,
+                                MARGIN_D2.1,
+                                size.0 - (MARGIN_D2.0 * 2),
+                                size.1 - (MARGIN_D2.1 * 2), 
                                 None
                             )
                         ), DEFAULT_ROUTE_ID);
@@ -415,8 +412,7 @@ fn main() -> std::io::Result<()> {
                         "keyboard" => 104,
                         // Get next sequential ID
                         _ => layers.iter().fold(0, |max, (id,_)| 
-                            if *id > max { *id } else { max }
-                        ) + 1
+                            if *id > max { *id } else { max }) + 1
                     };
                     // Make empty element with tag and id
                     let mut new_el = Element::new(&name);
@@ -425,6 +421,13 @@ fn main() -> std::io::Result<()> {
                     if let Some(mut doc) = document {
                         doc.modules.push((new_id, new_el));
                         document = Some(doc);
+                    } else {
+                        document = Some(Document {
+                            title: "Untitled".to_string(),
+                            src: "untitled.xml".to_string(),
+                            sample_rate: 48_000,
+                            modules: vec![],
+                        });
                     }
                     ipc_sound.write(Action::AddModule(new_id, name).to_string().as_bytes()).unwrap();
                     // Make sure modules view is still in front so it can Cancel
@@ -446,6 +449,46 @@ fn main() -> std::io::Result<()> {
                     }
                     if let Some(r_id) = routes_index {
                         layers[r_id].1.dispatch(Action::DelModule(id));
+                    }
+                },
+                Action::SaveAs(title) => {
+                    // This action must only be dispatched by the Title view
+                    let mut filename: String = title.replace(&[' ', '/'][..], "");
+                    filename.make_ascii_lowercase();
+                    let mut new_modules: Vec<(u16, Element)> = document.to_owned().unwrap().modules;
+                    new_modules.iter_mut().map(|(id, el)| {
+                        if let Some((_, layer)) = layers.iter().find(|(_id, l)| _id == id) {
+                            if let Some(_el) = layer.save() {
+                                (*id, _el)
+                            } else {
+                                // Layer did not return Element
+                                (*id, el.to_owned())
+                            }
+                        } else {
+                            // Could not find id from document in layers
+                            (*id, el.to_owned())
+                        }
+                    }).collect::<Vec<(u16, Element)>>();
+                    eprintln!("SAVE AS {:?}", new_modules);
+                    document = Some(Document {
+                        title,
+                        src: format!("{}{}", PALIT_ROOT, filename),
+                        sample_rate: document.unwrap().sample_rate,
+                        modules: new_modules,
+                    });
+                },
+                Action::Save => {
+                    // Document will never be None when Save is dispatched because
+                    // ... it requires the Project view to appear
+                    if let Some(doc) = document {
+                        add_layer(&mut layers, Box::new(Title::new(
+                            MARGIN_D0.0,
+                            MARGIN_D0.1,
+                            size.0 - (MARGIN_D0.0 * 2),
+                            size.1 - (MARGIN_D0.1 * 2), 
+                            doc.title.clone(),
+                        )), 0);
+                        document = Some(doc);
                     }
                 },
                 /*

@@ -581,13 +581,8 @@ impl Layer for Timeline {
             None => Action::Noop,
         }
     }
-    fn undo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn redo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn alpha(&self) -> bool {
-        false
+    fn alpha(&self) -> bool { false }
+    fn save(&self) -> Option<Element> { 
+        Some(Element::new("timeline"))
     }
 }

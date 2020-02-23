@@ -1,10 +1,11 @@
 use std::io::{Write, Stdout};
 use termion::{color, cursor};
+use xmltree::Element;
 use libcommon::Action;
 
 use crate::common::Screen;
 use crate::views::Layer;
-use crate::components::{popup, casette, button};
+use crate::components::{popup, casette, button, bigtext};
 
 pub struct Title {
     x: u16,
@@ -21,17 +22,19 @@ pub struct TitleState {
     letter: u8,
 }
 
-const ASCII_MAX: u8 = 126;
-const ASCII_MIN: u8 = 48;
+const ASCII_MAX: u8 = 90;
+const ASCII_MIN: u8 = 65;
 
 fn reduce(state: TitleState, action: Action) -> TitleState {
     TitleState {
         title: state.title.clone(),
         title_val: match action {
             Action::Right => format!("{}{}", state.title_val, state.letter as char),
-            Action::Left => state.title_val[..state.title_val.len()-1].to_string(),
-            Action::SelectG => format!("{}.xml", state.title_val),
-            Action::SelectY => "".to_string(),
+            Action::Left => if state.title_val.len() > 0 {
+                state.title_val[..state.title_val.len() - 1].to_string()
+            } else {
+                state.title_val.clone()
+            },
             _ => state.title_val.clone(),
         },
         letter: match action {
@@ -43,14 +46,12 @@ fn reduce(state: TitleState, action: Action) -> TitleState {
 }
 
 impl Title {
-    pub fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
-
-        let mut path: String = "/usr/local/palit/".to_string();
+    pub fn new(x: u16, y: u16, width: u16, height: u16, initial: String) -> Self {
 
         // Initialize State
         let initial_state: TitleState = TitleState {
             letter: ASCII_MIN,
-            title_val: path,
+            title_val: initial,
             title: "What's it called?".to_string(),
         };
 
@@ -70,13 +71,10 @@ impl Layer for Title {
 
 	    popup::render(out, self.x, self.y, self.width, self.height, &self.state.title);
 
-        casette::render(out, self.x+2, self.y);
-
-        write!(out, "{}\"{}{}\"", cursor::Goto(self.x+7, self.y+5), self.state.title_val, self.state.letter as char).unwrap();
-        write!(out, "{} ▲ Letter ▼  ◀ Space ▶", cursor::Goto(self.x+7, self.y+16)).unwrap();
-
-        write!(out, "{}{}{}  clear  ", cursor::Goto(self.x+24, self.y+18), color::Bg(color::Yellow), color::Fg(color::Black)).unwrap();
-        write!(out, "{}{}{}  .xml  ", cursor::Goto(self.x+24, self.y+20), color::Bg(color::Green), color::Fg(color::Black)).unwrap();
+        bigtext::render(out, self.x+2, self.y+2, 
+            format!("{}{}_", 
+            self.state.title_val, 
+            self.state.letter as char));
 
         button::render(out, self.x+2, self.y+18, 20, "Create");
 
@@ -88,17 +86,10 @@ impl Layer for Title {
 
         match action {
             Action::Back => Action::Cancel,
-            Action::SelectR => Action::CreateProject(self.state.title_val.clone()),
+            Action::SelectR => Action::SaveAs(self.state.title_val.clone()),
             _ => Action::Noop
         }
     }
-    fn undo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn redo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn alpha(&self) -> bool {
-        true
-    }
+    fn alpha(&self) -> bool { true }
+    fn save(&self) -> Option<Element> { None }
 }

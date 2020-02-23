@@ -18,9 +18,9 @@ mod title;
 pub use title::Title;
 pub use title::TitleState;
 
-mod piano;
-pub use piano::Piano;
-pub use piano::PianoState;
+mod hammond;
+pub use hammond::Hammond;
+pub use hammond::HammondState;
 
 mod routes;
 pub use routes::Routes;

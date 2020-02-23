@@ -133,7 +133,7 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
         p_id: void_id.clone(),
         p_t: |action, id, state| match action {
             Action::SelectP => {
-                let local_id = id.1 & REGIONS_PER_TRACK;
+                let local_id = id.1 % REGIONS_PER_TRACK;
                 let track_id = id.1 / REGIONS_PER_TRACK;
                 Action::DelRegion(track_id, local_id)
             },

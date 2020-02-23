@@ -1,5 +1,6 @@
 use std::io::{Write, Stdout};
 use termion::{color};
+use xmltree::Element;
 use libcommon::Action;
 
 use crate::common::Screen;
@@ -72,13 +73,6 @@ impl Layer for Help {
             _ => Action::Noop
         }
     }
-    fn undo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn redo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn alpha(&self) -> bool {
-        true
-    }
+    fn alpha(&self) -> bool { true }
+    fn save(&self) -> Option<Element> { None }
 }

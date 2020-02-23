@@ -36,7 +36,6 @@ pub enum Action {
     Redo,
     Shift,
     Back,
-    Save,
     Play,
     Stop,
     In,
@@ -98,6 +97,8 @@ pub enum Action {
     DelRegion(u16, u16), // Track ID, region ID
     SplitRegion(u16, u16, Offset), // Track ID, region ID
     LoopRegion(u16, u16), // Track ID, region ID
+    Save,
+    SaveAs(String),
     Noop,
     Error(String),
     Exit,

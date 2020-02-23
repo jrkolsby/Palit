@@ -24,6 +24,7 @@ pub struct Plugin {
     width: u16,
     height: u16,
     state: PluginState,
+    name: String,
     history: Vec<PluginState>,
     focii: Vec<Vec<MultiFocus<PluginState>>>,
 }
@@ -175,6 +176,7 @@ impl Plugin {
             width: width,
             height: height,
             history: vec![],
+            name: doc.name,
             state: initial_state,
             focii: vec![],
         }
@@ -255,13 +257,8 @@ impl Layer for Plugin {
             None => Action::Noop,
         }
     }
-    fn undo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn redo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn alpha(&self) -> bool {
-        false
+    fn alpha(&self) -> bool { false }
+    fn save(&self) -> Option<Element> { 
+        Some(Element::new(&self.name))
     }
 }

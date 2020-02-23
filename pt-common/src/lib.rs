@@ -22,3 +22,4 @@ pub use document::mark_add;
 pub use document::param_add;
 pub use document::Document;
 pub use document::note_list;
+pub use document::PALIT_ROOT;

@@ -1,6 +1,7 @@
 use std::io::{self, Write, Stdout, BufReader};
 use std::io::prelude::*;
 use termion::{color, cursor};
+use xmltree::Element;
 use libcommon::{Action, Anchor};
 
 use crate::common::Screen;
@@ -104,7 +105,7 @@ impl Layer for Home {
         let mut num_choices = num_projects - (self.state.scroll_x * NUM_PROJECTS);
         num_choices = if num_choices > 4 { 4 } else { num_choices };
         match action {
-            Action::SelectR => { Action::InputTitle }
+            //Action::SelectR => { Action::InputTitle }
             Action::SelectY => {
                 Action::OpenProject(self.state.projects[self.state.scroll_x * NUM_PROJECTS].clone())
             },
@@ -128,13 +129,6 @@ impl Layer for Home {
             _ => Action::Noop,
         }
     }
-    fn undo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn redo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn alpha(&self) -> bool {
-        false
-    }
+    fn alpha(&self) -> bool { false }
+    fn save(&self) -> Option<Element> { None }
 }

@@ -6,11 +6,12 @@ use crate::{Key, Param, Offset};
 #[derive(Clone, Debug)]
 pub struct Document {
     pub title: String,
+    pub src: String,
     pub sample_rate: u32,
     pub modules: Vec<(u16, Element)>,
 }
 
-const PALIT_ROOT: &str = "/usr/local/palit/";
+pub const PALIT_ROOT: &str = "/usr/local/palit/";
 
 pub fn param_map(doc: &mut Element) -> (&mut Element, HashMap<String, Param>) {
     let mut params: HashMap<String, Param> = HashMap::new();
@@ -45,6 +46,7 @@ pub fn read_document(filename: String) -> Document {
     let mut patch: Option<(u16, Element)> = None;
 
     let mut result = Document {
+        src: filename,
         title: "Untitled".to_string(),
         sample_rate: 48000,
         modules: vec![],
@@ -83,6 +85,21 @@ pub fn read_document(filename: String) -> Document {
     }
 
     result
+}
+
+pub fn write_document(doc: Document) {
+    let mut root = Element::new("project");
+    let mut meta = Element::new("meta");
+    meta.attributes.insert("samplerate".to_string(), doc.sample_rate.to_string());
+    let mut title = Element::new("title");
+    title.text = Some(doc.title);
+    for module in doc.modules.iter() { 
+        let mut new_module = module.1.clone();
+        new_module.attributes.insert("id".to_string(), module.0.to_string());
+        root.children.push(new_module);
+    } 
+    let doc_path: String = format!("{}{}_WRITE.xml", PALIT_ROOT, doc.src);
+    root.write(fs::File::open(doc_path).unwrap());
 }
 
 pub fn note_list(doc: &mut Element) -> (&mut Element, Vec<Key>) {

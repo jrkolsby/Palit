@@ -414,13 +414,8 @@ impl Layer for Routes {
             }
         } else { Action::Noop }
     }
-    fn undo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn redo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn alpha(&self) -> bool {
-        true
+    fn alpha(&self) -> bool { true }
+    fn save(&self) -> Option<Element> { 
+        Some(Element::new("patch")) 
     }
 }
