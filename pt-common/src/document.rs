@@ -81,25 +81,36 @@ pub fn read_document(filename: String) -> Document {
 
     match patch {
         Some(p) => { result.modules.push(p); },
-        None => panic!("No patch defined!")
+        None => {} // No need to panic, sound will add a master route
     }
 
     result
 }
 
-pub fn write_document(doc: Document) {
+pub fn write_document(doc: &mut Document) {
     let mut root = Element::new("project");
+
+    // Metadata declaration (sample rate, bitrate, project-wide)
     let mut meta = Element::new("meta");
     meta.attributes.insert("samplerate".to_string(), doc.sample_rate.to_string());
+    root.children.push(meta);
+
+    // Title declaration
     let mut title = Element::new("title");
-    title.text = Some(doc.title);
-    for module in doc.modules.iter() { 
-        let mut new_module = module.1.clone();
-        new_module.attributes.insert("id".to_string(), module.0.to_string());
-        root.children.push(new_module);
+    title.text = Some(doc.title.clone());
+    root.children.push(title);
+
+    // Modules declaration
+    let mut modules = Element::new("modules");
+    for (id, module_el) in doc.modules.iter_mut() { 
+        module_el.attributes.insert("id".to_string(), id.to_string());
+        eprintln!("ADDING MODULE {:?}", module_el);
+        modules.children.push(module_el.to_owned());
     } 
+    root.children.push(modules);
+
     let doc_path: String = format!("{}{}_WRITE.xml", PALIT_ROOT, doc.src);
-    root.write(fs::File::open(doc_path).unwrap());
+    root.write(fs::File::create(doc_path).unwrap());
 }
 
 pub fn note_list(doc: &mut Element) -> (&mut Element, Vec<Key>) {

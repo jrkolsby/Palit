@@ -273,6 +273,13 @@ fn main() -> Result<(), Box<error::Error>> {
                 }
                 let root = patch.add_node(Module::Master);
                 patch.set_master(Some(root));
+
+                // Make sure we always have a master route 
+                if !routes.contains_key(&MASTER_ROUTE) {
+                    routes.insert(MASTER_ROUTE, 
+                        patch.add_node(Module::Passthru(vec![])));
+                }
+
                 patch.add_connection(*routes.get(&MASTER_ROUTE).unwrap(), root);
                 eprintln!("Loaded {} Nodes", patch.node_count());
                 eprintln!("Loaded {} Edges", patch.connection_count());
@@ -288,11 +295,12 @@ fn main() -> Result<(), Box<error::Error>> {
                 // Because removing a node from the graph will cause indicies to
                 // ... shift, we're just going to lazily remove all edges on the
                 // ... node cluster but leave the nodes there.
-                let operator = operators.remove(&id).unwrap();
-                let mut module_cluster = patch.outputs(operator);
-                while let Some(output_idx) = module_cluster.next_node(&patch) {
-                    patch.remove_all_output_connections(output_idx);
-                    patch.remove_all_input_connections(output_idx);
+                if let Some(operator) = operators.remove(&id) {
+                    let mut module_cluster = patch.outputs(operator);
+                    while let Some(output_idx) = module_cluster.next_node(&patch) {
+                        patch.remove_all_output_connections(output_idx);
+                        patch.remove_all_input_connections(output_idx);
+                    }
                 }
             }
             Action::DelRoute(id) => {

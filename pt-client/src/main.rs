@@ -16,6 +16,7 @@ use xmltree::Element;
 use termion::{clear, color, cursor, terminal_size};
 use termion::raw::{IntoRawMode, RawTerminal};
 use libcommon::{Action, Module, Anchor, PALIT_ROOT};
+use libcommon::{Document, read_document, write_document};
 
 // NOTE: These need to be here
 mod views;
@@ -27,16 +28,15 @@ use views::{Layer,
     Home, 
     Timeline, 
     Help, 
-    Title, 
+    Save, 
     Hammond, 
-    Routes, 
+    Patch, 
     Keyboard, 
     Arpeggio,
     Modules,
     Project,
     Plugin,
 };
-use libcommon::{read_document, Document};
 
 use common::{Screen, MARGIN_D0, MARGIN_D1, MARGIN_D2};
 
@@ -92,47 +92,41 @@ fn add_layer(a: &mut VecDeque<(u16, Box<Layer>)>, b: Box<Layer>, id: u16) {
 }
 
 fn add_module(
-    a: &mut VecDeque<(u16, Box<Layer>)>, 
+    layers: &mut VecDeque<(u16, Box<Layer>)>, 
     name: &str, 
     id: u16, 
     size: (u16, u16), 
     el: Element) {
     match name {
-        "timeline" => add_layer(a, 
+        "timeline" => add_layer(layers, 
             Box::new(Timeline::new(1, 1, size.0, size.1, (el).to_owned())), id),
-        "hammond" => add_layer(a,
+        "hammond" => add_layer(layers,
             Box::new(Hammond::new(5,5,size.0,size.1, (el).to_owned())), id),
-        "keyboard" => add_layer(a,
+        "keyboard" => add_layer(layers,
             Box::new(Keyboard::new(1, 1, size.0, size.1, (el).to_owned())), id),
-        "arpeggio" => add_layer(a,
+        "arpeggio" => add_layer(layers,
             Box::new(Arpeggio::new(1, 1, size.0, size.1, (el).to_owned())), id),
         "patch" => { 
-            let mut routes_index: Option<usize> = None;
-            for (i, (_id, layer)) in a.iter_mut().enumerate() {
-                if *_id == DEFAULT_ROUTE_ID {
-                    routes_index = Some(i);
-                    break;
-                }
-            }
-            if routes_index.is_none() {
-                add_layer(a, Box::new(
-                    Routes::new(
-                        MARGIN_D0.0,
-                        MARGIN_D0.1,
-                        size.0 - (MARGIN_D0.0 * 2),
-                        size.1 - (MARGIN_D0.1 * 2), 
-                    Some((el).to_owned()))
-                ), DEFAULT_ROUTE_ID);
-            }
+            // Remove any existing patch 
+            layers.retain(|(id, _)| *id != DEFAULT_ROUTE_ID);
+            add_layer(layers, Box::new(
+                Patch::new(
+                    MARGIN_D0.0,
+                    MARGIN_D0.1,
+                    size.0 - (MARGIN_D0.0 * 2),
+                    size.1 - (MARGIN_D0.1 * 2), 
+                Some((el).to_owned()))
+            ), DEFAULT_ROUTE_ID);
         },
-        a @ "chord" => { eprintln!("Unimplemented module {}", a); },
+        name @ "chord" => { eprintln!("Unimplemented module {}", name); },
         plugin => {
             let cmd = format!("sudo make plugin name={} &> /dev/null", plugin);
             // Run make as arg to sh in parent directory
             let result = Command::new("sh").current_dir("..").arg("-c").arg(cmd).status()
                 .expect("failed to run plugin compiler");
             if result.success() {
-                add_layer(a, Box::new(Plugin::new(1, 1, size.0, size.1, (el).to_owned())), id)
+                add_layer(layers, 
+                    Box::new(Plugin::new(1, 1, size.0, size.1, (el).to_owned())), id)
             } else {
                 // Make sure that plugin.so exists by the time we leave this function, or panic
                 panic!("Failed to make plugin name={}", plugin);
@@ -377,12 +371,12 @@ fn main() -> std::io::Result<()> {
                     for (i, (id, layer)) in layers.iter_mut().enumerate() {
                         if *id == DEFAULT_ROUTE_ID {
                             routes_index = Some(i);
+                            break;
                         }
                     }
-
                     if routes_index.is_none() {
                         add_layer(&mut layers, Box::new(
-                            Routes::new(
+                            Patch::new(
                                 MARGIN_D2.0,
                                 MARGIN_D2.1,
                                 size.0 - (MARGIN_D2.0 * 2),
@@ -391,8 +385,11 @@ fn main() -> std::io::Result<()> {
                             )
                         ), DEFAULT_ROUTE_ID);
                         routes_index = Some(layers.len()-1);
+                        if let Some(mut doc) = document {
+                            doc.modules.push((DEFAULT_ROUTE_ID, Element::new("patch")));
+                            document = Some(doc);
+                        }
                     }
-
                     let (_, mut route_view) = layers.remove(routes_index.unwrap()).unwrap();
 
                     let (mod_id, _) = layers.get(layers.len()-1).unwrap();
@@ -426,7 +423,7 @@ fn main() -> std::io::Result<()> {
                             title: "Untitled".to_string(),
                             src: "untitled.xml".to_string(),
                             sample_rate: 48_000,
-                            modules: vec![],
+                            modules: vec![(new_id, new_el)],
                         });
                     }
                     ipc_sound.write(Action::AddModule(new_id, name).to_string().as_bytes()).unwrap();
@@ -450,38 +447,43 @@ fn main() -> std::io::Result<()> {
                     if let Some(r_id) = routes_index {
                         layers[r_id].1.dispatch(Action::DelModule(id));
                     }
+                    events.push_back(Action::Back);
                 },
                 Action::SaveAs(title) => {
-                    // This action must only be dispatched by the Title view
+                    // This action must only be dispatched by the Save view
                     let mut filename: String = title.replace(&[' ', '/'][..], "");
                     filename.make_ascii_lowercase();
-                    let mut new_modules: Vec<(u16, Element)> = document.to_owned().unwrap().modules;
-                    new_modules.iter_mut().map(|(id, el)| {
-                        if let Some((_, layer)) = layers.iter().find(|(_id, l)| _id == id) {
-                            if let Some(_el) = layer.save() {
-                                (*id, _el)
+                    let new_modules: Vec<(u16, Element)> = 
+                        document.to_owned().unwrap().modules.iter().map(|(id, el)| {
+                            if let Some((_, layer)) = layers.iter().find(|(_id, l)| _id == id) {
+                                if let Some(_el) = layer.save() {
+                                    (*id, _el)
+                                } else {
+                                    // Layer did not return Element
+                                    (*id, el.to_owned())
+                                }
                             } else {
-                                // Layer did not return Element
+                                // Could not find id from document in layers
                                 (*id, el.to_owned())
                             }
-                        } else {
-                            // Could not find id from document in layers
-                            (*id, el.to_owned())
                         }
-                    }).collect::<Vec<(u16, Element)>>();
-                    eprintln!("SAVE AS {:?}", new_modules);
-                    document = Some(Document {
+                    ).collect();
+                    eprintln!("NEW MODULES {:?}", new_modules);
+                    let mut new_document = Document {
                         title,
-                        src: format!("{}{}", PALIT_ROOT, filename),
+                        src: filename,
                         sample_rate: document.unwrap().sample_rate,
                         modules: new_modules,
-                    });
+                    };
+                    write_document(&mut new_document);
+                    eprintln!("WROTE DOCUMENT!");
+                    document = Some(new_document);
                 },
                 Action::Save => {
                     // Document will never be None when Save is dispatched because
                     // ... it requires the Project view to appear
                     if let Some(doc) = document {
-                        add_layer(&mut layers, Box::new(Title::new(
+                        add_layer(&mut layers, Box::new(Save::new(
                             MARGIN_D0.0,
                             MARGIN_D0.1,
                             size.0 - (MARGIN_D0.0 * 2),

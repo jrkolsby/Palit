@@ -18,6 +18,7 @@ pub mod document;
 pub use document::mark_map;
 pub use document::param_map;
 pub use document::read_document;
+pub use document::write_document;
 pub use document::mark_add;
 pub use document::param_add;
 pub use document::Document;

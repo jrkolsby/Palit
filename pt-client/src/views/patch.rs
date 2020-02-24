@@ -13,7 +13,7 @@ use crate::components::{button, popup};
 use crate::modules::patch;
 
 #[derive(Clone, Debug)]
-pub struct RoutesState {
+pub struct PatchState {
     pub routes: HashMap<u16, Route>,
     pub anchors: HashMap<u16, Anchor>,
     pub focus: (usize, usize),
@@ -21,25 +21,25 @@ pub struct RoutesState {
     pub selected_anchor: Option<u16>,
 }
 
-pub struct Routes {
+pub struct Patch {
     x: u16,
     y: u16,
     width: u16,
     height: u16,
-    state: RoutesState,
-    focii: Vec<Vec<MultiFocus<RoutesState>>>
+    state: PatchState,
+    focii: Vec<Vec<MultiFocus<PatchState>>>
 }
 
 static PADDING: (u16, u16) = (3,3);
 
-static VOID_RENDER: fn( &mut Screen, Window, ID, &RoutesState, bool) =
+static VOID_RENDER: fn( &mut Screen, Window, ID, &PatchState, bool) =
     |_, _, _, _, _| {};
 
 fn generate_focii(
     routes: &HashMap<u16, Route>, 
     anchors: &HashMap<u16, Anchor>
-) -> Vec<Vec<MultiFocus::<RoutesState>>> {
-    let void_focus = MultiFocus::<RoutesState> {
+) -> Vec<Vec<MultiFocus::<PatchState>>> {
+    let void_focus = MultiFocus::<PatchState> {
         w_id: (FocusType::Void, 0),
         w: VOID_RENDER,
         r_id: (FocusType::Void, 0),
@@ -71,7 +71,7 @@ fn generate_focii(
 
     for anchor in sorted_anchors.iter() {
         let id = (FocusType::Button, anchor.index);
-        let transform: fn(Action, ID, &RoutesState) -> Action = |a, id, state| match a {
+        let transform: fn(Action, ID, &PatchState) -> Action = |a, id, state| match a {
             // Change selected route
             Action::Left => if let Some(id) = state.selected_route {
                 if state.routes.contains_key(&(id-1)) {
@@ -91,7 +91,7 @@ fn generate_focii(
             Action::SelectB => Action::PatchAnchor(id.1),
             _ => Action::Noop
         };
-        let render: fn(&mut Screen, Window, ID, &RoutesState, bool) = 
+        let render: fn(&mut Screen, Window, ID, &PatchState, bool) = 
             |mut out, window, id, state, focus| {
                 let anchor = &state.anchors.get(&id.1).unwrap();
                 write!(out, "{}{} {}", cursor::Goto(
@@ -152,8 +152,8 @@ fn generate_focii(
     focii
 }
 
-fn reduce(state: RoutesState, action: Action) -> RoutesState {
-    RoutesState {
+fn reduce(state: PatchState, action: Action) -> PatchState {
+    PatchState {
         routes: match action {
             Action::AddRoute(a) => {
                 let mut new_routes = state.routes.clone();
@@ -241,11 +241,11 @@ fn reduce(state: RoutesState, action: Action) -> RoutesState {
     }
 }
 
-impl Routes {
+impl Patch {
     pub fn new(x: u16, y: u16, width: u16, height: u16, doc: Option<Element>) -> Self {
 
         // Initialize State
-        let mut initial_state: RoutesState = if let Some(el) = doc {
+        let mut initial_state: PatchState = if let Some(el) = doc {
             patch::read(el)
         } else { 
             let mut default_routes = HashMap::new();
@@ -253,7 +253,7 @@ impl Routes {
                 id: 1,
                 patch: vec![]
             });
-            RoutesState {
+            PatchState {
                 routes: default_routes,
                 anchors: HashMap::new(),
                 selected_anchor: None,
@@ -262,7 +262,7 @@ impl Routes {
             }
         };
 
-        Routes {
+        Patch {
             x: x,
             y: y,
             width: width,
@@ -290,7 +290,7 @@ fn render_patch(out: &mut Screen,
     )).unwrap();
 }
 
-impl Layer for Routes {
+impl Layer for Patch {
     fn render(&self, out: &mut Screen, target: bool) {
 
         let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
@@ -416,6 +416,6 @@ impl Layer for Routes {
     }
     fn alpha(&self) -> bool { true }
     fn save(&self) -> Option<Element> { 
-        Some(Element::new("patch")) 
+        Some(patch::write(self.state.clone()))
     }
 }

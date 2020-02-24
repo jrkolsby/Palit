@@ -299,8 +299,8 @@ CGEventRef eventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
                             fprintf(stdout, "EXIT "); break; // q
                     case 126: fprintf(stdout, "UP "); break; // up
                     case 125: fprintf(stdout, "DN "); break; // down
-                    case 123: fprintf(stdout, "LT "); break; // left
                     case 124: fprintf(stdout, "RT "); break; // right
+                    case 123: fprintf(stdout, "LT "); break; // left
                     case 6: fprintf(stdout, "INSTRUMENT "); break; // right
                     default:
                         fprintf(stderr, "UNKNOWN:%d ", keyCode);
@@ -310,7 +310,7 @@ CGEventRef eventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
         }
         if (isUpEvent && keyCode == *(CGKeyCode *)refcon) {
             *(CGKeyCode *)refcon = -1;
-        } else {
+        } else if (keyCode != 126 && keyCode != 125 && keyCode != 124 && keyCode != 123) {
             *(CGKeyCode *)refcon = keyCode;
         }
 

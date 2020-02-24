@@ -3,18 +3,24 @@ use std::collections::HashMap;
 use xmltree::Element;
 use libcommon::{Route, Anchor, Param, param_map, mark_map};
 
-use crate::views::RoutesState;
+use crate::views::PatchState;
 
-pub fn write(state: RoutesState) -> Element {
-    Element::new("param")
+pub fn write(state: PatchState) -> Element {
+    let mut root = Element::new("patch");
+
+    let mut master_route = Element::new("route");
+    master_route.attributes.insert("id".to_string(), "1".to_string());
+    root.children.push(master_route);
+
+    root
 }
 
-pub fn read(mut doc: Element) -> RoutesState {
+pub fn read(mut doc: Element) -> PatchState {
 
     let (mut doc, params) = param_map(&mut doc);
     let (mut doc, marks) = mark_map(&mut doc);
 
-    let mut state = RoutesState {
+    let mut state = PatchState {
         routes: HashMap::new(),
         anchors: HashMap::new(),
         selected_anchor: None,
