@@ -11,7 +11,7 @@ use libcommon::{Note, Offset};
 #[derive(Debug, Clone)]
 pub struct Asset {
     pub src: String,
-    pub duration: u32,
+    pub duration: Offset,
     pub channels: usize,
     pub waveform: Vec<(u8, u8)>,
 }
@@ -29,8 +29,8 @@ pub struct AudioRegion {
 pub struct MidiRegion {
     pub duration: Offset,
     pub offset: Offset,
-    pub track: u16,
     pub notes: Vec<Note>,
+    pub track: u16,
 }
 
 #[derive(Clone, Debug)]
@@ -42,6 +42,8 @@ pub struct Track {
     pub index: u16,
     pub id: u16,
 }
+
+pub static REGIONS_PER_TRACK: u16 = 1000;
 
 pub fn char_offset(sample_offset: u32, rate: u32, bpm: u16, zoom: usize) -> u16 {
     // return how many beats passed based on a given sample rate

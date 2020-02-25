@@ -8,7 +8,6 @@ pub use home::HomeState;
 mod timeline;
 pub use timeline::Timeline;
 pub use timeline::TimelineState;
-pub use timeline::REGIONS_PER_TRACK;
 
 mod help;
 pub use help::Help;

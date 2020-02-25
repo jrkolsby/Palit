@@ -17,6 +17,7 @@ pub use pcm::Asset;
 pub use pcm::AudioRegion;
 pub use pcm::MidiRegion;
 pub use pcm::Track;
+pub use pcm::REGIONS_PER_TRACK;
 
 pub use color::Color;
 pub use color::write_bg;

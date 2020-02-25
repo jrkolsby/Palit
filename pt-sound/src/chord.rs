@@ -14,9 +14,9 @@ pub fn init() -> Store {
 }
 
 pub fn read(doc: &mut Element) -> Option<Store> {
-    let (mut doc, notes) = note_list(doc);
+    let (mut doc, notes) = note_list(doc, 0);
     let mut store: Store = init();
-    store.intervals = notes;
+    store.intervals = notes.iter().map(|n| n.note).collect();
     Some(store)
 }
 

@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs;
-use xmltree::Element;
-use crate::{Key, Param, Offset};
+use xmltree::{Element, EmitterConfig};
+use crate::{Note, Key, Volume, Param, Offset};
 
 #[derive(Clone, Debug)]
 pub struct Document {
@@ -104,20 +104,30 @@ pub fn write_document(doc: &mut Document) {
     let mut modules = Element::new("modules");
     for (id, module_el) in doc.modules.iter_mut() { 
         module_el.attributes.insert("id".to_string(), id.to_string());
-        eprintln!("ADDING MODULE {:?}", module_el);
         modules.children.push(module_el.to_owned());
     } 
     root.children.push(modules);
 
     let doc_path: String = format!("{}{}_WRITE.xml", PALIT_ROOT, doc.src);
-    root.write(fs::File::create(doc_path).unwrap());
+    root.write_with_config(
+        fs::File::create(doc_path).unwrap(), 
+        EmitterConfig::new()
+            .line_separator("\r\n")
+            .perform_indent(true)
+            .normalize_empty_elements(true));
 }
 
-pub fn note_list(doc: &mut Element) -> (&mut Element, Vec<Key>) {
-    let mut notes: Vec<Key> = vec![];
-    while let Some(param) = doc.take_child("note") {
-        let note = param.attributes.get("key").unwrap();
-        notes.push(note.parse::<Key>().unwrap());
+pub fn note_list(doc: &mut Element, r_id: u16) -> (&mut Element, Vec<Note>) {
+    let mut notes: Vec<Note> = vec![];
+    while let Some(note) = doc.take_child("note") {
+        notes.push(Note {
+            id: note.attributes.get("id").unwrap().parse::<u16>().unwrap(),
+            r_id,
+            note: note.attributes.get("key").unwrap().parse::<Key>().unwrap(),
+            t_in: note.attributes.get("t_in").unwrap().parse::<Offset>().unwrap(),
+            t_out: note.attributes.get("t_out").unwrap().parse::<Offset>().unwrap(),
+            vel: note.attributes.get("vel").unwrap().parse::<Volume>().unwrap(),
+        });
     }
     return (doc, notes);
 }
