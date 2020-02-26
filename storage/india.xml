@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <meta samplerate="48000" />
+  <title>INDIA</title>
+  <modules>
+    <keyboard id="104">
+      <param value="2" name="octave" />
+      <param name="shift" value="0" />
+      <param value="500" name="velocity" />
+    </keyboard>
+    <timeline id="8">
+      <param value="179" name="bpm" />
+      <param name="meter_beat" value="4" />
+      <param value="13" name="meter_note" />
+      <mark name="seq_in" value="0" />
+      <mark name="seq_out" value="48000" />
+      <mark name="loop_in" value="0" />
+      <mark value="317478" name="loop_out" />
+      <asset id="1" size="715008" src="/usr/local/palit/assets/1582602925_1.wav" />
+      <track id="1">
+        <audio offset="43819" id="3" asset="1" in="441909" duration="273099" />
+      </track>
+    </timeline>
+    <hammond id="9" />
+    <arpeggio id="10" />
+    <patch id="1">
+      <route id="1">
+        <output module="8" index="0" />
+      </route>
+      <route id="2">
+        <input index="1" module="10" />
+        <output index="0" module="104" />
+      </route>
+      <route id="3">
+        <input index="1" module="9" />
+        <output index="0" module="10" />
+      </route>
+      <route id="4">
+        <output index="0" module="9" />
+        <input module="8" index="1" />
+      </route>
+    </patch>
+  </modules>
+</project>
