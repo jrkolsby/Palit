@@ -8,7 +8,7 @@
 
     <modules>
 
-        <patch id="1">
+        <patch id="29200">
             <route id="1">
                 <output module="8" index="0" />
             </route>

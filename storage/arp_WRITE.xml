@@ -1,0 +1,208 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <meta samplerate="48000" />
+  <title>ARP</title>
+  <modules>
+    <keyboard id="104">
+      <param name="octave" value="2" />
+      <param value="0" name="shift" />
+      <param value="500" name="velocity" />
+    </keyboard>
+    <timeline id="8">
+      <param value="127" name="bpm" />
+      <param value="4" name="meter_beat" />
+      <param name="meter_note" value="4" />
+      <mark value="0" name="seq_in" />
+      <mark value="0" name="seq_out" />
+      <mark value="0" name="loop_in" />
+      <mark value="480000" name="loop_out" />
+      <track id="1">
+        <midi id="4" duration="784924" offset="212864">
+          <note id="0" t_in="275200" vel="1" key="52" t_out="282752" />
+          <note t_in="290304" key="55" t_out="297856" vel="1" id="1" />
+          <note t_out="312960" id="2" vel="1" key="48" t_in="305408" />
+          <note key="52" t_in="320512" id="3" t_out="328064" vel="1" />
+          <note key="55" vel="1" t_out="343168" t_in="335616" id="4" />
+          <note t_out="358272" id="5" vel="1" t_in="350720" key="48" />
+          <note id="6" key="52" t_in="365824" t_out="373376" vel="1" />
+          <note t_in="380928" id="7" vel="1" t_out="388480" key="55" />
+          <note key="48" t_in="396032" vel="1" t_out="403712" id="8" />
+          <note vel="1" key="52" id="9" t_in="411264" t_out="418816" />
+          <note vel="1" id="10" key="55" t_in="426368" t_out="433920" />
+          <note id="12" vel="1" key="52" t_in="449024" t_out="454656" />
+          <note t_out="466048" vel="1" t_in="460288" id="13" key="57" />
+          <note id="14" key="55" vel="1" t_out="477312" t_in="471680" />
+          <note vel="1" id="11" key="48" t_in="441472" t_out="488704" />
+          <note t_in="494336" key="52" t_out="500096" vel="1" id="16" />
+          <note t_out="511360" vel="1" t_in="505728" key="57" id="17" />
+          <note t_in="516992" key="55" t_out="522752" vel="1" id="18" />
+          <note t_in="483072" vel="1" id="15" key="48" t_out="534016" />
+          <note vel="1" t_out="545408" t_in="539776" key="52" id="20" />
+          <note id="21" vel="1" key="57" t_in="551040" t_out="556672" />
+          <note id="22" t_in="562432" vel="1" t_out="568064" key="55" />
+          <note key="48" vel="1" id="19" t_out="576000" t_in="528384" />
+          <note id="24" t_out="585088" vel="1" t_in="580480" key="52" />
+          <note t_out="594176" id="25" vel="1" t_in="589568" key="57" />
+          <note id="26" key="59" vel="1" t_in="598656" t_out="603264" />
+          <note t_in="607744" t_out="612224" vel="1" id="27" key="55" />
+          <note t_out="621312" id="23" key="48" vel="1" t_in="573696" />
+          <note vel="1" key="52" t_in="625920" id="29" t_out="630400" />
+          <note key="57" id="30" t_out="639488" vel="1" t_in="635008" />
+          <note vel="1" t_in="644096" key="59" t_out="648576" id="31" />
+          <note key="55" vel="1" id="32" t_out="657664" t_in="653056" />
+          <note t_out="666752" vel="1" id="28" t_in="616832" key="48" />
+          <note t_out="675840" vel="1" t_in="671232" key="52" id="34" />
+          <note key="57" id="35" vel="1" t_in="680320" t_out="684800" />
+          <note key="59" vel="1" t_in="689408" id="36" t_out="693888" />
+          <note id="37" t_in="698496" t_out="702976" vel="1" key="55" />
+          <note vel="1" key="48" t_in="662144" id="33" t_out="712064" />
+          <note t_in="721152" key="57" id="40" vel="1" t_out="724864" />
+          <note t_in="728704" vel="1" id="41" key="59" t_out="732416" />
+          <note t_out="739968" vel="1" t_in="736256" id="42" key="60" />
+          <note t_in="743808" t_out="747648" id="43" key="55" vel="1" />
+          <note t_in="707584" vel="1" key="48" id="38" t_out="755200" />
+          <note vel="1" t_out="762752" id="39" t_in="716544" key="52" />
+          <note vel="1" t_in="766464" t_out="770304" id="46" key="57" />
+          <note id="47" key="59" t_in="774016" t_out="777856" vel="1" />
+          <note vel="1" id="48" key="60" t_out="785408" t_in="781568" />
+          <note t_out="792960" vel="1" t_in="789120" key="55" id="49" />
+          <note t_in="751360" t_out="800512" id="44" vel="1" key="48" />
+          <note id="45" t_in="758912" t_out="808064" key="52" vel="1" />
+          <note id="52" key="57" t_in="811904" vel="1" t_out="815616" />
+          <note t_in="819456" t_out="823168" key="59" id="53" vel="1" />
+          <note id="54" t_out="830720" t_in="827008" key="60" vel="1" />
+          <note key="55" t_out="838272" t_in="834560" vel="1" id="55" />
+          <note t_in="796672" vel="1" id="50" t_out="845824" key="48" />
+          <note key="52" vel="1" id="51" t_in="804352" t_out="853376" />
+          <note id="58" key="57" t_out="860928" vel="1" t_in="857216" />
+          <note t_in="864768" vel="1" id="59" t_out="868480" key="59" />
+          <note id="60" t_in="872320" key="60" vel="1" t_out="876160" />
+          <note key="55" id="61" vel="1" t_in="879872" t_out="883712" />
+          <note key="48" t_in="842112" id="56" vel="1" t_out="891264" />
+          <note t_in="849664" id="57" vel="1" t_out="898816" key="52" />
+          <note vel="1" key="57" id="64" t_in="902528" t_out="906368" />
+          <note key="59" vel="1" t_out="913920" t_in="910080" id="65" />
+          <note t_out="921472" key="60" id="66" vel="1" t_in="917632" />
+          <note t_out="929024" vel="1" id="67" key="55" t_in="925184" />
+          <note t_in="887424" key="48" id="62" vel="1" t_out="936576" />
+          <note id="63" vel="1" t_in="894976" t_out="944128" key="52" />
+          <note t_out="951680" vel="1" t_in="947968" id="70" key="57" />
+          <note t_out="959232" t_in="955520" id="71" key="59" vel="1" />
+          <note id="72" t_out="966784" key="60" vel="1" t_in="963072" />
+          <note id="73" t_out="974336" vel="1" key="55" t_in="970624" />
+          <note t_out="981888" t_in="932736" id="68" vel="1" key="48" />
+          <note key="52" t_out="989440" id="69" t_in="940416" vel="1" />
+          <note vel="1" id="75" key="52" t_out="991744" t_in="985728" />
+          <note key="48" id="74" vel="1" t_in="978176" t_out="991744" />
+          <note id="76" key="60" t_out="994304" vel="1" t_in="993280" />
+        </midi>
+        <midi id="2" offset="0" duration="0" />
+        <midi id="6" duration="618852" offset="997788">
+          <note t_out="1034880" id="77" vel="1" t_in="1031040" key="50" />
+          <note id="78" t_out="1042432" key="52" vel="1" t_in="1038592" />
+          <note vel="1" t_in="1046144" id="79" t_out="1049984" key="60" />
+          <note t_in="1053696" key="57" vel="1" t_out="1057536" id="80" />
+          <note vel="1" id="81" key="48" t_in="1061248" t_out="1065088" />
+          <note id="82" vel="1" t_in="1068800" key="55" t_out="1072640" />
+          <note t_out="1080192" key="50" vel="1" t_in="1076480" id="83" />
+          <note id="84" t_out="1087744" key="52" vel="1" t_in="1084032" />
+          <note t_out="1095296" t_in="1091584" id="85" vel="1" key="60" />
+          <note vel="1" t_in="1099136" t_out="1102848" id="86" key="57" />
+          <note id="87" t_out="1110400" t_in="1106688" vel="1" key="48" />
+          <note t_in="1114240" key="55" id="88" t_out="1117952" vel="1" />
+          <note vel="1" t_in="1121792" id="89" key="50" t_out="1125504" />
+          <note t_in="1129344" id="90" key="52" t_out="1133056" vel="1" />
+          <note t_in="1136896" id="91" t_out="1140608" vel="1" key="60" />
+          <note id="92" t_out="1148288" vel="1" key="57" t_in="1144448" />
+          <note t_out="1155840" vel="1" key="48" id="93" t_in="1152000" />
+          <note key="55" t_in="1159552" id="94" vel="1" t_out="1163392" />
+          <note t_out="1170944" t_in="1167104" key="50" vel="1" id="95" />
+          <note id="96" t_out="1178496" key="52" vel="1" t_in="1174656" />
+          <note t_in="1182208" vel="1" key="60" t_out="1186048" id="97" />
+          <note t_out="1193600" vel="1" t_in="1189760" key="57" id="98" />
+          <note vel="1" t_out="1201152" id="99" key="48" t_in="1197312" />
+          <note t_out="1208704" id="100" t_in="1204864" vel="1" key="55" />
+          <note t_out="1216256" key="50" id="101" t_in="1212544" vel="1" />
+          <note key="52" vel="1" id="102" t_in="1220096" t_out="1223808" />
+          <note t_out="1236992" key="52" t_in="1231360" vel="1" id="103" />
+          <note key="48" t_in="1242752" id="104" t_out="1248384" vel="1" />
+          <note id="105" vel="1" key="55" t_in="1254016" t_out="1259776" />
+          <note t_out="1271040" vel="1" id="106" key="50" t_in="1265408" />
+          <note t_out="1282432" t_in="1276800" key="52" id="107" vel="1" />
+          <note key="48" vel="1" t_in="1288064" id="108" t_out="1293696" />
+          <note key="55" vel="1" t_in="1299456" t_out="1305088" id="109" />
+          <note id="110" vel="1" key="50" t_out="1316480" t_in="1310720" />
+          <note id="111" t_in="1322112" vel="1" t_out="1327744" key="52" />
+          <note vel="1" id="112" key="48" t_in="1333376" t_out="1339136" />
+          <note t_in="1344768" id="113" t_out="1347584" key="50" vel="1" />
+          <note vel="1" t_in="1350400" id="114" t_out="1353216" key="52" />
+          <note t_out="1358976" key="48" vel="1" t_in="1356160" id="115" />
+          <note t_in="1361792" key="55" id="116" t_out="1364608" vel="1" />
+          <note vel="1" id="117" t_in="1367424" t_out="1370240" key="50" />
+          <note t_in="1373056" t_out="1376000" key="52" vel="1" id="118" />
+          <note vel="1" key="48" id="119" t_in="1378816" t_out="1381632" />
+          <note t_in="1384448" id="120" key="55" t_out="1387264" vel="1" />
+          <note key="50" vel="1" id="121" t_in="1390080" t_out="1392896" />
+          <note key="52" vel="1" id="122" t_in="1395840" t_out="1398656" />
+          <note id="123" key="48" t_out="1404288" vel="1" t_in="1401472" />
+          <note key="55" t_in="1407104" id="124" vel="1" t_out="1409920" />
+          <note t_out="1415680" vel="1" key="50" id="125" t_in="1412864" />
+          <note id="126" vel="1" t_in="1418496" t_out="1421312" key="52" />
+          <note id="127" key="48" vel="1" t_out="1426944" t_in="1424128" />
+          <note t_in="1429760" vel="1" t_out="1432704" id="128" key="55" />
+          <note key="50" t_in="1435520" t_out="1438336" vel="1" id="129" />
+          <note id="130" t_in="1441152" key="52" vel="1" t_out="1443968" />
+          <note t_out="1449600" vel="1" id="131" key="48" t_in="1446784" />
+          <note key="55" t_in="1452544" t_out="1455360" id="132" vel="1" />
+          <note id="133" key="50" t_in="1458176" t_out="1460992" vel="1" />
+          <note t_out="1466624" key="52" id="134" t_in="1463808" vel="1" />
+          <note t_out="1472384" key="48" id="135" vel="1" t_in="1469440" />
+          <note key="55" vel="1" t_in="1475200" t_out="1478016" id="136" />
+          <note vel="1" key="50" id="137" t_in="1480832" t_out="1483648" />
+          <note t_out="1489280" id="138" key="52" vel="1" t_in="1486464" />
+          <note key="48" id="139" vel="1" t_in="1492224" t_out="1495040" />
+          <note id="140" key="55" vel="1" t_in="1497856" t_out="1500672" />
+          <note id="141" vel="1" key="50" t_in="1503488" t_out="1506304" />
+          <note t_out="1512064" key="52" t_in="1509120" id="142" vel="1" />
+          <note vel="1" t_in="1514880" t_out="1517696" key="48" id="143" />
+          <note key="55" id="144" t_in="1520512" t_out="1523328" vel="1" />
+          <note vel="1" t_in="1537536" key="48" t_out="1548928" id="145" />
+          <note key="48" t_in="1560192" t_out="1571584" id="146" vel="1" />
+          <note key="48" t_in="1582848" t_out="1594240" id="147" vel="1" />
+          <note id="148" t_in="1605632" key="48" vel="1" t_out="1616640" />
+        </midi>
+      </track>
+    </timeline>
+    <hammond id="9">
+      <param name="16" value="0.01" />
+      <param name="5.3" value="0.01" />
+      <param name="8" value="0.01" />
+      <param value="0.01" name="4" />
+      <param value="0.01" name="2.6" />
+      <param name="2" value="0.01" />
+      <param name="1.6" value="0.01" />
+      <param value="0.01" name="1.3" />
+      <param value="0.06199995" name="1" />
+    </hammond>
+    <arpeggio id="10">
+      <param name="length" value="1" />
+    </arpeggio>
+    <patch id="29200">
+      <route id="3">
+        <output module="10" index="0" />
+        <input module="8" index="1" />
+      </route>
+      <route id="2">
+        <input module="10" index="1" />
+        <output module="104" index="0" />
+      </route>
+      <route id="1">
+        <output index="0" module="9" />
+      </route>
+      <route id="4">
+        <output index="0" module="8" />
+        <input module="9" index="1" />
+      </route>
+    </patch>
+  </modules>
+</project>
