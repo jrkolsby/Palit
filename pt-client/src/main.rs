@@ -468,15 +468,14 @@ fn main() -> std::io::Result<()> {
                             }
                         }
                     ).collect();
-                    eprintln!("NEW MODULES {:?}", new_modules);
                     let mut new_document = Document {
                         title,
-                        src: filename,
+                        src: filename.clone(),
                         sample_rate: document.unwrap().sample_rate,
                         modules: new_modules,
                     };
                     write_document(&mut new_document);
-                    eprintln!("WROTE DOCUMENT!");
+                    eprintln!("Saved to {}", filename);
                     document = Some(new_document);
                 },
                 Action::Save => {

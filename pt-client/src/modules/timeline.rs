@@ -10,13 +10,15 @@ use crate::common::{AudioRegion, MidiRegion, Track, Asset, REGIONS_PER_TRACK};
 pub fn write(state: TimelineState) -> Element {
     let mut root = Element::new("timeline");
 
+    eprintln!("WRITE {:?}", state);
+
     param_add(&mut root, state.tempo, "bpm".to_string());
     param_add(&mut root, state.meter_beat, "meter_beat".to_string());
     param_add(&mut root, state.meter_note, "meter_note".to_string());
-    param_add(&mut root, state.seq_in, "seq_in".to_string());
-    param_add(&mut root, state.seq_out, "seq_out".to_string());
-    param_add(&mut root, state.loop_in, "loop_in".to_string());
-    param_add(&mut root, state.loop_out, "loop_out".to_string());
+    mark_add(&mut root, state.seq_in, "seq_in".to_string());
+    mark_add(&mut root, state.seq_out, "seq_out".to_string());
+    mark_add(&mut root, state.loop_in, "loop_in".to_string());
+    mark_add(&mut root, state.loop_out, "loop_out".to_string());
 
     for (id, asset) in state.assets.iter() {
         let mut asset_el = Element::new("asset");
@@ -173,5 +175,7 @@ pub fn read(mut doc: Element) -> TimelineState {
         });
     }
     
+    eprintln!("READ {:?}", state);
+
     return state;
 }

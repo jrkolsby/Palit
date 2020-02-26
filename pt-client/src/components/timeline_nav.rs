@@ -69,7 +69,7 @@ pub fn new() -> MultiFocus::<TimelineState> {
             let out_x = offset_out as i16 - state.scroll_x as i16;
             if out_x >= 0 {
                 write!(out, "{}>> ", cursor::Goto(
-                    window.x + REGIONS_X + 1 + out_x as u16, 
+                    window.x + REGIONS_X + out_x as u16 - 1, 
                     window.y + TIMELINE_Y)
                 ).unwrap()
             }
