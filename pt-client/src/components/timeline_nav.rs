@@ -57,6 +57,10 @@ pub fn new() -> MultiFocus::<TimelineState> {
                     state.loop_in, 
                     state.loop_out + o1
                 ), 
+                Action::Up => Action::SetLoop(
+                    state.loop_in,
+                    state.playhead,
+                ),
                 _ => Action::Noop 
             }
         },
@@ -88,6 +92,10 @@ pub fn new() -> MultiFocus::<TimelineState> {
                     state.loop_in + o1, 
                     state.loop_out
                 ), 
+                Action::Up => Action::SetLoop(
+                    state.playhead,
+                    state.loop_out,
+                ),
                 _ => Action::Noop 
             }
         },

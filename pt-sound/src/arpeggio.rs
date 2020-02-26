@@ -66,6 +66,14 @@ pub fn dispatch(store: &mut Store, action: Action) {
             }
             store.queue.push(Action::NoteOff(note));
         },
+        Action::SetParam(ref key, val) if key == "length" => {
+            store.length = val;
+            store.bar = calculate_beat(store.sample_rate, store.bpm, store.length);
+            if store.notes.len() > 0 {
+                distribute_notes(store.notes.borrow_mut(), store.bar);
+            }
+            eprintln!("new bar {}", store.bar);
+        }
         _ => {}
     }
 }
@@ -88,7 +96,7 @@ pub fn compute(store: &mut Store) {
         }
     }
     // LOOP
-    store.timer = if store.timer == store.bar { 0 } 
+    store.timer = if store.timer >= store.bar { 0 } 
         else { store.timer + 1 }
 }
 

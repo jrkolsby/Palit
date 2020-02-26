@@ -173,7 +173,5 @@ pub fn read(mut doc: Element) -> TimelineState {
         });
     }
     
-    eprintln!("READ {:?}", state);
-
     return state;
 }

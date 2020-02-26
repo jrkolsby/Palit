@@ -155,7 +155,7 @@ fn main() -> std::io::Result<()> {
 
     // Allocate 8MB buffer in raw mode
     let mut out = unsafe {
-        BufWriter::with_capacity(200_000, File::from_raw_fd(1)).into_raw_mode().unwrap()
+        BufWriter::with_capacity(8_000_000, File::from_raw_fd(1)).into_raw_mode().unwrap()
     };
 
     // Configure input polling array

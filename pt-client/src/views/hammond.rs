@@ -1,6 +1,6 @@
 use std::io::{Write, Stdout};
 use xmltree::Element;
-use libcommon::{Action, Anchor, Param, param_map};
+use libcommon::{Action, Anchor, Param, param_map, param_add};
 
 use crate::common::{MultiFocus, shift_focus, render_focii, focus_dispatch};
 use crate::common::{Screen, Direction, FocusType, Window};
@@ -280,6 +280,16 @@ impl Layer for Hammond {
     }
     fn alpha(&self) -> bool { false }
     fn save(&self) -> Option<Element> { 
-        Some(Element::new("hammond"))
+        let mut root = Element::new("hammond");
+        param_add(&mut root, self.state.eq[0], "16".to_string());
+        param_add(&mut root, self.state.eq[1], "5.3".to_string());
+        param_add(&mut root, self.state.eq[2], "8".to_string());
+        param_add(&mut root, self.state.eq[3], "4".to_string());
+        param_add(&mut root, self.state.eq[4], "2.6".to_string());
+        param_add(&mut root, self.state.eq[5], "2".to_string());
+        param_add(&mut root, self.state.eq[6], "1.6".to_string());
+        param_add(&mut root, self.state.eq[7], "1.3".to_string());
+        param_add(&mut root, self.state.eq[8], "1".to_string());
+        Some(root)
     }
 }

@@ -11,7 +11,7 @@ use crate::components::{logo, button, bigtext};
 
 const NUM_FOCII: usize = 1;
 const NUM_PROJECTS: usize = 4;
-const SIZE: (u16, u16) = (34, 15);
+const SIZE: (u16, u16) = (34, 10);
 
 // Store for heavy, static vars
 pub struct Home {
@@ -72,7 +72,6 @@ impl Layer for Home {
     fn render(&self, out: &mut Screen, target: bool) {
 
         bigtext::render(out, self.x, self.y, "Song Garden".to_string());
-        button::render(out, self.x + 6, self.y + 6, 17, "New Project");
 
         // Project Listing
         let mut col: [u16; 2] = [4,4];
@@ -82,13 +81,13 @@ impl Layer for Home {
                 let j: u16 = (i % NUM_PROJECTS) as u16;
                 let row: usize = (j % 2) as usize;
                 write!(out, "{}", cursor::Goto(self.x+col[row] as u16, 
-                    self.y+10+(row as u16 * 2))).unwrap();
+                    self.y + 6 + (row as u16 * 2))).unwrap();
                 write!(out, "{}", color::Fg(color::Black)).unwrap();
                 match j {
                     0 => write!(out, "{}", color::Bg(color::Yellow)).unwrap(),
-                    1 => write!(out, "{}", color::Bg(color::Magenta)).unwrap(),
-                    2 => write!(out, "{}", color::Bg(color::Blue)).unwrap(),
-                    3 => write!(out, "{}", color::Bg(color::Green)).unwrap(),
+                    1 => write!(out, "{}", color::Bg(color::Blue)).unwrap(),
+                    2 => write!(out, "{}", color::Bg(color::Green)).unwrap(),
+                    3 => write!(out, "{}", color::Bg(color::Magenta)).unwrap(),
                     _ => write!(out, "{}", color::Bg(color::Reset)).unwrap(), 
                 }
                 write!(out, " {} ", project).unwrap();
@@ -105,21 +104,20 @@ impl Layer for Home {
         let mut num_choices = num_projects - (self.state.scroll_x * NUM_PROJECTS);
         num_choices = if num_choices > 4 { 4 } else { num_choices };
         match action {
-            //Action::SelectR => { Action::InputTitle }
             Action::SelectY => {
                 Action::OpenProject(self.state.projects[self.state.scroll_x * NUM_PROJECTS].clone())
             },
-            Action::SelectP => {
+            Action::SelectB => {
                 if num_choices > 1 {
                     Action::OpenProject(self.state.projects[self.state.scroll_x * NUM_PROJECTS + 1].clone())
                 } else { Action::Noop }
             },
-            Action::SelectB => {
+            Action::SelectG => {
                 if num_choices > 2 {
                     Action::OpenProject(self.state.projects[self.state.scroll_x * NUM_PROJECTS + 2].clone())
                 } else { Action::Noop }
             },
-            Action::SelectG => {
+            Action::SelectP => {
                 if num_choices > 3 {
                     Action::OpenProject(self.state.projects[self.state.scroll_x * NUM_PROJECTS + 3].clone())
                 } else { Action::Noop }
