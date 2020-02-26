@@ -6,11 +6,34 @@ use libcommon::{Route, Anchor, Param, param_map, mark_map};
 use crate::views::PatchState;
 
 pub fn write(state: PatchState) -> Element {
+    eprintln!("WRITE {:?}", state);
     let mut root = Element::new("patch");
 
-    let mut master_route = Element::new("route");
-    master_route.attributes.insert("id".to_string(), "1".to_string());
-    root.children.push(master_route);
+    let mut has_master: bool = false;
+
+    for (id, route) in state.routes.iter() {
+        if *id == 1 { has_master = true; }
+        let mut route_el = Element::new("route");
+        route_el.attributes.insert("id".to_string(), id.to_string());
+        for anchor in route.patch.iter() {
+            let mut anchor_el = if anchor.input { 
+                Element::new("input") 
+            } else {
+                Element::new("output")
+            };
+            anchor_el.attributes.insert("module".to_string(), anchor.module_id.to_string());
+            anchor_el.attributes.insert("index".to_string(), anchor.index.to_string());
+            route_el.children.push(anchor_el);
+        }
+        root.children.push(route_el);
+    }
+
+    // Make sure there's always a master route
+    if !has_master {
+        let mut master_route = Element::new("route");
+        master_route.attributes.insert("id".to_string(), "1".to_string());
+        root.children.push(master_route);
+    }
 
     root
 }
