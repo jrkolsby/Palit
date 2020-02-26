@@ -6,7 +6,6 @@ use libcommon::{Route, Anchor, Param, param_map, mark_map};
 use crate::views::PatchState;
 
 pub fn write(state: PatchState) -> Element {
-    eprintln!("WRITE {:?}", state);
     let mut root = Element::new("patch");
 
     let mut has_master: bool = false;

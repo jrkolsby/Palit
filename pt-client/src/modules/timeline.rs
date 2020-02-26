@@ -10,8 +10,6 @@ use crate::common::{AudioRegion, MidiRegion, Track, Asset, REGIONS_PER_TRACK};
 pub fn write(state: TimelineState) -> Element {
     let mut root = Element::new("timeline");
 
-    eprintln!("WRITE {:?}", state);
-
     param_add(&mut root, state.tempo, "bpm".to_string());
     param_add(&mut root, state.meter_beat, "meter_beat".to_string());
     param_add(&mut root, state.meter_note, "meter_note".to_string());
