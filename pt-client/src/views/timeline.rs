@@ -9,15 +9,13 @@ use crate::components::{button, ruler, roll};
 use crate::components::{region_midi, track_header, region_audio, timeline_meter, timeline_nav};
 use crate::common::{ID, VOID_ID, FocusType};
 use crate::common::{MultiFocus, render_focii, shift_focus, generate_partial_waveform};
-use crate::common::{Screen, Asset, AudioRegion, MidiRegion, Track, Window};
+use crate::common::{Screen, Asset, AudioRegion, MidiRegion, Track, Window, REGIONS_PER_TRACK};
 use crate::common::{char_offset, offset_char, generate_waveforms};
 use crate::modules::timeline;
 use crate::views::{Layer};
 
 use crate::common::{REGIONS_X, TIMELINE_Y};
 
-static ASSET_PREFIX: &str = "storage/";
-pub static REGIONS_PER_TRACK: u16 = 1000;
 
 #[derive(Clone, Debug)]
 pub struct TimelineState {
@@ -581,13 +579,8 @@ impl Layer for Timeline {
             None => Action::Noop,
         }
     }
-    fn undo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn redo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn alpha(&self) -> bool {
-        false
+    fn alpha(&self) -> bool { false }
+    fn save(&self) -> Option<Element> { 
+        Some(timeline::write(self.state.clone()))
     }
 }

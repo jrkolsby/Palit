@@ -1,16 +1,17 @@
 use std::collections::HashMap;
 use std::fs;
-use xmltree::Element;
-use crate::{Key, Param, Offset};
+use xmltree::{Element, EmitterConfig};
+use crate::{Note, Key, Volume, Param, Offset};
 
 #[derive(Clone, Debug)]
 pub struct Document {
     pub title: String,
+    pub src: String,
     pub sample_rate: u32,
     pub modules: Vec<(u16, Element)>,
 }
 
-const PALIT_ROOT: &str = "/usr/local/palit/";
+pub const PALIT_ROOT: &str = "/usr/local/palit/";
 
 pub fn param_map(doc: &mut Element) -> (&mut Element, HashMap<String, Param>) {
     let mut params: HashMap<String, Param> = HashMap::new();
@@ -45,6 +46,7 @@ pub fn read_document(filename: String) -> Document {
     let mut patch: Option<(u16, Element)> = None;
 
     let mut result = Document {
+        src: filename,
         title: "Untitled".to_string(),
         sample_rate: 48000,
         modules: vec![],
@@ -79,17 +81,53 @@ pub fn read_document(filename: String) -> Document {
 
     match patch {
         Some(p) => { result.modules.push(p); },
-        None => panic!("No patch defined!")
+        None => {} // No need to panic, sound will add a master route
     }
 
     result
 }
 
-pub fn note_list(doc: &mut Element) -> (&mut Element, Vec<Key>) {
-    let mut notes: Vec<Key> = vec![];
-    while let Some(param) = doc.take_child("note") {
-        let note = param.attributes.get("key").unwrap();
-        notes.push(note.parse::<Key>().unwrap());
+pub fn write_document(doc: &mut Document) {
+    let mut root = Element::new("project");
+
+    // Metadata declaration (sample rate, bitrate, project-wide)
+    let mut meta = Element::new("meta");
+    meta.attributes.insert("samplerate".to_string(), doc.sample_rate.to_string());
+    root.children.push(meta);
+
+    // Title declaration
+    let mut title = Element::new("title");
+    title.text = Some(doc.title.clone());
+    root.children.push(title);
+
+    // Modules declaration
+    let mut modules = Element::new("modules");
+    for (id, module_el) in doc.modules.iter_mut() { 
+        module_el.attributes.insert("id".to_string(), id.to_string());
+        modules.children.push(module_el.to_owned());
+    } 
+    root.children.push(modules);
+
+    let doc_path: String = format!("{}{}_WRITE.xml", PALIT_ROOT, doc.src);
+    root.write_with_config(
+        fs::File::create(doc_path).unwrap(), 
+        EmitterConfig::new()
+            .line_separator("\r\n")
+            .perform_indent(true)
+            .normalize_empty_elements(true));
+}
+
+pub fn note_list(doc: &mut Element, r_id: u16) -> (&mut Element, Vec<Note>) {
+    let mut notes: Vec<Note> = vec![];
+    while let Some(note) = doc.take_child("note") {
+        notes.push(Note {
+            id: note.attributes.get("id").unwrap().parse::<u16>().unwrap(),
+            r_id,
+            note: note.attributes.get("key").unwrap().parse::<Key>().unwrap(),
+            t_in: note.attributes.get("t_in").unwrap().parse::<Offset>().unwrap(),
+            t_out: note.attributes.get("t_out").unwrap().parse::<Offset>().unwrap(),
+            vel: note.attributes.get("vel").unwrap().parse::<Volume>().unwrap(),
+        });
     }
     return (doc, notes);
 }

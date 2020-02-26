@@ -1,5 +1,6 @@
 use std::io::Write;
 use termion::cursor;
+use xmltree::Element;
 use libcommon::{Action, Anchor, Module};
 
 use crate::common::{Screen, Direction, FocusType, Window};
@@ -176,15 +177,6 @@ impl Layer for Modules {
             }
         } else { Action::Noop }
     }
-
-    fn undo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn redo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn alpha(&self) -> bool {
-        true
-    }
-
+    fn alpha(&self) -> bool { true }
+    fn save(&self) -> Option<Element> { None }
 }

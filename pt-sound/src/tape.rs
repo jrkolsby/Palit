@@ -13,7 +13,8 @@ use xmltree::Element;
 use hound;
 use object_pool::Pool;
 use chrono::prelude::*;
-use libcommon::{Action, Offset, Note, Key, Param, param_map, param_add, mark_map, mark_add};
+use libcommon::{Action, Offset, Note, Key, Param};
+use libcommon::{param_map, param_add, mark_map, mark_add, note_list};
 
 use crate::core::{SAMPLE_HZ, BUF_SIZE, CHANNELS, BIT_RATE};
 use crate::core::{SF, Output};
@@ -767,31 +768,6 @@ pub fn compute(store: &mut Store) -> [Output; CHANNELS] {
     z
 }
 
-pub fn write(s: Store, doc: Option<Element>) -> Element {
-    let mut el = Element::new("timeline");
-
-    param_add(&mut el, s.bpm, "bpm".to_string());
-    param_add(&mut el, s.meter_beat, "meter_beat".to_string());
-    param_add(&mut el, s.meter_note, "meter_note".to_string());
-
-    mark_add(&mut el, s.loop_in, "loop_in".to_string());
-    mark_add(&mut el, s.loop_out, "loop_out".to_string());
-    mark_add(&mut el, s.duration, "seq_out".to_string());
-    mark_add(&mut el, 0, "seq_in".to_string());
-
-    let track = Element::new("track");
-    for region in s.audio_regions.iter() {
-        let r = Element::new("region");
-    }
-
-    /*
-    Element::new("asset")
-    Element::new("track")
-        Element::new("region")
-        */
-    el 
-}
-
 pub fn read(doc: &mut Element) -> Option<Store> {
     let mut store = init();
 
@@ -828,7 +804,7 @@ pub fn read(doc: &mut Element) -> Option<Store> {
         let _t_id = t_id.parse::<u16>().unwrap();
         store.track_id = _t_id;
 
-        while let Some(region) = track.take_child("region") {
+        while let Some(region) = track.take_child("audio") {
             let r_id: &str = region.attributes.get("id").unwrap();
             let a_id: &str = region.attributes.get("asset").unwrap();
             let offset: &str = region.attributes.get("offset").unwrap();
@@ -891,6 +867,27 @@ pub fn read(doc: &mut Element) -> Option<Store> {
                 buffer,
             });
         }
+
+        while let Some(mut midi_region) = track.take_child("midi") {
+            let r_id: &str = midi_region.attributes.get("id").unwrap();
+            let offset: &str = midi_region.attributes.get("offset").unwrap();
+            let duration: &str = midi_region.attributes.get("duration").unwrap();
+
+            let _r_id: u16 = r_id.parse().unwrap();
+            let _offset: Offset = offset.parse().unwrap();
+            let _duration: Offset = duration.parse().unwrap();
+
+            let (midi_region, notes) = note_list(&mut midi_region, _r_id);
+
+            store.midi_regions.push(MidiRegion {
+                id: _r_id,
+                notes,
+                note_queue: vec![],
+                offset: _offset,
+                duration: _duration,
+            });
+        }
+
     } else {
         return None;
     }

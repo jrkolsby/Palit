@@ -42,17 +42,17 @@
             <asset id="1" size="336000" src="/usr/local/palit/assets/Loop.wav" />
             <asset id="2" size="1728000" src="/usr/local/palit/assets/Keyboard.wav" />
             <track id="1">
-                <region id="1" asset="0" in="0" duration="1488000" offset="0" />
-                <region id="2" asset="2" in="0" duration="148800" offset="1808000" />
+                <audio id="1" asset="0" in="0" duration="1488000" offset="0" />
+                <audio id="2" asset="2" in="0" duration="148800" offset="1808000" />
             </track>
             <track id="2">
-                <region id="4" asset="1" in="0" duration="336000" offset="0" />
-                <region id="3" asset="2" in="0" duration="148800" offset="1808000" />
-                <region id="8" asset="0" in="0" duration="1488000" offset="80000" />
+                <audio id="4" asset="1" in="0" duration="336000" offset="0" />
+                <audio id="3" asset="2" in="0" duration="148800" offset="1808000" />
+                <audio id="8" asset="0" in="0" duration="1488000" offset="80000" />
             </track>
             <track id="3">
-                <region id="7" asset="2" in="0" duration="92800" offset="0" />
-                <region id="5" asset="2" in="0" duration="708800" offset="1808000" />
+                <audio id="7" asset="2" in="0" duration="92800" offset="0" />
+                <audio id="5" asset="2" in="0" duration="708800" offset="1808000" />
             </track>
             <track id="4">
             </track>
@@ -77,9 +77,9 @@
         </arpeggio>
 
         <chord id="11">
-            <note key="0" />
-            <note key="4" />
-            <note key="7" />
+            <note id="0" key="0" t_in="0" t_out="0" vel="1" />
+            <note id="1" key="4" t_in="0" t_out="0" vel="1" />
+            <note id="2" key="7" t_in="0" t_out="0" vel="1" />
         </chord>
 
     </modules>

@@ -4,9 +4,9 @@ use libcommon::Action;
 
 use crate::common::{Screen, MultiFocus, FocusType, ID, Window};
 use crate::common::{char_offset, offset_char};
-use crate::common::{REGIONS_X, TIMELINE_Y};
+use crate::common::{REGIONS_X, TIMELINE_Y, REGIONS_PER_TRACK};
 use crate::components::{waveform, roll};
-use crate::views::{TimelineState, REGIONS_PER_TRACK};
+use crate::views::TimelineState;
 
 pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
@@ -133,7 +133,7 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
         p_id: void_id.clone(),
         p_t: |action, id, state| match action {
             Action::SelectP => {
-                let local_id = id.1 & REGIONS_PER_TRACK;
+                let local_id = id.1 % REGIONS_PER_TRACK;
                 let track_id = id.1 / REGIONS_PER_TRACK;
                 Action::DelRegion(track_id, local_id)
             },

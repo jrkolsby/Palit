@@ -38,7 +38,7 @@ between modules, simply use the arrow keys to move past the
 top or bottom edge of the screen. 
 
 To delete a module, move past the left edge of the screen 
-and press RED to delete your selection. This cannot be
+and press PINK to delete your selection. This cannot be
 undone.
 
 To add a module or to save the current project, press ENTER

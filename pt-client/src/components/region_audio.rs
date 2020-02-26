@@ -4,9 +4,9 @@ use libcommon::Action;
 
 use crate::common::{Screen, MultiFocus, FocusType, ID, Window};
 use crate::common::{char_offset, offset_char};
-use crate::common::{REGIONS_X, TIMELINE_Y};
+use crate::common::{REGIONS_X, TIMELINE_Y, REGIONS_PER_TRACK};
 use crate::components::{waveform};
-use crate::views::{TimelineState, REGIONS_PER_TRACK};
+use crate::views::TimelineState;
 
 pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
 
@@ -57,14 +57,7 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
                 asset_start_offset as usize
             };
 
-            // Region split by right edge of timeline
-            let mut wave_out_i: usize = if state.scroll_x + window.w < region_offset + asset_length_offset {
-                // OVERFLOW ALERT
-                (asset_start_offset - region_offset - (state.scroll_x + window.w)) as usize
-            // Right edge of region appears unclipped
-            } else {
-                (asset_start_offset + asset_length_offset) as usize
-            };
+            let mut wave_out_i: usize = (asset_start_offset + asset_length_offset) as usize;
 
             // Limit to bounds of waveform (during recording)
             let max_i = match waveform.len() { 0 => 0, n => n - 1 };

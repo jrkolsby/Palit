@@ -7,24 +7,24 @@ use crate::common::{Screen, Direction, FocusType, Window};
 use crate::views::{Layer};
 use crate::components::{piano, slider, button};
 
-pub struct Piano {
+pub struct Hammond {
     x: u16,
     y: u16,
     width: u16,
     height: u16,
-    state: PianoState,
-    focii: Vec<Vec<MultiFocus<PianoState>>>,
+    state: HammondState,
+    focii: Vec<Vec<MultiFocus<HammondState>>>,
 }
 
 #[derive(Clone, Debug)]
-pub struct PianoState {
+pub struct HammondState {
     focus: (usize, usize),
     notes: Vec<Action>,
     eq: [Param; 9],
 }
 
-fn reduce(state: PianoState, action: Action) -> PianoState {
-    PianoState {
+fn reduce(state: HammondState, action: Action) -> HammondState {
+    HammondState {
         notes: match action {
             Action::NoteOn(_,_) => { 
                 let mut new_keys = state.notes.clone(); 
@@ -68,7 +68,7 @@ const SIZE: (u16, u16) = (70, 30);
 const EQ_STEP: Param = 0.001;
 const EQ_FACTOR: Param = 200.0;
 
-impl Piano {
+impl Hammond {
     pub fn new(x: u16, y: u16, width: u16, height: u16, mut doc: Element) -> Self {
 
         let (_, params) = param_map(&mut doc);
@@ -86,20 +86,20 @@ impl Piano {
         ];
 
         // Initialize State
-        let initial_state: PianoState = PianoState {
+        let initial_state: HammondState = HammondState {
             focus: (0,0),
             notes: vec![],
             eq: initial_eq,
         };
 
-        Piano {
+        Hammond {
             x: x + if SIZE.0 > width { 0 } else { (width / 2) - (SIZE.0 / 2) } ,
             y: y + if SIZE.1 > height { 0 } else { height - SIZE.1 },
             width: width,
             height: height,
             state: initial_state,
             focii: vec![vec![
-                MultiFocus::<PianoState> {
+                MultiFocus::<HammondState> {
                     g: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+5, window.y+5, "16'".to_string(), 
                             (state.eq[0] * EQ_FACTOR) as i16, Direction::North)
@@ -155,7 +155,7 @@ impl Piano {
                     r_id: (FocusType::Void, 0),
                     active: None,
                 },
-                MultiFocus::<PianoState> {
+                MultiFocus::<HammondState> {
                     w: |mut out, window, id, state, focus| {},
                     w_id: (FocusType::Void, 0),
 
@@ -227,7 +227,7 @@ impl Piano {
     }
 }
 
-impl Layer for Piano {
+impl Layer for Hammond {
     fn render(&self, out: &mut Screen, target: bool) {
 
         let win: Window = Window { x: self.x, y: self.y, h: self.height, w: self.width };
@@ -278,13 +278,8 @@ impl Layer for Piano {
             }
         } else { Action::Noop }
     }
-    fn undo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn redo(&mut self) {
-        self.state = self.state.clone()
-    }
-    fn alpha(&self) -> bool {
-        false
+    fn alpha(&self) -> bool { false }
+    fn save(&self) -> Option<Element> { 
+        Some(Element::new("hammond"))
     }
 }

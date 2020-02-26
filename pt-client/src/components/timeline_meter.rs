@@ -28,7 +28,7 @@ pub fn new() -> MultiFocus::<TimelineState> {
             match a {
                 Action::Up => Action::Zoom(zoom + 1),
                 Action::Down => {
-                    if zoom > 0 {
+                    if zoom > 1 {
                         Action::Zoom(zoom - 1)
                     } else {
                         Action::Noop
