@@ -1,5 +1,5 @@
 use std::io::{Write, Stdout};
-use termion::{color};
+use termion::{cursor};
 use xmltree::Element;
 use libcommon::Action;
 
@@ -57,12 +57,10 @@ impl Help {
 
 impl Layer for Help {
     fn render(&self, out: &mut Screen, target: bool) {
-        write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
-
 	    popup::render(out, self.x, self.y, self.width, self.height, &self.state.title);
         keyboard::render(out, &self.state.active, self.x+5, self.y+5);
 
-        write!(out, "{}{}", color::Bg(color::Reset), color::Fg(color::Reset)).unwrap();
+        write!(out, "{}Press 2 to go back", cursor::Goto(self.x + 5, self.y + 5)).unwrap();
     }
 
     fn dispatch(&mut self, action: Action) -> Action {

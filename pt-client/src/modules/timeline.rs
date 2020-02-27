@@ -128,7 +128,7 @@ pub fn read(mut doc: Element) -> TimelineState {
             let a_in: &str = audio_region.attributes.get("in").unwrap();
             let duration: &str = audio_region.attributes.get("duration").unwrap();
 
-            let _r_id = r_id.parse::<u16>().unwrap();            
+            let _r_id = r_id.parse::<u16>().unwrap();
             let global_r_id = _t_id * REGIONS_PER_TRACK + _r_id;
 
             state.regions.insert(global_r_id, AudioRegion {
@@ -165,7 +165,8 @@ pub fn read(mut doc: Element) -> TimelineState {
     while let Some(asset) = doc.take_child("asset") {
         let a_id: &str = asset.attributes.get("id").unwrap();
         let duration: &str = asset.attributes.get("size").unwrap();
-        state.assets.insert(a_id.parse::<u16>().unwrap(), Asset {
+        let _a_id = a_id.parse::<u16>().unwrap();
+        state.assets.insert(_a_id, Asset {
             src: asset.attributes.get("src").unwrap().parse().unwrap(),
             duration: duration.parse().unwrap(),
             channels: 2,

@@ -819,41 +819,45 @@ pub fn read(doc: &mut Element) -> Option<Store> {
 
             let mut buffer = vec![];
             let mut _src: Option<String> = None;
-            for (id, asset) in assets.iter() {
-                if (_a_id == *id) {
-                    let src: &str = asset.attributes.get("src").unwrap();
-                    _src = Some(src.to_string());
-                    let duration: &str = asset.attributes.get("size").unwrap();
-                    let _duration: usize = duration.parse().unwrap();
 
-                    buffer = Vec::with_capacity(_duration / BUF_SIZE);
-                    
-                    let mut wav_f = hound::WavReader::open(src).unwrap();
-                    let spec = wav_f.spec();
-                    let channels = spec.channels as usize;
-                    let bitrate = spec.bits_per_sample;
+            // Assets can only be used on a single track for now
+            let global_id = _t_id * 1000 + _a_id;
+            if let Some((_, asset)) = assets.iter().find(|(id, _)| **id == global_id) {
+                let src: &str = asset.attributes.get("src").unwrap();
+                _src = Some(src.to_string());
+                let duration: &str = asset.attributes.get("size").unwrap();
+                let _duration: usize = duration.parse().unwrap();
 
-                    let mut push_sample = |i, sample| {
-                        if i % (BUF_SIZE * channels) == 0 {
-                            buffer.push(vec![])
-                        }
-                        let frame_index = i % channels;
-                        if frame_index == 0 {
-                            buffer.last_mut().unwrap().push([0.0; CHANNELS]);
-                        }
-                        buffer.last_mut().unwrap().last_mut().unwrap()[frame_index] = sample
-                    };
+                buffer = Vec::with_capacity(_duration / BUF_SIZE);
+                
+                let mut wav_f = hound::WavReader::open(src).unwrap();
+                let spec = wav_f.spec();
+                let channels = spec.channels as usize;
+                let bitrate = spec.bits_per_sample;
 
-                    if spec.sample_format == hound::SampleFormat::Float {
-                        for (i, sample) in wav_f.samples::<f32>().enumerate() {
-                            push_sample(i, sample.unwrap());
-                        }
-                    } else {
-                        for (i, sample) in wav_f.samples::<i32>().enumerate() {
-                            push_sample(i, sample.unwrap() as f32 / 2_f32.powf(bitrate as f32));
-                        }
+                let mut push_sample = |i, sample| {
+                    if i % (BUF_SIZE * channels) == 0 {
+                        buffer.push(vec![])
+                    }
+                    let frame_index = i % channels;
+                    if frame_index == 0 {
+                        buffer.last_mut().unwrap().push([0.0; CHANNELS]);
+                    }
+                    buffer.last_mut().unwrap().last_mut().unwrap()[frame_index] = sample
+                };
+
+                if spec.sample_format == hound::SampleFormat::Float {
+                    for (i, sample) in wav_f.samples::<f32>().enumerate() {
+                        push_sample(i, sample.unwrap());
+                    }
+                } else {
+                    for (i, sample) in wav_f.samples::<i32>().enumerate() {
+                        push_sample(i, sample.unwrap() as f32 / 2_f32.powf(bitrate as f32));
                     }
                 }
+            }
+            if _src.is_none() {
+                eprintln!("couldn't find asset {}", global_id);
             }
 
             store.audio_regions.push(AudioRegion {

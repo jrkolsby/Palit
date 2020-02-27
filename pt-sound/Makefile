@@ -8,7 +8,7 @@ dev: darwin-optimal
 
 .PHONY : debug
 debug: darwin
-	sudo ./target/x86_64-apple-darwin/debug/pt-sound
+	sudo RUST_BACKTRACE=1 ./target/x86_64-apple-darwin/debug/pt-sound
 
 darwin-optimal:
 	cargo build --release --target x86_64-apple-darwin 

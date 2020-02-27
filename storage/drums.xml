@@ -38,9 +38,9 @@
             <param value="4" name="meter_beat" />
             <param value="4" name="meter_note" />
             <param value="127" name="bpm" />
-            <asset id="0" size="14880000" src="/usr/local/palit/assets/september.wav" />
-            <asset id="1" size="529000" src="/usr/local/palit/assets/Drums.wav" />
-            <asset id="2" size="529000" src="/usr/local/palit/assets/1580442100_1.wav" />
+            <asset id="1000" size="14880000" src="/usr/local/palit/assets/september.wav" />
+            <asset id="1001" size="529000" src="/usr/local/palit/assets/Drums.wav" />
+            <asset id="1002" size="529000" src="/usr/local/palit/assets/1580442100_1.wav" />
             <track id="1">
                 <audio id="0" asset="1" in="0" duration="529000" offset="0" />
             </track>

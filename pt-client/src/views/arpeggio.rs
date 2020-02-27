@@ -97,7 +97,7 @@ impl Arpeggio {
                 g: VOID_RENDER,
                 b_id: (FocusType::Param, 0),
                 b_t: |action, id, state| match action {
-                    Action::SelectG => Action::SetParam(
+                    Action::SelectB => Action::SetParam(
                         "pattern".to_string(), 
                         ((state.pattern + 1) % NUM_PATTERNS) as f32
                     ),
