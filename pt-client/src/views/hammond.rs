@@ -100,30 +100,30 @@ impl Hammond {
             state: initial_state,
             focii: vec![vec![
                 MultiFocus::<HammondState> {
-                    g: |mut out, window, id, state, focus| {
+                    y: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+5, window.y+5, "16'".to_string(), 
                             (state.eq[0] * EQ_FACTOR) as i16, Direction::North)
                     },
-                    g_t: |action, id, state| match action {
+                    y_t: |action, id, state| match action {
                         Action::Up => { Action::SetParam("16".to_string(), 
                                                          state.eq[0] + EQ_STEP) },
                         Action::Down => { Action::SetParam("16".to_string(), 
                                                          state.eq[0] - EQ_STEP) },
                         _ => Action::Noop
                     },
-                    g_id: (FocusType::Button, 0),
-                    y: |mut out, window, id, state, focus| {
+                    y_id: (FocusType::Button, 0),
+                    b: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+10, window.y+5, "5⅓'".to_string(), 
                             (state.eq[1] * EQ_FACTOR) as i16, Direction::North)
                     },
-                    y_t: |action, id, state| match action {
+                    b_t: |action, id, state| match action {
                         Action::Up => { Action::SetParam("5.3".to_string(), 
                                                          state.eq[1] + EQ_STEP) },
                         Action::Down => { Action::SetParam("5.3".to_string(), 
                                                          state.eq[1] - EQ_STEP) },
                         _ => Action::Noop
                     },
-                    y_id: (FocusType::Button, 0),
+                    b_id: (FocusType::Button, 0),
                     p: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+15, window.y+5, "8'".to_string(), 
                             (state.eq[2] * EQ_FACTOR) as i16, Direction::North)
@@ -136,18 +136,18 @@ impl Hammond {
                         _ => Action::Noop
                     },
                     p_id: (FocusType::Button, 0),
-                    b: |mut out, window, id, state, focus| {
+                    g: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+20, window.y+5, "4'".to_string(), 
                             (state.eq[3] * EQ_FACTOR) as i16, Direction::North)
                     },
-                    b_t: |action, id, state| match action { 
+                    g_t: |action, id, state| match action { 
                         Action::Up => { Action::SetParam("4".to_string(), 
                                                          state.eq[3] + EQ_STEP) },
                         Action::Down => { Action::SetParam("4".to_string(), 
                                                          state.eq[3] - EQ_STEP) },
                         _ => Action::Noop
                     },
-                    b_id: (FocusType::Button, 0),
+                    g_id: (FocusType::Button, 0),
                     w: |mut out, window, id, state, focus| {},
                     w_id: (FocusType::Void, 0),
                     r: |mut out, window, id, state, focus| {},
@@ -159,31 +159,31 @@ impl Hammond {
                     w: |mut out, window, id, state, focus| {},
                     w_id: (FocusType::Void, 0),
 
-                    g: |mut out, window, id, state, focus| {
+                    y: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+25, window.y+5, "2⅔'".to_string(), 
                             (state.eq[4] * EQ_FACTOR) as i16, Direction::North)
                     },
-                    g_t: |action, id, state| match action { 
+                    y_t: |action, id, state| match action { 
                         Action::Up => { Action::SetParam("2.6".to_string(), 
                                                          state.eq[4] + EQ_STEP) },
                         Action::Down => { Action::SetParam("2.6".to_string(), 
                                                          state.eq[4] - EQ_STEP) },
                         _ => Action::Noop
                     }, 
-                    g_id: (FocusType::Button, 0),
+                    y_id: (FocusType::Button, 0),
 
-                    y: |mut out, window, id, state, focus| {
+                    b: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+30, window.y+5, "2'".to_string(), 
                             (state.eq[5] * EQ_FACTOR) as i16, Direction::North)
                     },
-                    y_t: |action, id, state| match action {
+                    b_t: |action, id, state| match action {
                         Action::Up => { Action::SetParam("2".to_string(), 
                                                          state.eq[5] + EQ_STEP) },
                         Action::Down => { Action::SetParam("2".to_string(), 
                                                          state.eq[5] - EQ_STEP) },
                         _ => Action::Noop
                     },
-                    y_id: (FocusType::Button, 0),
+                    b_id: (FocusType::Button, 0),
                     p: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+35, window.y+5, "1⅗'".to_string(), 
                             (state.eq[6] * EQ_FACTOR) as i16, Direction::North)
@@ -196,18 +196,18 @@ impl Hammond {
                         _ => Action::Noop
                     },
                     p_id: (FocusType::Button, 0),
-                    b: |mut out, window, id, state, focus| {
+                    g: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+40, window.y+5, "1⅓'".to_string(), 
                             (state.eq[7] * EQ_FACTOR) as i16, Direction::North)
                     },
-                    b_t: |action, id, state| match action {
+                    g_t: |action, id, state| match action {
                         Action::Up => { Action::SetParam("1.3".to_string(), 
                                                          state.eq[7] + EQ_STEP) },
                         Action::Down => { Action::SetParam("1.3".to_string(), 
                                                          state.eq[7] - EQ_STEP) },
                         _ => Action::Noop
                     },
-                    b_id: (FocusType::Button, 0),
+                    g_id: (FocusType::Button, 0),
                     r: |mut out, window, id, state, focus| {
                         slider::render(out, window.x+45, window.y+5, "1'".to_string(), 
                             (state.eq[8] * EQ_FACTOR) as i16, Direction::North)

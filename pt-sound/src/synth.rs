@@ -43,9 +43,7 @@ pub fn dispatch(store: &mut Store, action: Action) {
 
             for (baridx, barfreq) in BAR_FREQS.iter().enumerate() {
                 let idx = store.sigs.iter().position(|s| s.is_none());
-                let idx = if let Some(idx) = idx { idx } else {
-                    println!("Voice overflow!"); return;
-                };
+                let idx = if let Some(idx) = idx { idx } else { return; }; // VOICE OVERFLOW
                 let hz = store.sample_rate.const_hz((hz * 8. / barfreq) as f64);
                 let s = Sig { sig: hz.sine(), note, targetvol: vol as f32, curvol: 0., baridx };
                 store.sigs[idx] = Some(s);

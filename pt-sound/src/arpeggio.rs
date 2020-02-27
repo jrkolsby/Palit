@@ -5,6 +5,7 @@ use libcommon::{Action, Note, Key, Offset, Param, param_map};
 pub struct Store {
     timer: Offset,
     length: Param,
+    pattern: usize,
     bpm: Param,
     sample_rate: Offset,
     bar: Offset,
@@ -16,6 +17,7 @@ pub fn init() -> Store {
     Store {
         timer: 0,
         length: 4.0, // beats per loop
+        pattern: 0,
         bpm: 127.0,
         sample_rate: 48000,
         bar: calculate_beat(48000, 127.0, 4.0),
@@ -25,21 +27,30 @@ pub fn init() -> Store {
 }
 
 fn calculate_beat(sample_rate: Offset, bpm: Param, length: Param) -> Offset {
-    (sample_rate * 60 / bpm as Offset) * length as Offset
+    ((sample_rate as Param * 60.0 / bpm as Param) * length) as Offset
 }
 
-fn distribute_notes(notes: &mut Vec<Note>, length: Offset) {
-    let len_i = notes.len() as u32;
+fn distribute_notes(notes: &mut Vec<Note>, length: Offset, pattern: usize) {
+    let len_i = notes.len() as f32;
     // given 3 notes in arpeggio, evenly space 6 NoteOn / NoteOff
     // actions, starting with the first event at timer == 0
     // |O  F  O  F  O  F  |
-    let samples_per_event = length / (len_i*2);
-    let mut i = 0;
+    let samples_per_event = length as f32 / (len_i * 2.0);
+    match pattern {
+        0 | 1 => {
+            notes.sort_by(|a, b| match pattern {
+                0 => b.note.partial_cmp(&a.note).unwrap(), // UP DN
+                _ => a.note.partial_cmp(&b.note).unwrap(), // DN UP
+            });
+        },
+        _ => {}
+    }
+    let mut i: f32 = 0.0;
     for mut note in notes.iter_mut() {
-        note.t_in = i*samples_per_event;
-        note.t_out = (i+1)*samples_per_event;
+        note.t_in = (i * samples_per_event) as Offset;
+        note.t_out = ((i + 1.0) * samples_per_event) as Offset;
         note.id = i as u16;
-        i = i+2;
+        i = i + 2.0;
     }
 }
 
@@ -57,20 +68,41 @@ pub fn dispatch(store: &mut Store, action: Action) {
                 note, 
                 vel,
             });
-            distribute_notes(store.notes.borrow_mut(), store.bar);
+            distribute_notes(
+                store.notes.borrow_mut(), 
+                store.bar,
+                store.pattern);
         },
         Action::NoteOff(note) => {
             store.notes.retain(|n| n.note != note);
             if store.notes.len() > 0 {
-                distribute_notes(store.notes.borrow_mut(), store.bar);
+                distribute_notes(
+                    store.notes.borrow_mut(), 
+                    store.bar,
+                    store.pattern);
             }
             store.queue.push(Action::NoteOff(note));
         },
         Action::SetParam(ref key, val) if key == "length" => {
             store.length = val;
-            store.bar = calculate_beat(store.sample_rate, store.bpm, store.length);
+            store.bar = calculate_beat(
+                store.sample_rate, 
+                store.bpm, 
+                store.length);
             if store.notes.len() > 0 {
-                distribute_notes(store.notes.borrow_mut(), store.bar);
+                distribute_notes(
+                    store.notes.borrow_mut(), 
+                    store.bar, 
+                    store.pattern);
+            }
+        }
+        Action::SetParam(ref key, val) if key == "pattern" => {
+            store.pattern = val as usize;
+            if store.notes.len() > 0 {
+                distribute_notes(
+                    store.notes.borrow_mut(), 
+                    store.bar,
+                    store.pattern);
             }
         }
         _ => {}

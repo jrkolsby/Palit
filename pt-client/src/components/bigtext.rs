@@ -19,10 +19,10 @@ const FONT: &str = r#"
 █▟▟▌█ ▐▌▝█▛ █▖▞▜▄▛▜▖▞ ▟▛ ▀▜▛ 
 █▛█▌█▐▐▌▟▛█▖▝█▖ █  ▜▘▟▛  ▗▛  
 ▝ ▝ ▝▘▀ ▀ ▝▘▀▝▀ ▀ ▗▌ ▀▀▀▘▀▀▀ 
-▗▀▙ ▗█ ▟▀▜▖▝▀█▘ ▟█ █▀▀ ▗▛▀ █▀▜▌▟▀▚ ▟▀▜▖▗▀▙ 
-█ ▐▌ █  ▄█▘ ▟▙ ▟▘█ ▀▀▜▖█▄▄  ▗▛ ▜▙▞ ▜▄▟▌█ ▐▌
-▜▖▐▘ █ ▟▛▘ ▄ ▐▌▀▀█▘▄ ▐▌█ ▐▌ █  ▌▝▜▌  ▟▘▜▖▐▘
- ▀▘ ▀▀▀▀▀▀▘▝▀▀   ▀ ▝▀▀ ▝▀▀  ▀  ▝▀▀ ▝▀▘  ▀▘ 
+▗▀▙ ▗█ ▟▀▜▖▝▀█▘ ▟█ █▀▀ ▗▛▀ █▀▜▌▟▀▚ ▟▀▜▖    
+█ ▐▌ █  ▄█▘ ▟▙ ▟▘█ ▀▀▜▖█▄▄  ▗▛ ▜▙▞ ▜▄▟▌    
+▜▖▐▘ █ ▟▛▘ ▄ ▐▌▀▀█▘▄ ▐▌█ ▐▌ █  ▌▝▜▌  ▟▘    
+ ▀▘ ▀▀▀▀▀▀▘▝▀▀   ▀ ▝▀▀ ▝▀▀  ▀  ▝▀▀ ▝▀▘ ▀   
 "#;
 
 pub fn render(out: &mut Screen, x: u16, y: u16, text: String) {
@@ -31,10 +31,9 @@ pub fn render(out: &mut Screen, x: u16, y: u16, text: String) {
     ).collect();
     let mut current_x = x;
     for c in text.chars() {
-        if c == ' ' {
-            current_x += 3; continue;
-        }
         let (_x,_y,_w): (usize,usize,usize) = match c {
+            ' ' => (41,17,2),
+            '.' => (39,17,2),
             '9' => (35,17,4),
             '8' => (31,17,4),
             '7' => (27,17,4),
@@ -101,7 +100,7 @@ pub fn render(out: &mut Screen, x: u16, y: u16, text: String) {
         };
         for dy in _y.._y+4 {
             write!(out, "{}{}", 
-                cursor::Goto(current_x, 1+y+(dy-_y) as u16), 
+                cursor::Goto(current_x, 1 + y + (dy-_y) as u16), 
                 font[dy][_x..(_x + _w)].iter().cloned().collect::<String>()
             ).unwrap();
         }

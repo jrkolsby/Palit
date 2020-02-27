@@ -44,15 +44,15 @@ pub fn new(track_id: u16) -> MultiFocus::<TimelineState> {
             ).unwrap();
         },
 
-        g_id: void_id.clone(),
-        g_t: |action, id, state| match action {
-            Action::SelectG => Action::MuteTrack(
+        b_id: void_id.clone(),
+        b_t: |action, id, state| match action {
+            Action::SelectB => Action::MuteTrack(
                 id.1,
                 !state.tracks.get(&id.1).unwrap().mute
             ),
             _ => Action::Noop,
         },
-        g: |mut out, win, id, state, focus| {
+        b: |mut out, win, id, state, focus| {
             let x = win.x + TRACKS_X + 2;
             let y = win.y + TIMELINE_Y + 2 * id.1;
             write!(out, "{}{}", cursor::Goto(x, y),
@@ -63,15 +63,15 @@ pub fn new(track_id: u16) -> MultiFocus::<TimelineState> {
             ).unwrap();
         },
 
-        b_id: void_id.clone(),
-        b_t: |action, id, state| match action {
-            Action::SelectB => Action::SoloTrack(
+        p_id: void_id.clone(),
+        p_t: |action, id, state| match action {
+            Action::SelectP => Action::SoloTrack(
                 id.1,
                 !state.tracks.get(&id.1).unwrap().solo
             ),
             _ => Action::Noop,
         },
-        b: |mut out, win, id, state, focus| {
+        p: |mut out, win, id, state, focus| {
             let x = win.x + TRACKS_X + 4;
             let y = win.y + TIMELINE_Y + 2 * id.1;
             write!(out, "{}{}", cursor::Goto(x, y),
@@ -82,15 +82,15 @@ pub fn new(track_id: u16) -> MultiFocus::<TimelineState> {
             ).unwrap();
         },
 
-        p_id: void_id.clone(),
-        p_t: |action, id, state| match action {
-            Action::SelectB => Action::SoloTrack(
+        g_id: void_id.clone(),
+        g_t: |action, id, state| match action {
+            Action::SelectG => Action::MonitorTrack(
                 id.1,
-                !state.tracks.get(&id.1).unwrap().solo
+                !state.tracks.get(&id.1).unwrap().monitor
             ),
             _ => Action::Noop,
         },
-        p: |mut out, win, id, state, focus| {
+        g: |mut out, win, id, state, focus| {
             let x = win.x + TRACKS_X + 6;
             let y = win.y + TIMELINE_Y + 2 * id.1;
             write!(out, "{}{}", cursor::Goto(x, y),

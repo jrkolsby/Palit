@@ -18,12 +18,12 @@ pub fn new() -> MultiFocus::<TimelineState> {
         w_id: void_id.clone(),
         w: void_render,
 
-        p_id: void_id.clone(),
-        p_t: void_transform,
-        p: void_render,
+        b_id: void_id.clone(),
+        b_t: void_transform,
+        b: void_render,
 
-        g_id: (FocusType::Param, 0),
-        g_t: |a, id, state| {
+        y_id: (FocusType::Param, 0),
+        y_t: |a, id, state| {
             let zoom = if let Some(z) = state.temp_zoom { z } else { state.zoom };
             match a {
                 Action::Up => Action::Zoom(zoom + 1),
@@ -37,7 +37,7 @@ pub fn new() -> MultiFocus::<TimelineState> {
                 _ => Action::Noop,
             }
         },
-        g: |out, window, id, state, focus| {
+        y: |out, window, id, state, focus| {
             let zoom = if let Some(z) = state.temp_zoom { z } else { state.zoom };
             write!(out, "{} {}X ", cursor::Goto(
                 window.x+window.w - 19, 2
@@ -62,24 +62,24 @@ pub fn new() -> MultiFocus::<TimelineState> {
             tempo::render(out, window.x+window.w-3, window.y, tempo, state.tick);
         },
 
-        y_id: (FocusType::Param, 0),
-        y_t: |a, id, state| match a {
+        g_id: (FocusType::Param, 0),
+        g_t: |a, id, state| match a {
             Action::Up => Action::SetMeter(state.meter_beat + 1, state.meter_note),
             Action::Down => Action::SetMeter(state.meter_beat - 1, state.meter_note),
             _ => Action::Noop,
         },
-        y: |out, window, id, state, focus|
+        g: |out, window, id, state, focus|
             write!(out, "{} {} ", cursor::Goto(
                 window.x+window.w-14, 2
             ), state.meter_beat).unwrap(),
         
-        b_id: (FocusType::Param, 0),
-        b_t: |a, id, state| match a {
+        p_id: (FocusType::Param, 0),
+        p_t: |a, id, state| match a {
             Action::Up => Action::SetMeter(state.meter_beat, state.meter_note + 1),
             Action::Down => Action::SetMeter(state.meter_beat, state.meter_note - 1),
             _ => Action::Noop,
         },
-        b: |out, window, id, state, focus|
+        p: |out, window, id, state, focus|
             write!(out, "{} {} ", cursor::Goto(
                 window.x+window.w-14, 3
             ), state.meter_note).unwrap(),

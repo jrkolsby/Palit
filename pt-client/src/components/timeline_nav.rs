@@ -3,7 +3,7 @@ use termion::cursor;
 use libcommon::Action;
 
 use crate::common::{Screen, MultiFocus, FocusType, ID, Window};
-use crate::common::{REGIONS_X, TIMELINE_Y};
+use crate::common::{REGIONS_X, TIMELINE_Y, TRACKS_X};
 use crate::common::{offset_char, char_offset};
 use crate::views::TimelineState;
 
@@ -29,7 +29,7 @@ pub fn new() -> MultiFocus::<TimelineState> {
         },
         r: |out, window, id, state, focus| 
             write!(out, "{} RECORD ", cursor::Goto(
-                window.x + 2, 
+                window.x + TRACKS_X, 
                 window.y + 1)).unwrap(),
 
         y_id: (FocusType::Button, 0),
@@ -40,11 +40,14 @@ pub fn new() -> MultiFocus::<TimelineState> {
             _ => Action::Noop 
         },
         y: |out, window, id, state, focus| 
-            write!(out, "{} {} ", cursor::Goto(window.x + 2, window.y + 2), if state.loop_mode { 
-                "LOOP ON" 
-            } else { 
-                "LOOP OFF"
-            }).unwrap(),
+            write!(out, "{} {} ", cursor::Goto(
+                window.x + TRACKS_X, 
+                window.y + 3), 
+                if state.loop_mode { 
+                    "LOOP" 
+                } else { 
+                    "LOOP"
+                }).unwrap(),
 
         g_id: (FocusType::Button, 0),
         g_t: |a, id, state| {
@@ -126,8 +129,8 @@ pub fn new() -> MultiFocus::<TimelineState> {
             _ => Action::Noop
         },
         b: |out, window, id, state, focus| 
-            write!(out, "{} + TRACK ", cursor::Goto(
-                window.x + 2, 
+            write!(out, "{} +TRK ", cursor::Goto(
+                window.x + TRACKS_X, 
                 window.y + TIMELINE_Y + 1)).unwrap(),
 
         active: None,
