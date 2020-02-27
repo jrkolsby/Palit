@@ -75,7 +75,7 @@ fn calculate_beat(sample_rate: u32, bpm: u16) -> u32 {
     (60 * sample_rate) / (bpm as u32)
 }
 
-pub fn init() -> Store {
+pub fn init(track_id: u16) -> Store {
     return Store {
         bpm: 127,
         duration: 960000,
@@ -94,10 +94,10 @@ pub fn init() -> Store {
         recording: 0,
         audio_regions: vec![],
         midi_regions: vec![],
-        track_id: 0,
+        track_id,
         out_queue: vec![],
         sample_rate: SAMPLE_HZ as u32,
-        beat: 0,
+        beat: calculate_beat(SAMPLE_HZ as u32, 127),
         zoom: 1,
         // Make SURE not to clone these when implementing undo/redo
         pool: None,
@@ -769,7 +769,7 @@ pub fn compute(store: &mut Store) -> [Output; CHANNELS] {
 }
 
 pub fn read(doc: &mut Element) -> Option<Store> {
-    let mut store = init();
+    let mut store = init(0);
 
     let (mut doc, mut params) = param_map(doc);
     let (mut doc, mut marks) = mark_map(doc);

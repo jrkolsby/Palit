@@ -97,6 +97,7 @@ pub enum Action {
     DelRegion(u16, u16), // Track ID, region ID
     SplitRegion(u16, u16, Offset), // Track ID, region ID
     LoopRegion(u16, u16), // Track ID, region ID
+    AddTrack(u16),
     Save,
     SaveAs(String),
     Noop,
@@ -167,6 +168,7 @@ impl ToString for Action {
             Action::DelRegion(t_id, r_id) => format!("DEL_REGION:{}:{}", t_id, r_id),
             Action::SplitRegion(t_id, r_id, offset) => format!("SPLIT_REGION:{}:{}:{}", t_id, r_id, offset),
             Action::LoopRegion(t_id, r_id) => format!("LOOP_REGION:{}:{}", t_id, r_id),
+            Action::AddTrack(id) => format!("ADD_TRACK:{}", id),
             _ => "NOOP".to_string()
         })
     }
@@ -296,6 +298,7 @@ impl FromStr for Action {
             "LOOP_REGION" => Action::LoopRegion(
                 argv[1].parse().unwrap(),
                 argv[2].parse().unwrap()),
+            "ADD_TRACK" => Action::AddTrack(argv[1].parse().unwrap()),
             _ => return Err(raw.to_string())
         };
         Ok(if is_direct { Action::At(

@@ -200,8 +200,25 @@ fn main() -> Result<(), Box<error::Error>> {
 
         match a {
             Action::At(n_id, action) => {
-                if let Some(id) = operators.get(&n_id) {
-                    patch[*id].dispatch(*action)
+                match *action {
+                    Action::AddTrack(t_id) => {
+                        if let Some(id) = operators.get(&n_id) {
+                            let new_tape = patch.add_node(Module::Tape(tape::init(t_id)));
+                            patch.add_connection(*id, new_tape);
+                            match patch[*id] {
+                                Module::Operator(_, ref mut anchors, _) => {
+                                    anchors.push(new_tape); // INPUT
+                                    anchors.push(new_tape); // OUTPUT
+                                },
+                                _ => {}
+                            }
+                        }
+                    },
+                    direct_action => {
+                        if let Some(id) = operators.get(&n_id) {
+                            patch[*id].dispatch(direct_action)
+                        }
+                    }
                 }
             },
             Action::SetMeter(_, _) |

@@ -193,6 +193,18 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
                 Action::MonitorTrack(id, is_on) => {
                     let track = new_tracks.get_mut(&id).unwrap();
                     track.monitor = is_on;
+                },
+                Action::AddTrack(id) => {
+                    let mut new_index = new_tracks.iter().fold(0, |max, (_,t)| 
+                        if t.index > max {t.index} else {max}) + 1;
+                    new_tracks.insert(id, Track {
+                        mute: false,
+                        solo: false,
+                        record: 0,
+                        monitor: false,
+                        index: new_index,
+                        id: id,
+                    });
                 }
                 _ => {}
             };
@@ -444,7 +456,7 @@ impl Layer for Timeline {
 
         // Actions which affect focii
         let (focus, default) = match _action.clone() {
-            // Move focus to the left when a region is deleted
+            // Generate focii, default, and move focus to the left
             a @ Action::DelRegion(_,_) |
             a @ Action::SplitRegion(_,_,_) => {
                 self.focii = generate_focii(
@@ -453,7 +465,8 @@ impl Layer for Timeline {
                     &self.state.midi_regions);
                 ((self.state.focus.0 - 1, self.state.focus.1), Some(a))
             },
-            // Regenerate to make new regions visible and default
+            // Generate focii and default 
+            a @ Action::AddTrack(_) |
             a @ Action::LoopRegion(_,_) => {
                 self.focii = generate_focii(
                     &self.state.tracks, 
@@ -461,7 +474,7 @@ impl Layer for Timeline {
                     &self.state.midi_regions);
                 (self.state.focus, Some(a))
             },
-            // Regenerate to make new regions visible 
+            // Generate focii but don't default
             Action::AddMidiRegion(_, _, _, _) |
             Action::AddRegion(_, _, _, _, _, _, _) => {
                 self.focii = generate_focii(
@@ -555,7 +568,8 @@ impl Layer for Timeline {
                     counter += 1;
                 }
                 (self.state.focus, Some(Action::ShowAnchors(anchors)))
-            }
+            },
+            a @ Action::AddTrack(_) |
             a @ Action::MoveRegion(_,_,_) |
             a @ Action::Zoom(_) |
             a @ Action::SetLoop(_,_) |

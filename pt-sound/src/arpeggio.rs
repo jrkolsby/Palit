@@ -72,7 +72,6 @@ pub fn dispatch(store: &mut Store, action: Action) {
             if store.notes.len() > 0 {
                 distribute_notes(store.notes.borrow_mut(), store.bar);
             }
-            eprintln!("new bar {}", store.bar);
         }
         _ => {}
     }

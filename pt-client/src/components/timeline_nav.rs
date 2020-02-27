@@ -28,7 +28,9 @@ pub fn new() -> MultiFocus::<TimelineState> {
             _ => Action::Noop 
         },
         r: |out, window, id, state, focus| 
-            write!(out, "{} RECORD ", cursor::Goto(window.x + 2, window.y)).unwrap(),
+            write!(out, "{} RECORD ", cursor::Goto(
+                window.x + 2, 
+                window.y + 1)).unwrap(),
 
         y_id: (FocusType::Button, 0),
         y_t: |a, id, state| match a { 
@@ -114,9 +116,19 @@ pub fn new() -> MultiFocus::<TimelineState> {
             }
         },
 
-        b_id: void_id.clone(),
-        b_t: void_transform,
-        b: void_render,
+        b_id: (FocusType::Button, 0),
+        b_t: |a, id, state| match a {
+            Action::SelectB => {
+                let mut new_id = state.tracks.iter().fold(0, |max, (id,_)| 
+                    if *id > max {*id} else {max}) + 1;
+                Action::AddTrack(new_id)
+            },
+            _ => Action::Noop
+        },
+        b: |out, window, id, state, focus| 
+            write!(out, "{} + TRACK ", cursor::Goto(
+                window.x + 2, 
+                window.y + TIMELINE_Y + 1)).unwrap(),
 
         active: None,
     }

@@ -34,7 +34,7 @@ pub fn write(state: TimelineState) -> Element {
             let track_id = r_id / REGIONS_PER_TRACK;
             let local_id = r_id % REGIONS_PER_TRACK;
 
-            if audio_region.track == track_id {
+            if audio_region.track == *t_id {
                 let mut audio_el = Element::new("audio");
                 audio_el.attributes.insert("id".to_string(), local_id.to_string());
                 audio_el.attributes.insert("asset".to_string(), audio_region.asset_id.to_string());
@@ -49,7 +49,7 @@ pub fn write(state: TimelineState) -> Element {
             let track_id = r_id / REGIONS_PER_TRACK;
             let local_id = r_id % REGIONS_PER_TRACK;
 
-            if midi_region.track == track_id {
+            if midi_region.track == *t_id {
                 let mut midi_el = Element::new("midi");
                 midi_el.attributes.insert("id".to_string(), local_id.to_string());
                 midi_el.attributes.insert("offset".to_string(), midi_region.offset.to_string());
