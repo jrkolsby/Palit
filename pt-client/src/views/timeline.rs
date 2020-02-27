@@ -211,10 +211,12 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
             new_tracks
         },
         assets: match action.clone() {
-            Action::AddRegion(_, _, asset_id, _, duration, asset_in, src) => {
+            Action::AddRegion(t_id, _, asset_id, _, duration, asset_in, src) => {
                 let mut new_assets = state.assets.clone();
-                if let Some(mut old_asset) = new_assets.get_mut(&asset_id) {
-                    // Do not clip assets, only add to them
+                let global_id = t_id * REGIONS_PER_TRACK + asset_id;
+                if let Some(mut old_asset) = new_assets.get_mut(&global_id) {
+                    // Do not clip assets when a region is split, 
+                    // ... should only ever add to them
                     if old_asset.duration < duration {
                         old_asset.duration = duration.clone();
                         old_asset.waveform = generate_partial_waveform(
@@ -226,7 +228,7 @@ fn reduce(state: TimelineState, action: Action) -> TimelineState {
                         );
                     }
                 } else {
-                    new_assets.insert(asset_id, Asset {
+                    new_assets.insert(global_id, Asset {
                         src: src.clone(),
                         duration: duration.clone(),
                         channels: 2,

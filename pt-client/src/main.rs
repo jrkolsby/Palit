@@ -2,6 +2,11 @@ extern crate libcommon;
 extern crate libc;
 extern crate termion;
 
+mod views;
+mod common;
+mod components; 
+mod modules;
+
 use std::io::{Write, Stdout, stdout, BufWriter};
 use std::io::prelude::*;
 use std::fs::{OpenOptions, File};
@@ -18,12 +23,6 @@ use termion::raw::{IntoRawMode, RawTerminal};
 use libcommon::{Action, Module, Anchor, PALIT_ROOT};
 use libcommon::{Document, read_document, write_document};
 
-// NOTE: These need to be here
-mod views;
-mod common;
-mod components; 
-mod modules;
-
 use views::{Layer, 
     Home, 
     Timeline, 
@@ -39,6 +38,7 @@ use views::{Layer,
 };
 
 use common::{Screen, MARGIN_D0, MARGIN_D1, MARGIN_D2};
+use common::{Color, write_bg, write_fg};
 
 const DEFAULT_ROUTE_ID: u16 = 29200;
 const DEFAULT_HOME_ID: u16 = 29201;
@@ -64,6 +64,9 @@ fn render(stdout: &mut Screen, layers: &VecDeque<(u16, Box<Layer>)>) {
         else { break }
     };
     for i in bottom..(*layers).len() {
+        // Make sure to cleanup any untidy layers
+        write_fg(stdout, Color::White);
+        write_bg(stdout, Color::Black);
         layers[i].1.render(stdout, i == target);
     }
 }

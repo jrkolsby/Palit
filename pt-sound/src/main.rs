@@ -5,6 +5,14 @@ extern crate sample;
 extern crate hound;
 extern crate chrono;
 
+mod core;
+mod midi;
+mod synth;
+mod tape;
+mod chord;
+mod arpeggio;
+mod plugin;
+
 use std::{iter, error};
 use std::fs::{OpenOptions, File};
 use std::os::unix::fs::OpenOptionsExt;
@@ -15,14 +23,6 @@ use libcommon::{Action, Key, Document, read_document, param_map};
 use dsp::{NodeIndex, Frame, FromSample, Graph, Node, Sample, Walker};
 use xmltree::Element;
 use sample::signal;
-
-mod core;
-mod midi;
-mod synth;
-mod tape;
-mod chord;
-mod arpeggio;
-mod plugin;
 
 use crate::core::{event_loop, Module, Output, CHANNELS};
 

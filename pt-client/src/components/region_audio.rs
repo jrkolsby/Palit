@@ -20,7 +20,8 @@ pub fn new(region_id: u16) -> MultiFocus::<TimelineState> {
         w_id: (FocusType::Region, region_id),
         w: |mut out, window, id, state, focus| {
             let region = state.regions.get(&id.1).unwrap();
-            let waveform = &state.assets.get(&region.asset_id).unwrap().waveform;
+            let global_asset_id = region.track * REGIONS_PER_TRACK + region.asset_id;
+            let waveform = &state.assets.get(&global_asset_id).unwrap().waveform;
 
             let region_offset = char_offset(
                 region.offset,
