@@ -34,7 +34,7 @@ pub struct ModulesState {
 impl Modules {
     pub fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
         let mut core: Vec<String> = CORE_MODULES.iter().map(|a| a.to_string()).collect();
-        let mut modules: Vec<String> = get_files(PALIT_MODULES, core).unwrap();
+        let mut modules: Vec<String> = get_files(PALIT_MODULES, "dsp", core).unwrap();
         modules = modules.iter().filter_map(|m| {
             let parts: Vec<&str> = m.split(".").collect();
             if parts.len() < 2 {

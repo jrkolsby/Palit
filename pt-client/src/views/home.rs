@@ -49,7 +49,7 @@ fn reduce(state: HomeState, action: Action) -> HomeState {
 impl Home {
     pub fn new(x: u16, y: u16, width: u16, height: u16) -> Self {
 
-        let projects = get_files(PALIT_PROJECTS, vec![]).unwrap();
+        let projects = get_files(PALIT_PROJECTS, "xml", vec![]).unwrap();
 
         // Initialize State
         let initial_state: HomeState = HomeState {

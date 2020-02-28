@@ -11,7 +11,7 @@
       <mark name="seq_out" value="48000" />
       <mark value="0" name="loop_in" />
       <mark value="0" name="loop_out" />
-      <asset id="3001" size="691584" src="./assets/1582762616_3.wav" />
+      <asset id="3001" size="691584" src="./assets/blackbird.wav" />
       <track id="1">
         <midi offset="0" duration="488320" id="2">
           <note id="0" vel="1" t_in="45824" t_out="52608" key="60" />
