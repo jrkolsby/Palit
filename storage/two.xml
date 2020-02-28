@@ -34,9 +34,9 @@
             <param value="4" name="meter_beat" />
             <param value="4" name="meter_note" />
             <param value="127" name="bpm" />
-            <asset id="0" size="1488000" src="/usr/local/palit/assets/Who.wav" />
-            <asset id="1" size="336000" src="/usr/local/palit/assets/Loop.wav" />
-            <asset id="2" size="1728000" src="/usr/local/palit/assets/Keyboard.wav" />
+            <asset id="0" size="1488000" src="./assets/Who.wav" />
+            <asset id="1" size="336000" src="./assets/Loop.wav" />
+            <asset id="2" size="1728000" src="./assets/Keyboard.wav" />
             <track id="1">
                 <audio id="0" asset="0" in="0" duration="1488000" offset="0" />
                 <audio id="1" asset="2" in="0" duration="148800" offset="1808000" />

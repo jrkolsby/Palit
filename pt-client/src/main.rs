@@ -123,16 +123,23 @@ fn add_module(
         },
         name @ "chord" => { eprintln!("Unimplemented module {}", name); },
         plugin => {
-            let cmd = format!("sudo make plugin name={} &> /dev/null", plugin);
+            let cmd = format!(r#"
+                ./bin/faust -lang c -cn mydsp ./modules/{name}.dsp > ./modules/_plugin_part.c; 
+                cat ./modules/faust.h ./modules/_plugin_part.c > ./modules/_plugin.c; 
+                gcc -c -fpic ./modules/_plugin.c -o ./modules/_plugin.o; 
+                gcc -shared -o ./modules/{name}.so ./modules/_plugin.o; 
+                rm ./modules/_plugin_part.c; 
+                rm ./modules/_plugin.o;
+                rm ./modules/_plugin.c"#, name=plugin);
             // Run make as arg to sh in parent directory
-            let result = Command::new("sh").current_dir("..").arg("-c").arg(cmd).status()
+            let result = Command::new("sh").arg("-c").arg(cmd).status()
                 .expect("failed to run plugin compiler");
             if result.success() {
                 add_layer(layers, 
                     Box::new(Plugin::new(1, 1, size.0, size.1, (el).to_owned())), id)
             } else {
                 // Make sure that plugin.so exists by the time we leave this function, or panic
-                panic!("Failed to make plugin name={}", plugin);
+                panic!("Failed to compile {}", plugin);
                 //add_layer(a, Box::new(Plugin::new(1, 1, size.0, size.1, (el).to_owned())), id)
             }
         }

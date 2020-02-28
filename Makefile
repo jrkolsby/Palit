@@ -1,40 +1,42 @@
-homedir = /usr/local/palit
+.PHONY : clean
+clean:
+	rm -f ./dist/bin/pt-client;
+	rm -f ./dist/bin/pt-sound;
+	rm -f ./dist/bin/pt-input;
+
+.PHONY : dist
+dist: clean
+	cd ./pt-client/ && cargo build --release;
+	cd ./pt-sound/ && cargo build --release
+	cd ./pt-input/ && make sniffMk;
+	mv -f ./pt-client/target/release/pt-client ./dist/bin/;
+	mv -f ./pt-sound/target/release/pt-sound ./dist/bin/;
+	mv -f ./pt-input/bin/sniffMk ./dist/bin/pt-input;
 
 .PHONY : dev
-dev: ipc
-	tmux split-window -v "cat /tmp/pt-debug" && tmux split-window -v "cd pt-sound && make dev" && tmux split-window -v "cd pt-input && make dev" && cd pt-client/ && sudo cargo run --release 2> /tmp/pt-debug
-
-.PHONY : demo
-demo: ipc
-	cd pt-input && make dev &> /tmp/pt-debug &
-	cd pt-sound && make dev &> /tmp/pt-debug &
-	cd pt-client && cargo run --release 2> /tmp/pt-debut
+dev: ipc dist
+	tmux split-window -v "cat /tmp/pt-debug" && \
+	tmux split-window -v "cd storage && ../dist/bin/pt-sound" && \
+	tmux split-window -v "cd storage && sudo ../dist/bin/pt-input 1> /tmp/pt-client 2> /tmp/pt-sound" && \
+	cd storage && ../dist/bin/pt-client 2> /tmp/pt-debug
 
 .PHONY : debug
 debug: ipc
-	tmux split-window -v "cat /tmp/pt-debug" && tmux split-window -v "cd pt-sound && sudo RUST_BACKTRACE=1 make debug" && tmux split-window -v "cd pt-input && RUST_BACKTRACE=1 cargo run" && cd pt-client/ && sudo RUST_BACKTRACE=1 cargo run 2> /tmp/pt-debug
+	tmux split-window -v "cat /tmp/pt-debug" && \
+	tmux split-window -v "cd pt-sound && sudo RUST_BACKTRACE=1 make debug" && \
+	tmux split-window -v "cd pt-input && RUST_BACKTRACE=1 cargo run" && \
+	cd pt-client/ && sudo RUST_BACKTRACE=1 cargo run 2> /tmp/pt-debug
 
 .PHONY : prod
 prod: 
-	tmux split-window -v "cat /tmp/pt-debug" && tmux split-window -v "cd pt-sound && make prod" && tmux split-window -v "cd pt-input && cargo build && sudo ./target/debug/pt-input" && cd pt-client/ && cargo run --release 2> /tmp/pt-debug
-
-.PHONY : tick
-tick:
-	watch -n .1 'printf %s TICK > /tmp/pt-client'
+	tmux split-window -v "cat /tmp/pt-debug" && \
+	tmux split-window -v "cd pt-sound && make prod" && \
+	tmux split-window -v "cd pt-input && cargo build && sudo ./target/debug/pt-input" && \
+	cd pt-client/ && cargo run --release 2> /tmp/pt-debug
 
 .PHONY : sound
 sound:
 	cd pt-sound && cargo run --release NVidia 48000 128
-
-.PHONY : plugin
-plugin: 
-	faust -lang c -cn mydsp $(homedir)/modules/$(name).dsp > $(homedir)/modules/_plugin_part.c;
-	cat $(homedir)/modules/faust.h $(homedir)/modules/_plugin_part.c > $(homedir)/modules/_plugin.c;
-	gcc -c -fpic $(homedir)/modules/_plugin.c -o $(homedir)/modules/_plugin.o;
-	gcc -shared -o $(homedir)/modules/$(name).so $(homedir)/modules/_plugin.o;
-	rm $(homedir)/modules/_plugin_part.c;
-	rm $(homedir)/modules/_plugin.c;
-	rm $(homedir)/modules/_plugin.o;
 
 .PHONY : ipc
 ipc : 

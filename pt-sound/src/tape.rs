@@ -296,7 +296,9 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     let mut new_asset_id = store.audio_regions.iter().fold(0, |max, r| 
                         if r.asset_id > max {r.asset_id} else {max}) + 1;
                     let timestamp = chrono::offset::Local::now().format("%s").to_string();
-                    let new_src = format!("/usr/local/palit/assets/{}_{}.wav", 
+                    let src_dir = std::fs::canonicalize(std::path::Path::new(".")).unwrap();
+                    let new_src = format!("{}/assets/{}_{}.wav", 
+                        src_dir.into_os_string().into_string().unwrap(), 
                         timestamp, store.track_id);
                     let mut region_guard = store.rec_region.write().unwrap();
                     *region_guard = Some(AudioRegion {

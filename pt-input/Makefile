@@ -6,6 +6,10 @@ dev: sniffMk
 sniffMk: 
 	clang -o ./bin/sniffMK ./src/sniffMK.m -framework Cocoa -framework Carbon
 
+.PHONY : cocoasudo
+cocoasudo:
+	clang -o ./bin/cocoasudo ./src/cocoasudo.m -framework Cocoa -framework Carbon
+
 .PHONY : prod
 prod: 
 	cargo build

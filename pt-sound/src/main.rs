@@ -144,7 +144,7 @@ fn add_module(
             },
             plugin => {
                 // FIXME: use current directory
-                let store = plugin::init(format!("/usr/local/palit/modules/{}.so", plugin));
+                let store = plugin::init(format!("./modules/{}.so", plugin));
                 let plugin = patch.add_node(Module::Plugin(store));
                 let operator = patch.add_node(Module::Operator(vec![], 
                     vec![plugin, plugin], id.clone()

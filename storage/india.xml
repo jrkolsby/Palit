@@ -16,7 +16,7 @@
       <mark name="seq_out" value="48000" />
       <mark name="loop_in" value="0" />
       <mark value="317478" name="loop_out" />
-      <asset id="1" size="715008" src="/usr/local/palit/assets/1582602925_1.wav" />
+      <asset id="1" size="715008" src="./assets/1582602925_1.wav" />
       <track id="1">
         <audio offset="43819" id="3" asset="1" in="441909" duration="273099" />
       </track>

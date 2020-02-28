@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <meta samplerate="48000" />
+  <title>duet</title>
+  <modules>
+    <timeline id="29204">
+      <param value="127" name="bpm" />
+      <param value="4" name="meter_beat" />
+      <param value="4" name="meter_note" />
+      <mark name="seq_in" value="0" />
+      <mark name="seq_out" value="48000" />
+      <mark value="0" name="loop_in" />
+      <mark value="0" name="loop_out" />
+      <asset id="3001" size="691584" src="./assets/1582762616_3.wav" />
+      <track id="1">
+        <midi offset="0" duration="488320" id="2">
+          <note id="0" vel="1" t_in="45824" t_out="52608" key="60" />
+          <note t_out="93056" vel="1" t_in="83328" id="1" key="60" />
+          <note t_in="96384" vel="1" t_out="106368" id="2" key="64" />
+          <note id="3" key="64" vel="1" t_out="121344" t_in="115072" />
+          <note t_out="140800" id="4" vel="1" key="65" t_in="131200" />
+          <note t_out="176896" id="5" t_in="170368" vel="1" key="65" />
+          <note t_in="182912" key="62" id="6" vel="1" t_out="188800" />
+          <note t_out="205568" id="7" key="62" t_in="198400" vel="1" />
+          <note key="67" t_in="214016" id="8" t_out="223232" vel="1" />
+          <note vel="1" key="67" t_in="250752" t_out="256640" id="9" />
+          <note key="67" vel="1" t_out="270080" id="10" t_in="262784" />
+          <note t_out="284800" key="69" vel="1" t_in="277888" id="11" />
+          <note key="71" vel="1" id="12" t_out="301952" t_in="294528" />
+          <note key="72" vel="1" t_in="309760" id="13" t_out="315904" />
+          <note t_out="332672" key="69" id="14" vel="1" t_in="326528" />
+          <note t_in="344832" id="15" vel="1" t_out="352512" key="64" />
+          <note t_in="358912" t_out="365056" id="16" key="65" vel="1" />
+          <note key="67" t_in="375040" vel="1" id="17" t_out="382720" />
+          <note key="69" id="18" t_in="391296" vel="1" t_out="397312" />
+          <note t_in="405376" t_out="413952" id="19" key="60" vel="1" />
+          <note vel="1" t_out="442368" key="60" id="20" t_in="436864" />
+          <note id="21" key="60" t_in="448896" t_out="453760" vel="1" />
+          <note t_out="470784" id="22" t_in="463232" key="64" vel="1" />
+          <note key="67" id="23" t_in="465024" t_out="471808" vel="1" />
+          <note t_in="479488" t_out="488320" key="60" id="24" vel="1" />
+        </midi>
+      </track>
+      <track id="2">
+        <midi duration="385424" id="2" offset="0">
+          <note key="60" t_out="119552" vel="1" t_in="41600" id="0" />
+          <note t_in="41856" t_out="120320" id="2" vel="1" key="64" />
+          <note t_out="208256" id="4" key="71" t_in="121088" vel="1" />
+          <note id="1" vel="1" t_out="208896" key="67" t_in="41856" />
+          <note t_in="121344" vel="1" id="5" t_out="210176" key="74" />
+          <note t_out="274944" t_in="211584" vel="1" id="8" key="60" />
+          <note id="7" t_out="277248" vel="1" key="64" t_in="208896" />
+          <note id="6" t_in="208896" key="69" t_out="278400" vel="1" />
+          <note t_in="275328" key="65" t_out="295552" vel="1" id="9" />
+          <note key="62" vel="1" id="10" t_in="277248" t_out="299136" />
+          <note t_out="300928" vel="1" t_in="277248" id="11" key="71" />
+          <note t_out="348416" id="13" t_in="298624" vel="1" key="64" />
+          <note id="3" key="67" vel="1" t_out="349824" t_in="120320" />
+          <note id="18" t_in="350848" vel="1" t_out="385424" key="69" />
+          <note key="65" vel="1" id="17" t_in="348416" t_out="385424" />
+          <note t_out="385424" key="72" vel="1" t_in="300672" id="14" />
+          <note key="67" t_out="385424" t_in="300800" id="15" vel="1" />
+        </midi>
+      </track>
+      <track id="3">
+        <audio in="0" asset="1" duration="691584" offset="0" id="1" />
+      </track>
+    </timeline>
+    <nylonGuitarMIDI id="29205" />
+    <hammond id="29206">
+      <param name="16" value="0.004999999" />
+      <param name="5.3" value="0.004999999" />
+      <param value="0.0029999986" name="8" />
+      <param value="-0.0020000017" name="4" />
+      <param value="0.003999999" name="2.6" />
+      <param value="0.003999999" name="2" />
+      <param value="0.003999999" name="1.6" />
+      <param name="1.3" value="0.004999999" />
+      <param value="0.004999999" name="1" />
+    </hammond>
+    <keyboard id="104" />
+    <patch id="29200">
+      <route id="1">
+        <output index="4" module="29204" />
+      </route>
+      <route id="4">
+        <input module="29206" index="1" />
+      </route>
+      <route id="2">
+        <output module="104" index="0" />
+      </route>
+      <route id="3">
+        <input index="1" module="29205" />
+      </route>
+      <route id="5">
+        <output index="0" module="29206" />
+        <output module="29205" index="0" />
+      </route>
+    </patch>
+  </modules>
+</project>

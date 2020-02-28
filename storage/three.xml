@@ -38,12 +38,12 @@
             <param value="4" name="meter_beat" />
             <param value="4" name="meter_note" />
             <param value="127" name="bpm" />
-            <asset id="1000" size="1488000" src="/usr/local/palit/assets/Who.wav" />
-            <asset id="2000" size="1488000" src="/usr/local/palit/assets/Who.wav" />
-            <asset id="1001" size="336000" src="/usr/local/palit/assets/Loop.wav" />
-            <asset id="1002" size="1728000" src="/usr/local/palit/assets/Keyboard.wav" />
-            <asset id="2002" size="1728000" src="/usr/local/palit/assets/Keyboard.wav" />
-            <asset id="3002" size="1728000" src="/usr/local/palit/assets/Keyboard.wav" />
+            <asset id="1000" size="1488000" src="./assets/Who.wav" />
+            <asset id="2000" size="1488000" src="./assets/Who.wav" />
+            <asset id="1001" size="336000" src="./assets/Loop.wav" />
+            <asset id="1002" size="1728000" src="./assets/Keyboard.wav" />
+            <asset id="2002" size="1728000" src="./assets/Keyboard.wav" />
+            <asset id="3002" size="1728000" src="./assets/Keyboard.wav" />
             <track id="1">
                 <audio id="0" asset="0" in="0" duration="1488000" offset="0" />
                 <audio id="1" asset="2" in="0" duration="148800" offset="1808000" />

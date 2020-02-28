@@ -2,8 +2,8 @@ use std::path::Path;
 use std::fs::{self, File};
 use std::io;
 
-pub const PALIT_PROJECTS: &str = "/usr/local/palit/";
-pub const PALIT_MODULES: &str = "/usr/local/palit/modules/";
+pub const PALIT_PROJECTS: &str = "./";
+pub const PALIT_MODULES: &str = "./modules/";
 
 pub fn get_files(path: &str, mut collection: Vec<String>) -> io::Result<Vec<String>> {
     let dir = Path::new(path);

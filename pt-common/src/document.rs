@@ -11,7 +11,7 @@ pub struct Document {
     pub modules: Vec<(u16, Element)>,
 }
 
-pub const PALIT_ROOT: &str = "/usr/local/palit/";
+pub const PALIT_ROOT: &str = "./";
 
 pub fn param_map(doc: &mut Element) -> (&mut Element, HashMap<String, Param>) {
     let mut params: HashMap<String, Param> = HashMap::new();
@@ -108,7 +108,7 @@ pub fn write_document(doc: &mut Document) {
     } 
     root.children.push(modules);
 
-    let doc_path: String = format!("{}{}_WRITE.xml", PALIT_ROOT, doc.src);
+    let doc_path: String = format!("{}{}.xml", PALIT_ROOT, doc.src);
     root.write_with_config(
         fs::File::create(doc_path).unwrap(), 
         EmitterConfig::new()
