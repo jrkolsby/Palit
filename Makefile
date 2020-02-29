@@ -12,31 +12,33 @@ dist: clean
 	mv -f ./pt-client/target/release/pt-client ./dist/bin/;
 	mv -f ./pt-sound/target/release/pt-sound ./dist/bin/;
 	mv -f ./pt-input/bin/sniffMk ./dist/bin/pt-input;
+	cp -f ./storage/bin/* ./dist/bin/
+
+.PHONY : dist-debug
+dist-debug: clean
+	cd ./pt-client/ && cargo build
+	cd ./pt-sound/ && cargo build
+	cd ./pt-input/ && make sniffMk;
+	mv -f ./pt-client/target/debug/pt-client ./dist/bin/;
+	mv -f ./pt-sound/target/debug/pt-sound ./dist/bin/;
+	mv -f ./pt-input/bin/sniffMk ./dist/bin/pt-input;
+	cp -f ./storage/bin/* ./dist/bin/
 
 .PHONY : dev
 dev: ipc dist
+	tmux set remain-on-exit on && \
 	tmux split-window -v "cat /tmp/pt-debug" && \
 	tmux split-window -v "cd storage && ../dist/bin/pt-sound" && \
 	tmux split-window -v "cd storage && sudo ../dist/bin/pt-input 1> /tmp/pt-client 2> /tmp/pt-sound" && \
 	cd storage && ../dist/bin/pt-client 2> /tmp/pt-debug
 
 .PHONY : debug
-debug: ipc
+debug: ipc dist-debug
+	tmux set remain-on-exit on && \
 	tmux split-window -v "cat /tmp/pt-debug" && \
-	tmux split-window -v "cd pt-sound && sudo RUST_BACKTRACE=1 make debug" && \
-	tmux split-window -v "cd pt-input && RUST_BACKTRACE=1 cargo run" && \
-	cd pt-client/ && sudo RUST_BACKTRACE=1 cargo run 2> /tmp/pt-debug
-
-.PHONY : prod
-prod: 
-	tmux split-window -v "cat /tmp/pt-debug" && \
-	tmux split-window -v "cd pt-sound && make prod" && \
-	tmux split-window -v "cd pt-input && cargo build && sudo ./target/debug/pt-input" && \
-	cd pt-client/ && cargo run --release 2> /tmp/pt-debug
-
-.PHONY : sound
-sound:
-	cd pt-sound && cargo run --release NVidia 48000 128
+	tmux split-window -v "cd storage && ../dist/bin/pt-sound" && \
+	tmux split-window -v "cd storage && sudo ../dist/bin/pt-input 1> /tmp/pt-client 2> /tmp/pt-sound" && \
+	cd storage && ../dist/bin/pt-client 2> /tmp/pt-debug
 
 .PHONY : ipc
 ipc : 

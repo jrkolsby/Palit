@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project>
+  <meta samplerate="48000" />
+  <title>mmmmmmmmmmmm</title>
+  <modules>
+    <nylonGuitarMIDI id="29204" />
+    <keyboard id="104" />
+    <patch id="29200">
+      <route id="3">
+        <output module="29205" index="0" />
+        <input index="1" module="29204" />
+      </route>
+      <route id="2">
+        <output module="104" index="0" />
+        <input module="29205" index="1" />
+      </route>
+      <route id="1">
+        <output module="29204" index="0" />
+      </route>
+    </patch>
+    <timeline id="29205">
+      <param value="127" name="bpm" />
+      <param value="4" name="meter_beat" />
+      <param value="4" name="meter_note" />
+      <mark name="seq_in" value="0" />
+      <mark value="48000" name="seq_out" />
+      <mark name="loop_in" value="29271" />
+      <mark value="255630" name="loop_out" />
+      <track id="1">
+        <midi id="4" offset="92056" duration="4294904803">
+          <note key="62" id="0" vel="1" t_in="245400" t_out="29563" />
+        </midi>
+        <midi duration="225920" offset="27210" id="6">
+          <note vel="1" key="62" t_in="246730" id="0" t_out="253130" />
+        </midi>
+        <midi id="2" offset="0" duration="267520">
+          <note t_in="48896" vel="1" t_out="56448" id="0" key="64" />
+          <note key="60" vel="1" t_in="49408" id="1" t_out="56960" />
+          <note id="2" key="62" vel="1" t_out="68864" t_in="63360" />
+          <note vel="1" key="65" t_out="69376" id="3" t_in="63360" />
+          <note id="5" vel="1" t_out="82944" t_in="77440" key="67" />
+          <note t_out="82944" vel="1" id="4" key="64" t_in="76928" />
+          <note key="69" t_in="92160" t_out="98560" vel="1" id="6" />
+          <note t_in="93568" key="65" id="7" vel="1" t_out="99072" />
+          <note t_in="113664" id="9" key="71" t_out="120064" vel="1" />
+          <note t_out="120704" t_in="113152" key="67" id="8" vel="1" />
+          <note t_out="142848" vel="1" id="10" key="72" t_in="135808" />
+          <note vel="1" key="69" t_out="142848" t_in="136320" id="11" />
+          <note key="71" vel="1" t_out="168704" id="12" t_in="164352" />
+          <note t_out="169856" id="13" vel="1" t_in="164992" key="67" />
+          <note id="15" vel="1" key="67" t_in="190336" t_out="194688" />
+          <note id="14" vel="1" key="64" t_in="189824" t_out="195200" />
+          <note id="17" t_out="209792" vel="1" key="65" t_in="204416" />
+          <note t_in="203776" vel="1" key="69" t_out="210816" id="16" />
+          <note id="19" t_in="225408" t_out="229248" vel="1" key="64" />
+          <note vel="1" key="67" id="18" t_in="224256" t_out="229760" />
+          <note key="65" t_out="249728" vel="1" id="20" t_in="244352" />
+          <note id="21" vel="1" t_in="260480" t_out="266496" key="64" />
+          <note id="22" vel="1" key="60" t_in="261120" t_out="267520" />
+        </midi>
+      </track>
+    </timeline>
+  </modules>
+</project>

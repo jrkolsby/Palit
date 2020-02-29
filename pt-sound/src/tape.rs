@@ -365,7 +365,8 @@ pub fn dispatch(store: &mut Store, a: Action) {
                     // Mode 2 (AUDIO)
                     2 => {
                         if store.pool.is_none() {
-                            store.pool = Some(Pool::new(30, || vec![[0.0; CHANNELS]; BUF_SIZE]));
+                            // Allocate a three minute buffer pool (120 * 0.5s == 1min)
+                            store.pool = Some(Pool::new(360, || vec![[0.0; CHANNELS]; BUF_SIZE]));
                         }
                         if store.writer.is_none() {
                             // https://stackoverflow.com/questions/42043823/design-help-threading-within-a-struct

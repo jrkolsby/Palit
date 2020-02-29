@@ -146,11 +146,11 @@ fn reduce(state: PluginState, action: Action) -> PluginState {
             Action::DeclareAnchors(ins, outs) => {
                 let mut new_anchors = vec![];
                 // Outputs first
-                for i in 0..(outs / 2) {
-                    new_anchors.push((format!("Audio Out {}", i), false))
+                if outs > 0 {
+                    new_anchors.push((format!("Audio Out {}", new_anchors.len()), false))
                 }
-                for i in 0..(ins / 2) {
-                    new_anchors.push((format!("Audio In {}", i), true))
+                if ins > 0 {
+                    new_anchors.push((format!("Audio In {}", new_anchors.len()), true))
                 }
                 new_anchors
             },
@@ -197,7 +197,7 @@ impl Layer for Plugin {
             self.state.focus.clone(), 
             &self.focii, &self.state, false, !target);
 
-        write!(out, "{}FAUST PLUGIN", cursor::Goto(win.x + PADDING.0, win.y + 2));
+        write!(out, "{}{}", cursor::Goto(win.x + PADDING.0, win.y + 2), self.name);
     }
     fn dispatch(&mut self, action: Action) -> Action {
         // Let the focus transform the action 

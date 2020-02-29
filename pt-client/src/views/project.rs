@@ -113,9 +113,15 @@ fn generate_focii(modules: &Vec<Module>) -> Vec<Vec<MultiFocus<ProjectState>>> {
     focii.push(vec![MultiFocus::<ProjectState> {
         w_id: (FocusType::Void, 0),
         w: VOID_RENDER,
-        p_id: (FocusType::Void, 0),
-        p: VOID_RENDER,
-        p_t: |_, _, _| Action::Noop,
+        y_id: (FocusType::Button, 0),
+        y: |mut out, window, id, state, focus|
+            button::render(out,
+                PADDING.0 + window.x, 
+                window.y + window.h - PADDING.1 - 6,
+                window.w - (2 * PADDING.0),
+                "Quit Project"
+            ),
+        y_t: |_, _, _| Action::Exit,
         g_id: (FocusType::Void, 0), 
         g: VOID_RENDER,
         g_t: |_, _, _| Action::Noop,
@@ -128,9 +134,9 @@ fn generate_focii(modules: &Vec<Module>) -> Vec<Vec<MultiFocus<ProjectState>>> {
                 "Save Project"
             ),
         r_t: |_, _, _| Action::Save,
-        y_id:(FocusType::Void, 0), 
-        y: VOID_RENDER,
-        y_t: |_, _, _| Action::Noop,
+        p_id:(FocusType::Void, 0), 
+        p: VOID_RENDER,
+        p_t: |_, _, _| Action::Noop,
         b_id: (FocusType::Void, 0), 
         b: VOID_RENDER,
         b_t: |_, _, _| Action::Noop,

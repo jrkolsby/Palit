@@ -487,6 +487,7 @@ fn main() -> std::io::Result<()> {
                     write_document(&mut new_document);
                     eprintln!("Saved to {}", filename);
                     document = Some(new_document);
+                    layers.pop_back();
                 },
                 Action::Save => {
                     // Document will never be None when Save is dispatched because

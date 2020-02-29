@@ -45,6 +45,7 @@ fn sanitize(s: String) -> String {
     s.replace(&[' ', ':'][..], "")
 }
 
+// These functions will be used to make the faust UI more expressive
 extern "C" fn openTabBox(ui: *mut PluginUI, label: *const c_char) { 
     //eprintln!("openHorizontalBox {:?}", label);
 }
@@ -57,6 +58,7 @@ extern "C" fn openVerticalBox(ui: *mut PluginUI, label: *const c_char) {
 extern "C" fn closeBox(ui: *mut PluginUI) { 
     //eprintln!("closeBox");
 }
+// These callbacks are expected to mutate void * pointers on the provided PluginUI
 extern "C" fn addButton(ui: *mut PluginUI, label: *const c_char, param: *mut c_float) { 
     unsafe {
         let label_str = CStr::from_ptr(label).to_str().unwrap();
@@ -74,7 +76,20 @@ extern "C" fn addButton(ui: *mut PluginUI, label: *const c_char, param: *mut c_f
     }
 }
 extern "C" fn addCheckButton(ui: *mut PluginUI, label: *const c_char, param: *mut c_float) { 
-    //eprintln!("addCheckButton {:?}", label);
+    unsafe {
+        let label_str = CStr::from_ptr(label).to_str().unwrap();
+        let mut params = &mut (*ui).params;
+        let mut declarations = &mut (*ui).declarations;
+        let safe_label = sanitize(label_str.to_string());
+        params.insert(safe_label.clone(), param);
+        declarations.push(Action::DeclareParam(
+            safe_label,
+            0.0,
+            0.0,
+            1.0,
+            1.0,
+        ));
+    }
 }
 extern "C" fn addVerticalSlider(ui: *mut PluginUI, 
         label: *const c_char,
@@ -262,7 +277,10 @@ pub struct Store {
     vtable: PluginVTable,
     declarations: Vec<Action>,
     midi_enabled: bool,
-    buffer: Vec<Vec<c_float>>,
+    num_inputs: usize,
+    num_outputs: usize,
+    buffer_in: Vec<Vec<c_float>>,
+    buffer_out: Vec<Vec<c_float>>,
     buffer_sum: Vec<Vec<c_float>>,
     voices: [Option<(*mut Voice, Box<PluginUI>, Box<UIGlue>)>; MAX_VOICES],
     next_voice: usize,
@@ -289,6 +307,8 @@ pub fn init(lib_src: String) -> Store {
     let num_outputs = (vtable.getNumOutputs)(voice0) as usize;
     declarations.push(Action::DeclareAnchors(num_inputs, num_outputs));
 
+    eprintln!("IN {} OUT {}", num_inputs, num_outputs);
+
     // Add UI declarations 
     (vtable.buildUserInterface)(voice0, &mut *uiGlue);
     declarations.extend(ui.declarations.clone());
@@ -312,8 +332,11 @@ pub fn init(lib_src: String) -> Store {
         voices,
         declarations,
         midi_enabled,
+        num_inputs,
+        num_outputs,
         // Make sure we are not allocating this in tight loop (see below)
-        buffer: vec![vec![0.0; FRAMES as usize]; num_outputs],
+        buffer_in: vec![vec![0.0; FRAMES as usize]; num_inputs],
+        buffer_out: vec![vec![0.0; FRAMES as usize]; num_outputs],
         buffer_sum: vec![vec![0.0; FRAMES as usize]; num_outputs],
         next_voice: 0,
     };
@@ -322,28 +345,30 @@ pub fn init(lib_src: String) -> Store {
 
 pub fn compute_buf(store: &mut Store, buffer: &mut [[Output; CHANNELS]]) {
     // We need to prepare our channels as two seperate arrays
-    // ... instead of using frames. This is just what faust wants *shrug*
+    // ... not one array of frames. This is expected by the 
+    // ... computemydsp. We will zero the output buffer from
+    // ... the previous computation, and copy the core buffer
+    // ... to the inputs for each channel it expects (0, 1, or 2)
     for (i, frame) in buffer.iter().enumerate() {
         for (j, sample) in frame.iter().enumerate() {
-            if j < store.buffer.len() {
-                if store.midi_enabled {
-                    // Midi enabled plugins don't take audio input
-                    store.buffer_sum[j][i] = 0.0 as c_float;
-                } else {
-                    // Otherwise map into input buffer (will be overwritten)
-                    store.buffer[j][i] = *sample as c_float;
-                }
+            if j < store.num_inputs {
+                store.buffer_in[j][i] = *sample as c_float;
+            }
+            if j < store.num_outputs {
+                store.buffer_out[j][i] = 0.0 as c_float;
+                store.buffer_sum[j][i] = 0.0 as c_float;
             }
         }
     }
 
-    // Buffer will be passed to C for writing
+    // Buffer which will be written to
     let mut output_ptrs: Vec<*mut Output> =
-        store.buffer.iter_mut().map(|out| out.as_mut_ptr()
+        store.buffer_out.iter_mut().map(|out| out.as_mut_ptr()
     ).collect();
 
+    // Buffer which will be read from
     let input_ptrs: Vec<*const Output> = 
-        store.buffer.iter().map(|out| out.as_ptr()
+        store.buffer_in.iter().map(|out| out.as_ptr()
     ).collect();
 
     for voice in store.voices.iter() {
@@ -359,9 +384,9 @@ pub fn compute_buf(store: &mut Store, buffer: &mut [[Output; CHANNELS]]) {
             }
 
             // Add voices together
-            for i in 0..CHANNELS {
+            for i in 0..store.num_outputs {
                 for j in 0..FRAMES as usize {
-                    store.buffer_sum[i][j] += store.buffer[i][j];
+                    store.buffer_sum[i][j] += store.buffer_out[i][j];
                 }
             }
         } else {
@@ -369,10 +394,18 @@ pub fn compute_buf(store: &mut Store, buffer: &mut [[Output; CHANNELS]]) {
         }
     }
 
-    // ... and then we have to copy the sum to the output frames *sigh*
+    // Then we have to copy the sum to our output. Because
+    // ... our core will expect a stereo signal and the faust
+    // ... plugin might only have 1 output, we will need to 
+    // ... copy this value twice to each channel
     for i in 0..FRAMES as usize {
         for j in 0..CHANNELS {
-            buffer[i][j] = store.buffer_sum[j][i] as f32;
+            if j < store.num_outputs {
+                buffer[i][j] = store.buffer_sum[j][i] as f32;
+            } else {
+                // Copy the last channel until buffer is full
+                buffer[i][j] = store.buffer_sum[store.num_outputs - 1][i] as f32;
+            }
         }
     }
 }
