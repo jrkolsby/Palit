@@ -499,7 +499,7 @@ fn main() -> std::io::Result<()> {
                     document = Some(new_document);
 
                     if let Some((_, layer)) = layers.iter_mut().find(|(id, _)| *id == DEFAULT_HOME_ID) {
-                        layer.dispatch(Action::ShowProject(filename.clone(), vec![]));
+                        layer.dispatch(Action::ShowProject(format!("{}.xml", filename), vec![]));
                     }
 
                     layers.pop_back();

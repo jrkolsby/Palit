@@ -2,6 +2,7 @@
 .vscode
 .*.swp
 *.so
-dist/bin/
-dist/assets/
-storage/assets/
+dist/bin/*
+dist/assets/*
+dist/logs/*
+storage/assets/*
