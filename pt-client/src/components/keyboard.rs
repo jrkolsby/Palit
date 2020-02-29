@@ -2,7 +2,7 @@ use std::io::Write;
 use termion::cursor;
 use libcommon::Action;
 
-use crate::common::Screen;
+use crate::common::{Screen, Color, write_bg, write_fg};
 
 const KEYBOARD: &str = r#"
 [][][][][][_________][][][][]
@@ -14,35 +14,34 @@ const KEYBOARD: &str = r#"
 
 pub fn render(out: &mut Screen, current_actions: &Vec<Action>, x: u16, y: u16) {
     for (i, line) in KEYBOARD.lines().enumerate() {
+        for (j, key_char) in line.chars().enumerate() {
+            let (bg, fg) = match (i,j) {
+                (3,4) | // NoteOn C
+                (5,4) | // NoteOn D
+                (7,4) | // NoteOn E
+                (9,4) | // NoteOn F
+                (11,4) | // NoteOn G
+                (13,4) | // NoteOn A
+                (15,4) | // NoteOn B
+                (17,4) | // ...
+                (19,4) |
+                (21,4) |
+                (23,4) |
+                (23,4) => (Color::White, Color::Black), 
+                (4,3) | // NoteOn C#
+                (6,3) | // NoteOn D#
+                (10,3) | // NoteOn F#
+                (12,3) | // NoteOn G#
+                (14,3) | // NoteOn A#
+                (18,3) | // ...
+                (20,3) => (Color::Black, Color::White),
+                _ => (Color::Beige, Color::Black),
+            };
+            write_bg(out, bg);
+            write_fg(out, fg);
+        }
         write!(out, "{}{}",
             cursor::Goto(x, (i as u16)+y+1),
             line).unwrap();
     };
-    for action in current_actions.iter() {
-        let (dx,dy,len) = match action {
-            Action::NoteOn(24, _) => (3,4,2),
-            Action::NoteOn(25, _) => (4,3,2),
-            Action::NoteOn(26, _) => (5,4,2),
-            Action::NoteOn(27, _) => (6,3,2),
-            Action::NoteOn(28, _) => (7,4,2),
-            Action::NoteOn(29, _) => (9,4,2),
-            Action::NoteOn(30, _) => (10,3,2),
-            Action::NoteOn(31, _) => (11,4,2),
-            Action::NoteOn(32, _) => (12,3,2),
-            Action::NoteOn(33, _) => (13,4,2),
-            Action::NoteOn(34, _) => (14,3,2),
-            Action::NoteOn(35, _) => (15,4,2),
-            Action::NoteOn(36, _) => (17,4,2),
-            Action::NoteOn(37, _) => (18,3,2),
-            Action::NoteOn(38, _) => (19,4,2),
-            Action::NoteOn(39, _) => (20,3,2),
-            Action::NoteOn(40, _) => (21,4,2),
-            Action::NoteOn(41, _) => (23,4,2),
-            _ => (0,0,0)
-        };
-        let fg: &str = &KEYBOARD.lines().nth(dy+1).unwrap()[dx..dx+len];
-        write!(out, "{}{}",
-            cursor::Goto(x+(dx as u16), y+(dy as u16)),
-            fg).unwrap();
-    }
 }

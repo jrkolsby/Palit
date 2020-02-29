@@ -8,8 +8,6 @@ use crate::common::{MultiFocus, ID, focus_dispatch, render_focii};
 use crate::components::{popup, button};
 use crate::views::{Layer};
 
-static PADDING: (u16, u16) = (3, 3);
-
 pub struct Project {
     window: Window,
     state: ProjectState,
@@ -44,6 +42,9 @@ impl Project {
 
 static VOID_RENDER: fn( &mut Screen, Window, ID, &ProjectState, bool) =
     |_, _, _, _, _| {};
+
+static PADDING: (u16, u16) = (3, 3);
+static CLOSE_SIZE: u16 = 10;
 
 fn reduce(state: ProjectState, action: Action) -> ProjectState {
     ProjectState {
@@ -119,9 +120,9 @@ fn generate_focii(modules: &Vec<Module>) -> Vec<Vec<MultiFocus<ProjectState>>> {
                 PADDING.0 + window.x, 
                 window.y + window.h - PADDING.1 - 6,
                 window.w - (2 * PADDING.0),
-                "Quit Project"
+                "Close Project"
             ),
-        y_t: |_, _, _| Action::Exit,
+        y_t: |_, _, _| Action::Close,
         g_id: (FocusType::Void, 0), 
         g: VOID_RENDER,
         g_t: |_, _, _| Action::Noop,
@@ -176,6 +177,7 @@ impl Layer for Project {
             };
             match _default {
                 Action::Back => Action::Cancel,
+                a @ Action::Close |
                 a @ Action::Save |
                 a @ Action::DelModule(_) => a,
                 _ => Action::Noop,
@@ -184,5 +186,4 @@ impl Layer for Project {
     }
     fn alpha(&self) -> bool { true }
     fn save(&self) -> Option<Element> { None }
-
 }

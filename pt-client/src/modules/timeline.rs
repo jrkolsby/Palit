@@ -104,9 +104,6 @@ pub fn read(mut doc: Element) -> TimelineState {
         focus: (0,0),
     };
 
-    // keep track of track index for vertical positioning
-    let mut counter: u16 = 0;
-
     while let Some(mut track) = doc.take_child("track") {
         let t_id: &str = track.attributes.get("id").unwrap();
         let _t_id = t_id.parse::<u16>().unwrap();
@@ -117,7 +114,7 @@ pub fn read(mut doc: Element) -> TimelineState {
             mute: false,
             solo: false,
             monitor: true,
-            index: counter,
+            index: _t_id,
         });
 
         while let Some(audio_region) = track.take_child("audio") {
@@ -158,8 +155,6 @@ pub fn read(mut doc: Element) -> TimelineState {
                 track: _t_id,
             });
         }
-
-        counter += 1;
     }
 
     while let Some(asset) = doc.take_child("asset") {

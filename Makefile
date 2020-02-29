@@ -36,9 +36,9 @@ dev: ipc dist
 debug: ipc dist-debug
 	tmux set remain-on-exit on && \
 	tmux split-window -v "cat /tmp/pt-debug" && \
-	tmux split-window -v "cd storage && ../dist/bin/pt-sound" && \
-	tmux split-window -v "cd storage && sudo ../dist/bin/pt-input 1> /tmp/pt-client 2> /tmp/pt-sound" && \
-	cd storage && ../dist/bin/pt-client 2> /tmp/pt-debug
+	tmux split-window -v "cd storage && RUST_BACKTRACE=1 ../dist/bin/pt-sound" && \
+	tmux split-window -v "cd storage && sudo RUST_BACKTRACE=1 ../dist/bin/pt-input 1> /tmp/pt-client 2> /tmp/pt-sound" && \
+	cd storage && RUST_BACKTRACE=1 ../dist/bin/pt-client 2> /tmp/pt-debug
 
 .PHONY : ipc
 ipc : 

@@ -106,6 +106,17 @@ impl Layer for Save {
                 self.state.last_char as char)
             );
 
+        write_fg(out, Color::White);
+        write_bg(out, Color::Black);
+        write!(out, "{} ▲ Letter ▼ ", cursor::Goto(
+            self.x + PADDING.0, 
+            self.y + PADDING.1 + 1)).unwrap();
+
+        write!(out, "{} ◀ Space ▶ ", cursor::Goto(
+            self.x + PADDING.0, 
+            self.y + PADDING.1 + 1)).unwrap();
+
+
         write_fg(out, Color::Black);
         write_bg(out, Color::Yellow);
         write!(out, "{} UPPERCASE ", cursor::Goto(

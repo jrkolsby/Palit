@@ -34,7 +34,14 @@ fn reduce(state: HomeState, action: Action) -> HomeState {
     let scroll_max = (match state.projects.len() { 0 => 0, x => x - 1 }) / 4 + 1;
     HomeState {
         motd: state.motd.clone(),
-        projects: state.projects.clone(),
+        projects: match action.clone() {
+            Action::ShowProject(title, _) => {
+                let mut new_projects = state.projects.clone();
+                new_projects.push(title);
+                new_projects
+            },
+            _ => state.projects.clone(),
+        },
 	    scroll_x: match action {
             Action::Left => {
                 if state.scroll_x == 0 { scroll_max - 1 } 
@@ -104,6 +111,7 @@ impl Layer for Home {
         let mut num_choices = num_projects - (self.state.scroll_x * NUM_PROJECTS);
         num_choices = if num_choices > 4 { 4 } else { num_choices };
         match action {
+            Action::Back => Action::Exit,
             Action::SelectY => {
                 Action::OpenProject(self.state.projects[self.state.scroll_x * NUM_PROJECTS].clone())
             },

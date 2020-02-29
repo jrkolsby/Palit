@@ -252,6 +252,8 @@ CGEventRef eventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
                 case 31: fprintf(stderr, "NOTE_OFF:73 "); break; // o
                 case 37: fprintf(stderr, "NOTE_OFF:74 "); break; // l
                 case 35: fprintf(stderr, "NOTE_OFF:75 "); break; // p
+                case 41: fprintf(stderr, "NOTE_OFF:76 "); break; // ;
+                case 39: fprintf(stderr, "NOTE_OFF:77 "); break; // '
                 case 15: // r
                 case 9: // v
                 case 46: // m
@@ -281,27 +283,28 @@ CGEventRef eventCallback(CGEventTapProxy proxy, CGEventType type, CGEventRef eve
                     case 31: fprintf(stderr, "NOTE_ON:73:1 "); break; // o
                     case 37: fprintf(stderr, "NOTE_ON:74:1 "); break; // l
                     case 35: fprintf(stderr, "NOTE_ON:75:1 "); break; // p
+                    case 41: fprintf(stderr, "NOTE_ON:76:1 "); break; // ;
+                    case 39: fprintf(stderr, "NOTE_ON:77:1 "); break; // '
                     case 33: fprintf(stdout, "PLAY "); break; // [
                     case 30: fprintf(stdout, "STOP "); break; // ]
-                    case 18: fprintf(stdout, "1 "); break; // 1
-                    case 19: fprintf(stdout, "2 "); break; // 2
+                    case 44: fprintf(stdout, "HELP "); break; // ?
                     case 48: fprintf(stdout, "ROUTE "); break; // tab
-                    case 27: fprintf(stderr, "OCTAVE:0 "); // -
+                    case 6: fprintf(stderr, "OCTAVE:0 "); // z
                             fprintf(stdout, "OCTAVE:0 "); break; 
-                    case 24: fprintf(stderr, "OCTAVE:1 "); // -
+                    case 7: fprintf(stderr, "OCTAVE:1 "); // x
                             fprintf(stdout, "OCTAVE:1 "); break; 
                     case 15: fprintf(stdout, "R "); break; // r
                     case 9: fprintf(stdout, "V "); break; // v
                     case 46: fprintf(stdout, "M "); break; // m
                     case 34: fprintf(stdout, "I "); break; // i
                     case 49: fprintf(stdout, "SPC "); break; // space
-                    case 12: fprintf(stderr, "EXIT "); 
-                            fprintf(stdout, "EXIT "); break; // q
+                    case 12: fprintf(stdout, "BACK "); break; // q
                     case 126: fprintf(stdout, "UP "); break; // up
                     case 125: fprintf(stdout, "DN "); break; // down
                     case 124: fprintf(stdout, "RT "); break; // right
                     case 123: fprintf(stdout, "LT "); break; // left
-                    case 6: fprintf(stdout, "INSTRUMENT "); break; // right
+                    case 36: fprintf(stdout, "MODULES "); break; // enter
+                    case 51: fprintf(stdout, "PROJECT "); break; // enter
                     default:
                         fprintf(stderr, "UNKNOWN:%d ", keyCode);
                         break;

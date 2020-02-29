@@ -225,8 +225,23 @@ fn main() -> std::io::Result<()> {
 
             // Execute toplevel actions, capture default from view
             let default: Action = match event {
-                Action::Exit => { 
-                    break 'event;
+                Action::Project => {
+                    let mut project_view = Project::new(
+                        MARGIN_D2.0,
+                        MARGIN_D2.1, 
+                        size.0 - (MARGIN_D2.0 * 2), 
+                        size.1 - (MARGIN_D2.1 * 2),
+                    );
+                    if let Some(doc) = document {
+                        let modules: Vec<Module> = doc.modules.iter().map(|(id, el)| Module {
+                            id: id.clone(),
+                            name: el.name.clone(),
+                        }).collect();
+                        project_view.dispatch(Action::ShowProject(doc.src.clone(), modules));
+                        add_layer(&mut layers, Box::new(project_view), DEFAULT_PROJECT_ID); 
+                        document = Some(doc);
+                    }
+                    Action::Noop
                 },
                 Action::Help => { 
                     add_layer(&mut layers, Box::new(Help::new(
@@ -237,7 +252,7 @@ fn main() -> std::io::Result<()> {
                     )), DEFAULT_HELP_ID); 
                     Action::Noop
                 },
-                Action::Instrument => {
+                Action::Modules => {
                     add_layer(&mut layers, Box::new(Modules::new(
                         MARGIN_D1.0,
                         MARGIN_D1.1, 
@@ -263,7 +278,21 @@ fn main() -> std::io::Result<()> {
 
             // capture default action if returned from layer
             match default {
-                Action::Cancel => { layers.pop_back(); },
+                Action::Exit => { 
+                    ipc_sound.write(Action::Exit.to_string().as_bytes()).unwrap();
+                    break 'event; 
+                },
+                Action::Close => {
+                    if let Some(doc) = document.to_owned() {
+                        for (id, _) in doc.modules {
+                            layers.retain(|(i, _)| *i != id);
+                        }
+                    }
+                    document = None;
+                },
+                Action::Cancel => { 
+                    layers.pop_back(); 
+                },
                 Action::Back => {
                     if let Some(current) = layers.pop_back() {
                         layers.push_front(current);
@@ -358,24 +387,6 @@ fn main() -> std::io::Result<()> {
                     }
                     document = Some(doc.clone());
                 },
-                // SHOW PROJECT
-                Action::Left => {
-                    let mut project_view = Project::new(
-                        MARGIN_D2.0,
-                        MARGIN_D2.1, 
-                        size.0 - (MARGIN_D2.0 * 2), 
-                        size.1 - (MARGIN_D2.1 * 2),
-                    );
-                    if let Some(doc) = document {
-                        let modules: Vec<Module> = doc.modules.iter().map(|(id, el)| Module {
-                            id: id.clone(),
-                            name: el.name.clone(),
-                        }).collect();
-                        project_view.dispatch(Action::ShowProject( doc.title.clone(), modules));
-                        add_layer(&mut layers, Box::new(project_view), DEFAULT_PROJECT_ID); 
-                        document = Some(doc);
-                    }
-                },
                 Action::ShowAnchors(anchors) => {
                     let mut routes_index: Option<usize> = None;
                     for (i, (id, layer)) in layers.iter_mut().enumerate() {
@@ -395,7 +406,7 @@ fn main() -> std::io::Result<()> {
                             )
                         ), DEFAULT_ROUTE_ID);
                         routes_index = Some(layers.len()-1);
-                        if let Some(mut doc) = document {
+                        if let Some(mut doc) = document.to_owned() {
                             doc.modules.push((DEFAULT_ROUTE_ID, Element::new("patch")));
                             document = Some(doc);
                         }
@@ -425,7 +436,7 @@ fn main() -> std::io::Result<()> {
                     let mut new_el = Element::new(&name);
                     new_el.attributes.insert("id".to_string(), new_id.to_string());
                     add_module(&mut layers, &name, new_id, size, new_el.clone());
-                    if let Some(mut doc) = document {
+                    if let Some(mut doc) = document.to_owned() {
                         doc.modules.push((new_id, new_el));
                         document = Some(doc);
                     } else {
@@ -444,7 +455,7 @@ fn main() -> std::io::Result<()> {
                 Action::DelModule(id) => {
                     ipc_sound.write(Action::DelModule(id).to_string().as_bytes()).unwrap();
                     layers.retain(|(i, _)| *i != id);
-                    if let Some(mut doc) = document {
+                    if let Some(mut doc) = document.to_owned() {
                         doc.modules.retain(|(i, _)| *i != id);
                         document = Some(doc);
                     }
@@ -457,7 +468,6 @@ fn main() -> std::io::Result<()> {
                     if let Some(r_id) = routes_index {
                         layers[r_id].1.dispatch(Action::DelModule(id));
                     }
-                    events.push_back(Action::Back);
                 },
                 Action::SaveAs(title) => {
                     // This action must only be dispatched by the Save view
@@ -487,12 +497,17 @@ fn main() -> std::io::Result<()> {
                     write_document(&mut new_document);
                     eprintln!("Saved to {}", filename);
                     document = Some(new_document);
+
+                    if let Some((_, layer)) = layers.iter_mut().find(|(id, _)| *id == DEFAULT_HOME_ID) {
+                        layer.dispatch(Action::ShowProject(filename.clone(), vec![]));
+                    }
+
                     layers.pop_back();
                 },
                 Action::Save => {
                     // Document will never be None when Save is dispatched because
                     // ... it requires the Project view to appear
-                    if let Some(doc) = document {
+                    if let Some(doc) = document.to_owned() {
                         add_layer(&mut layers, Box::new(Save::new(
                             MARGIN_D0.0,
                             MARGIN_D0.1,

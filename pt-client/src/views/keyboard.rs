@@ -97,7 +97,6 @@ impl Layer for Keyboard {
                 name: "Keys".to_string(),
                 input: false,
             }]),
-            a @ Action::Left |
             a @ Action::Up | 
             a @ Action::Down => a,
             _ => Action::Noop

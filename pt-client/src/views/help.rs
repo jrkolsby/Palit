@@ -60,7 +60,7 @@ impl Layer for Help {
 	    popup::render(out, self.x, self.y, self.width, self.height, &self.state.title);
         keyboard::render(out, &self.state.active, self.x+5, self.y+5);
 
-        write!(out, "{}Press 2 to go back", cursor::Goto(self.x + 5, self.y + 5)).unwrap();
+        write!(out, "{}Press q to go back", cursor::Goto(self.x + 5, self.y + 5)).unwrap();
     }
 
     fn dispatch(&mut self, action: Action) -> Action {

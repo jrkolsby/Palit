@@ -19,14 +19,13 @@ use std::os::unix::fs::OpenOptionsExt;
 use std::io::prelude::*;
 use std::collections::HashMap;
 use std::borrow::BorrowMut;
-use libcommon::{Action, Key, Document, read_document, param_map};
 use dsp::{NodeIndex, Frame, FromSample, Graph, Node, Sample, Walker};
 use xmltree::Element;
 use sample::signal;
+use libcommon::{Action, Key, Document, read_document, param_map};
 
 use crate::core::{event_loop, Module, Output, CHANNELS};
-
-const MASTER_ROUTE: u16 = 1;
+const MASTER_ROUTE_ID: u16 = 1;
 
 fn add_module(
     id: u16,
@@ -186,7 +185,7 @@ fn main() -> Result<(), Box<error::Error>> {
     // Make a master route available without a project
     let master_node = graph.add_node(Module::Master);
     let master_route = graph.add_node(Module::Master);
-    routes.insert(MASTER_ROUTE, master_route);
+    routes.insert(MASTER_ROUTE_ID, master_route);
     graph.add_connection(master_route, master_node);
     graph.set_master(Some(master_node));
 
@@ -292,12 +291,12 @@ fn main() -> Result<(), Box<error::Error>> {
                 patch.set_master(Some(root));
 
                 // Make sure we always have a master route 
-                if !routes.contains_key(&MASTER_ROUTE) {
-                    routes.insert(MASTER_ROUTE, 
+                if !routes.contains_key(&MASTER_ROUTE_ID) {
+                    routes.insert(MASTER_ROUTE_ID, 
                         patch.add_node(Module::Passthru(vec![])));
                 }
 
-                patch.add_connection(*routes.get(&MASTER_ROUTE).unwrap(), root);
+                patch.add_connection(*routes.get(&MASTER_ROUTE_ID).unwrap(), root);
                 eprintln!("Loaded {} Nodes", patch.node_count());
                 eprintln!("Loaded {} Edges", patch.connection_count());
             },

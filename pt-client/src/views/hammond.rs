@@ -270,7 +270,6 @@ impl Layer for Hammond {
                             input: true,
                         }])
                 },
-                a @ Action::Left |
                 a @ Action::Up | 
                 a @ Action::Down |
                 a @ Action::SetParam(_,_) => a,

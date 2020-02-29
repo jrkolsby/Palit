@@ -160,7 +160,6 @@ impl Layer for Arpeggio {
                 input: true,
             }]),
             a @ Action::SetParam(_,_) |
-            a @ Action::Left |
             a @ Action::Up | 
             a @ Action::Down => a,
             _ => Action::Noop
