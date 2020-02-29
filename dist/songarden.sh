@@ -6,5 +6,5 @@ mkfifo /tmp/pt-sound
 touch ./logs/pt-sound
 touch ./logs/pt-client
 sudo ./bin/pt-input 1> /tmp/pt-client 2> /tmp/pt-sound &
-./bin/pt-sound 2&> ./logs/pt-sound &
-./bin/pt-client 2> ./logs/pt-client
+./bin/pt-sound >> ./logs/pt-sound 2>&1 &
+./bin/pt-client 2>>./logs/pt-client

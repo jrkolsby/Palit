@@ -126,8 +126,8 @@ fn add_module(
             let cmd = format!(r#"
                 ./bin/faust -lang c -cn mydsp ./modules/{name}.dsp > ./modules/_plugin_part.c; 
                 cat ./modules/faust.h ./modules/_plugin_part.c > ./modules/_plugin.c; 
-                gcc -c -fpic ./modules/_plugin.c -o ./modules/_plugin.o; 
-                gcc -shared -o ./modules/{name}.so ./modules/_plugin.o; 
+                ./bin/gcc -c -fpic ./modules/_plugin.c -o ./modules/_plugin.o; 
+                ./bin/gcc -shared -o ./modules/{name}.so ./modules/_plugin.o; 
                 rm ./modules/_plugin_part.c; 
                 rm ./modules/_plugin.o;
                 rm ./modules/_plugin.c"#, name=plugin);

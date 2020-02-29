@@ -307,8 +307,6 @@ pub fn init(lib_src: String) -> Store {
     let num_outputs = (vtable.getNumOutputs)(voice0) as usize;
     declarations.push(Action::DeclareAnchors(num_inputs, num_outputs));
 
-    eprintln!("IN {} OUT {}", num_inputs, num_outputs);
-
     // Add UI declarations 
     (vtable.buildUserInterface)(voice0, &mut *uiGlue);
     declarations.extend(ui.declarations.clone());
