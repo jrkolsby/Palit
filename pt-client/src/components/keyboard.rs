@@ -5,10 +5,10 @@ use libcommon::Action;
 use crate::common::{Screen, Color, write_bg, write_fg};
 
 const KEYBOARD: &str = r#"
-         [][][][][][][][][][][][][][_] ◀ PROJECT
-ROUTES ▶ [][Q][][][][][][][][][][][][] ◀ [STOP][PLAY]
-         [_][][][][][][][][][][][][__] ◀ MODULES
-    OCTAVE ▶ [][][][][][][][][][] ◀ THIS SCREEN
+         [][][][][][][][][][][][][][_] < PROJECT
+ PATCH > [][Q][][][][][][][][][][][][] < [PLAY][STOP]
+         [_][][][][][][][][][][][][__] < MODULES
+    OCTAVE > [][][][][][][][][][] < THIS SCREEN
          [][][][][_________][][][][][]
 "#;
 
@@ -46,8 +46,8 @@ pub fn render(out: &mut Screen, current_actions: &Vec<Action>, x: u16, y: u16) {
             write_fg(out, fg);
             write!(out, "{}{}",
                 cursor::Goto(
-                    (j as u16) + x + 1, 
-                    (i as u16) + y + 1
+                    (j as u16) + x,
+                    (i as u16) + y
                 ),
                 key_char).unwrap();
         }

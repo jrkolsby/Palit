@@ -58,9 +58,9 @@ impl Help {
 impl Layer for Help {
     fn render(&self, out: &mut Screen, target: bool) {
 	    popup::render(out, self.x, self.y, self.width, self.height, &self.state.title);
-        keyboard::render(out, &self.state.active, self.x+5, self.y+5);
+        keyboard::render(out, &self.state.active, self.x + 4, self.y + 4);
 
-        write!(out, "{}Press Q to go back", cursor::Goto(self.x + 5, self.y + 5)).unwrap();
+        write!(out, "{}Press Q to go back", cursor::Goto(self.x + 2, self.y + 2)).unwrap();
     }
 
     fn dispatch(&mut self, action: Action) -> Action {
