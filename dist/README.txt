@@ -113,24 +113,24 @@ To remove the last route, press YELLOW.
 The timeline records and plays back audio and MIDI data. The
 various functions are labeled below:
 
-        RECORD                ZOOM: 1X 127   @
+        RECORD               ZOOM > 1X 127   @ < METRONOME
                                        BPM  / 
         TOGGLE LOOP
                         << LOOP REGION >>
-        ADD TRACK   {{...!...!...!...!...!...!   TEMPO GRID
+        ADD TRACK   {{...!...!...!...!...!...! < TEMPO GRID
                       |
-        r m s i       |   ::::::. AUDIO REGION
-        | | | |INPUT   |  
-        | | | MONITOR |   - _ - - MIDI REGION
+        r m s i       |   ::::::. < AUDIO REGION
+        | | | |INPUT  |  
+        | | | MONITOR |   - _ - - < MIDI REGION
         | | SOLO      |   
         | MUTE        |
-        RECORD        |
+        RECORD        | < PLAYHEAD
 
 To arm a track for MIDI recording, move to its track header 
 and press RED once. For audio recording, press RED again. To
 disarm, press RED one more time.
 
-                   Off:  MIDI:  Audio:
+                   Off   MIDI   Audio
                          …      ∿
                    r     R      R
 
@@ -168,7 +168,7 @@ the Faust DSP language. To write a new module, create a
 new file named "mymodule.dsp" and place it in the "modules/" 
 folder.
 
-Check out asynth.dsp for a minimal example. 
+Check out "modules/asynth.dsp" for a minimal example. 
 
 Faust documentation:
 https://faust.grame.fr
