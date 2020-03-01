@@ -36,13 +36,23 @@ fn add_module(
         match &el.name[..] {
             "timeline" => {
                 let mut anchors: Vec<NodeIndex> = vec![];
-                // Mutate el by removing track elements until
-                // none are left
+
+                // We need to load the tracks in order of their track ID
+                // otherwise the patch will connect the wrong anchors
+                let mut sorted_tracks = vec![];
+
+                // Mutate el by removing track elements until none are left
                 while let Some(store) = tape::read(el) {
-                    let tape = patch.add_node(Module::Tape(store));
-                    anchors.push(tape); // INPUT
-                    anchors.push(tape); // OUTPUT
+                    sorted_tracks.push(store);
                 }
+                // Sort tracks
+                sorted_tracks.sort_by(|a, b| a.track_id.partial_cmp(&b.track_id).unwrap());
+                for track in sorted_tracks.drain(0..) {
+                    let tape = patch.add_node(Module::Tape(track));
+                    anchors.push(tape);
+                    anchors.push(tape);
+                }
+
                 let operator = patch.add_node(Module::Operator(vec![], 
                     anchors.clone(), id.clone()
                 ));
