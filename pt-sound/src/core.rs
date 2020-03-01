@@ -255,18 +255,21 @@ impl Module {
                 return (Some(carry), None, None)
             },
             Module::Octave(ref mut queue, ref mut dn) => {
-                let mut carry = Vec::new();
+                let mut client_carry = vec![];
+                let mut carry = vec![];
                 while let Some(note) = queue.pop() {
                     let shift: i8 = (12 * (*dn as i8 - 3)); // C3 is middle C (60)
-                    carry.push(match note {
+                    let shifted_note = match note {
                         Action::NoteOn(n, v) => Action::NoteOn(
                             if shift > n as i8 { 0 } else { (n as i8 + shift) as u8 }, v),
                         Action::NoteOff(n) => Action::NoteOff(
                             if shift > n as i8 { 0 } else { (n as i8 + shift) as u8 }),
                         _ => Action::Noop,
-                    });
+                    };
+                    carry.push(shifted_note.clone());
+                    client_carry.push(shifted_note);
                 }
-                return (Some(carry), None, None)
+                return (Some(carry), None, Some(client_carry))
             },
             Module::DebugKeys(ref mut onqueue, ref mut offqueue, ref mut timer) => {
                 let carry = onqueue.clone();
