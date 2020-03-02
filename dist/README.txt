@@ -13,9 +13,12 @@ the following two commands:
 
         brew install portaudio
 
-To begin, double click on launcher.sh -- you will be asked
-to give your computer password. This is required to access
-your keyboard, please type it in and press ENTER.
+While Terminal is open, you should load the color palette
+by double clicking "themes/Original.terminal"
+
+To launch Song Garden, double click on "launcher" you will
+be asked to give your computer password. This is required
+to access your keyboard, please type it in and press ENTER.
 
                     ~| controls |~
 
@@ -59,7 +62,7 @@ affect it.
 
 If you would like to try the demo, press YELLOW
 
-To quit, press Q from the homescreen
+To quit Song Garden, press Q from the homescreen
 
 
                     ~| modules |~
