@@ -19,9 +19,9 @@ your keyboard, please type it in and press ENTER.
 
                     ~| controls |~
 
-   [][][][][][][][][][][][][][][][][][][][][][_PROJECT]
+   [`][1][2][3][4][5][6][7][8][9][0][-][+][__PROJECT__]
    [ROUTES][BACK][][][YEL][][][][GRN][][][PLAY][STOP][]
-   [_____]      [][][]   [][][][]   [][][][]  [MODULES]
+   [________][C][D][E][F][G][A][B][C][D][E][F][MODULES]
    [_____][OCT+][OCT-][][BLU][][][PNK][][][HELP][_____]
    [][][][][__________RED_____________][][][ARROW KEYS]
 
@@ -58,6 +58,8 @@ affect it.
               (hold + LEFT RIGHT)     PARAM
 
 If you would like to try the demo, press YELLOW
+
+To quit, press Q from the homescreen
 
 
                     ~| modules |~

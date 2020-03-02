@@ -1,8 +1,8 @@
 .PHONY : clean
 clean:
-	rm -f ./dist/bin/pt-client;
-	rm -f ./dist/bin/pt-sound;
-	rm -f ./dist/bin/pt-input;
+	rm -f ./dist/bin/*;
+	rm -f ./dist/logs/*;
+	rm -f ./dist/lib/*;
 
 .PHONY : dist
 dist: clean
@@ -13,6 +13,7 @@ dist: clean
 	mv -f ./pt-sound/target/release/pt-sound ./dist/bin/;
 	mv -f ./pt-input/bin/sniffMk ./dist/bin/pt-input;
 	cp -f ./storage/bin/* ./dist/bin/
+	cp -f ./storage/lib/* ./dist/lib/
 
 .PHONY : dist-debug
 dist-debug: clean
