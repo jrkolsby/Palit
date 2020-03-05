@@ -1,1 +1,22 @@
 pub mod waveform;
+pub mod keyboard;
+pub mod popup;
+pub mod button;
+pub mod logo;
+pub mod tempo;
+pub mod ruler;
+pub mod casette;
+pub mod piano;
+pub mod slider;
+pub mod border;
+pub mod bigtext;
+pub mod ivories;
+pub mod roll;
+pub mod scroll;
+
+// multifocus components
+pub mod region_audio;
+pub mod region_midi;
+pub mod timeline_meter;
+pub mod timeline_nav;
+pub mod track_header;

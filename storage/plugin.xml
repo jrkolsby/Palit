@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE notedoc>
+
+<project>
+
+    <title>IT IS FAUST TIME</title>
+    <meta samplerate="48000" bitrate="12"/>
+
+    <modules>
+
+        <patch id="29200">
+            <route id="1">
+                <output module="2" index="0" />
+            </route>
+            <route id="2">
+                <input module="2" index="1" />
+                <output module="104" index="0" />
+            </route>
+        </patch>
+
+        <keyboard id="104">
+            <param value="2" name="octave" />
+            <param value="0" name="shift" />
+            <param value="500" name="velocity" />
+        </keyboard>
+
+        <karplus id="2" />
+
+    </modules>
+</project>

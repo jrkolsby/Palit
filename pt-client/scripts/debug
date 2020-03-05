@@ -1,0 +1,1 @@
+cargo build && tmux split -v "cat /tmp/pt-debug" && ./target/debug/DAW 2> /tmp/pt-debug
