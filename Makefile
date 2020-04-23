@@ -1,5 +1,8 @@
 .PHONY : clean
 clean:
+	rm -f /tmp/pt-client
+	rm -f /tmp/pt-sound
+	rm -f /tmp/pt-debug
 	rm -f ./dist/bin/*;
 	rm -f ./dist/logs/*;
 	rm -f ./dist/lib/*;
@@ -14,6 +17,7 @@ dist: clean
 	mv -f ./pt-input/bin/sniffMk ./dist/bin/pt-input;
 	cp -f ./storage/bin/* ./dist/bin/
 	cp -f ./storage/lib/* ./dist/lib/
+	cp -f ./storage/modules/* ./dist/modules/
 
 .PHONY : dist-debug
 dist-debug: clean
@@ -26,7 +30,7 @@ dist-debug: clean
 	cp -f ./storage/bin/* ./dist/bin/
 
 .PHONY : dev
-dev: ipc dist
+dev: dist ipc
 	tmux set remain-on-exit on && \
 	tmux split-window -v "cat /tmp/pt-debug" && \
 	tmux split-window -v "cd storage && ../dist/bin/pt-sound" && \
@@ -34,7 +38,7 @@ dev: ipc dist
 	cd storage && ../dist/bin/pt-client 2> /tmp/pt-debug
 
 .PHONY : debug
-debug: ipc dist-debug
+debug: dist-debug ipc
 	tmux set remain-on-exit on && \
 	tmux split-window -v "cat /tmp/pt-debug" && \
 	tmux split-window -v "cd storage && RUST_BACKTRACE=1 ../dist/bin/pt-sound" && \
@@ -43,9 +47,6 @@ debug: ipc dist-debug
 
 .PHONY : ipc
 ipc : 
-	rm -f /tmp/pt-client
-	rm -f /tmp/pt-sound
-	rm -f /tmp/pt-debug
 	mkfifo /tmp/pt-client
 	mkfifo /tmp/pt-sound
 	mkfifo /tmp/pt-debug

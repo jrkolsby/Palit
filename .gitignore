@@ -4,5 +4,6 @@
 *.so
 dist/bin/*
 dist/assets/*
+dist/modules/*
 dist/logs/*
 dist/lib/*
