@@ -1,5 +1,5 @@
-.PHONY : bitmap
-bitmap:
+.PHONY : all
+all:
 	python3 src/render_font.py
 
 .PHONY : svg

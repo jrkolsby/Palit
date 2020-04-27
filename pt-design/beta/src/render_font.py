@@ -1,7 +1,9 @@
 from PIL import Image, ImageFont, ImageDraw
 import cv2
+import math
 import numpy as np
 from shapely import geometry, ops
+import sqlite3
 
 # FONT RENDERING
 
@@ -11,66 +13,90 @@ HOUGH_MIN_LEN = 10
 HOUGH_MAX_GAP = 2
 MAX_LINES = 70
 
+#CHARSET = "人攴/~彡厂二工田冂冖丿艸匚爪巛州儿冫山彳乙丶QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm,<.>/?;:'\"~`1234567890-=!@#$%^&*()_+[]{}\\|▗▖▄▝▐▞▟▘▚▌▙▀▜▛█━┃┅┇┉┋┏┓┗┛┣┫┳┻╋╏"
+CHARSET = "人攴/~彡厂二工田冂冖丿艸匚爪巛州儿冫山彳乙丶QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm,<.>/?;:'\"~`1234567890-=!"
+
+# Initialize unicode font
+
 font = ImageFont.truetype("fonts/OsakaMono.ttf", SIZE) # Load font
-char_img = Image.new("L", (SIZE, SIZE), 0) #Initialize black bg
-draw = ImageDraw.Draw(char_img)
-# 人攴/~彡厂二工田冂冖丿艸匚爪巛州儿冫彳
-draw.text((0, 0), ")", font=font, fill=(255)) # Draw white char
 
-img = np.array(char_img) # Convert to numpy array
-cv2.imwrite("bitmap.png", img)
+# Initialize SQL DB
 
-# SKELETONIZATION and PATH DETECTION (perform hough transform)
+db = sqlite3.connect('lines.db')
 
-kernel = np.ones((9, 9), np.uint8) 
-# output = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
-lines = []
-done = False
+# Initialize SVG to display results
 
-while not done:
-    img = cv2.erode(img, kernel)  
+svg = open('path.svg', 'w+')
+svg.write('<svg width="{0}" height="{1}" xmlns="http://www.w3.org/2000/svg">'
+        .format(SIZE, SIZE * len(CHARSET)))
+svg.write('<style> .small { font: italic 5px sans-serif; } </style>')
+svg_offset = 0 # We're gonna make a column of chars
 
-    edges = cv2.Canny(img, 50, 150, apertureSize = 3)
-    lines = cv2.HoughLinesP(edges, 1, np.pi/180, 
-            HOUGH_THRESH,
-            HOUGH_MIN_LEN,
-            HOUGH_MAX_GAP)
+for char in CHARSET:
 
-    if len(lines) <= MAX_LINES:
-        done = True
+    char_img = Image.new("L", (SIZE, SIZE), 0) #Initialize black bg
+    draw = ImageDraw.Draw(char_img)
+    draw.text((0, 0), char, font=font, fill=(255)) # Draw white char
 
-# SIMPLIFY LINE TOPOLOGY WITH MERGE
+    img = np.array(char_img) # Convert to numpy array
 
-line_string = [] 
-for line in lines:
-    for x1, y1, x2, y2 in line:
-        line_string.append(geometry.LineString([[x1,y1], [x2,y2]]))
+    # SKELETONIZATION and PATH DETECTION (perform hough transform)
 
-multi_line = geometry.MultiLineString(line_string)
+    kernel = np.ones((9, 9), np.uint8) 
+    # output = cv2.cvtColor(img, cv2.COLOR_GRAY2RGB)
+    lines = None
+    done = False
 
-print(multi_line)
+    while not done:
+        img = cv2.erode(img, kernel)  
 
-merged_line = ops.linemerge(multi_line)
+        edges = cv2.Canny(img, 50, 150, apertureSize = 3)
+        lines = cv2.HoughLinesP(edges, 1, np.pi/180, 
+                HOUGH_THRESH,
+                HOUGH_MIN_LEN,
+                HOUGH_MAX_GAP)
 
-print(merged_line)  # prints LINESTRING (0 0, 1 1, 2 2, 3 3)
+        if len(lines) <= MAX_LINES:
+            done = True
 
-# WRITE TO SVG (TODO: DATABASE)
+    # SIMPLIFY LINE TOPOLOGY WITH MERGE
 
-f = open('path.svg', 'w+')
-f.write('<svg width="{0}" height="{1}" xmlns="http://www.w3.org/2000/svg">'.format(SIZE, SIZE))
+    line_string = [] 
+    for line in lines:
+        for x1, y1, x2, y2 in line:
+            line_string.append(geometry.LineString([[x1,y1], [x2,y2]]))
 
+    multi_line = geometry.MultiLineString(line_string)
 
-for line in merged_line:
-    f.write('<path stroke="red" stroke-width="1" d="M')
-    print('\n')
-    for x, y in line.coords:
-        print(x, y)
-        f.write('{0} {1} '.format(int(x), int(y)))
-        # cv2.line(output,(int(x1),int(y1)),(int(x2),int(y2)),(0,255,0),1)
-    f.write('"/>')
+    merged_line = ops.linemerge(multi_line)
 
+    # WRITE TO DATABASE
 
-f.write('"</svg>')
-f.close()
+    for line in merged_line:
+        [[x1, y1], [x2, y2]] = line.coords
 
-# cv2.imwrite('output.png', output)
+        dx = x2 - x1
+        dy = y2 - y1
+
+        theta = 90 if dx == 0 else (180 * math.atan(dy / dx)) / np.pi
+        length = math.sqrt(dx**2 + dy**2)
+        mid_x = x1 + (dx / 2)
+        mid_y = y1 + (dy / 2)
+
+        theta = int(theta)
+        length = int(length)
+        mid_x = int(mid_x)
+        mid_y = int(mid_y)
+
+        # db.execute(...)
+
+        svg.write('<path stroke="red" stroke-width="1" d="M {0} {1} {2} {3} "/>'
+                .format(int(x1), svg_offset + int(y1), 
+                    int(x2), svg_offset + int(y2)))
+        svg.write('<text class="small" x="{0}" y="{1}">{2} {3}</text>'
+                .format(mid_x, svg_offset + mid_y, theta, length))
+
+    svg_offset += SIZE
+
+svg.write('"</svg>')
+svg.close()
