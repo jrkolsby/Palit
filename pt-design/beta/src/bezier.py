@@ -38,3 +38,7 @@ plt.plot([control2[0], end[0]], [control2[1], end[1]], '-', lw=1)
 
 plt.show()
 
+
+# 1 generate lines from bezier curves
+# 2 compute a map of slopes for each point in the svg
+# 3 find the longest contiguous lines of a common (or near common) slope
