@@ -31,7 +31,7 @@ dist-debug: clean
 
 .PHONY : dev
 dev: dist ipc
-	tmux set remain-on-exit on && \
+	tmux set remain-on-exit on && tmux && \
 	tmux split-window -v "cat /tmp/pt-debug" && \
 	tmux split-window -v "cd storage && ../dist/bin/pt-sound" && \
 	tmux split-window -v "cd storage && sudo ../dist/bin/pt-input 1> /tmp/pt-client 2> /tmp/pt-sound" && \

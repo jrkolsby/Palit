@@ -11,6 +11,7 @@ def cubic_bezier_sample(start, control1, control2, end):
     ])
     partial = cubic_bezier_matrix.dot(inputs)
 
+    # Return a function of t to get points along line
     return (lambda t: np.array([t**3, t**2, t, 1]).dot(partial))
 
 # == control points ==
@@ -37,8 +38,3 @@ plt.plot([start[0], control1[0]], [start[1], control1[1]], '-', lw=1)
 plt.plot([control2[0], end[0]], [control2[1], end[1]], '-', lw=1)
 
 plt.show()
-
-
-# 1 generate lines from bezier curves
-# 2 compute a map of slopes for each point in the svg
-# 3 find the longest contiguous lines of a common (or near common) slope
