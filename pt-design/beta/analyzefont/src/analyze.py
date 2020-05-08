@@ -1,7 +1,9 @@
-from PIL import Image, ImageFont, ImageDraw
+import os
+import sys
 import cv2
 import math
 import numpy as np
+from PIL import Image, ImageFont, ImageDraw
 from shapely import geometry, ops
 from skimage import morphology, filters, img_as_ubyte
 from octree import OctNode, Window, Line
@@ -12,13 +14,21 @@ SIZE = 512
 HOUGH_THRESH = 3
 HOUGH_MIN_LEN = 20
 HOUGH_MAX_GAP = 7
-
-OUTPUT_DEST = "linetree.xml"
+OUTPUT_DIR = 'output'
 CHARSET = "人攴彡厂二工田冂冖丿艸匚爪巛州儿冫山彳乙丶QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm,<.>/?;:'\"~`1234567890-=!@#$%^&*()_+[]{}\\|▗▖▄▝▐▞▟▘▚▌▙▀▜▛█━┃┅┇┉┋┏┓┗┛┣┫┳┻╋╏"
 
 # Initialize unicode font
 
-font = ImageFont.truetype("fonts/OsakaMono.ttf", SIZE) # Load font
+input_font = sys.argv[1]
+input_file = os.path.basename(input_font)
+input_name = input_file.split('.')[0]
+
+output_svg = '{0}/{1}.svg'.format(OUTPUT_DIR, input_name)
+output_xml = '{0}/{1}.xml'.format(OUTPUT_DIR, input_name)
+
+print(input_name)
+
+font = ImageFont.truetype(input_font, SIZE) # Load font
 
 '''
     We want to save this data in a way that can be quickly written into memory
@@ -29,7 +39,7 @@ font = ImageFont.truetype("fonts/OsakaMono.ttf", SIZE) # Load font
 
 # Initialize SVG to display results
 
-svg = open('path.svg', 'w+')
+svg = open(output_svg, 'w+')
 svg.write('<svg width="{0}" height="{1}" xmlns="http://www.w3.org/2000/svg">'
         .format(SIZE, SIZE * len(CHARSET)))
 svg.write('<style> .small { font: italic 5px sans-serif; } </style>')
@@ -39,7 +49,7 @@ root = OctNode(Window(dim, dim, dim, dim))
 
 for char in CHARSET:
 
-    print(char)
+    print(char, end="", flush=True)
 
     char_img = Image.new("L", (SIZE, SIZE), 0) #Initialize black bg
     draw = ImageDraw.Draw(char_img)
@@ -51,9 +61,12 @@ for char in CHARSET:
 
     img = cv2.blur(img, (29,29)) # erode
 
-    img = img > filters.threshold_otsu(img) # Convert to 1 bit image
-    img = morphology.skeletonize(img)
-    img = img_as_ubyte(img)
+    try:
+        img = img > filters.threshold_otsu(img) # Convert to 1 bit image
+        img = morphology.skeletonize(img)
+        img = img_as_ubyte(img)
+    except:
+        continue
 
     edges = cv2.Canny(img, 50, 150, apertureSize = 3)
     lines = cv2.HoughLinesP(edges, 1, np.pi/180, 
@@ -75,6 +88,9 @@ for char in CHARSET:
     multi_line = geometry.MultiLineString(line_string)
 
     merged_line = ops.linemerge(multi_line)
+
+    if merged_line.geometryType() is not 'MultiLineString':
+        continue
 
     for line in merged_line:
         [[x1, y1], [x2, y2]] = line.coords
@@ -101,14 +117,10 @@ for char in CHARSET:
         svg.write('<text class="small" x="{0}" y="{1}">({2},{3},{4})</text>'
                 .format(mid_x, mid_y, mid_x, mid_y, theta_norm))
 
-'''
-root.traverse(lambda data: (
-    print(list(map(lambda p: str(p), data)))
-))
-'''
-
 svg.write('"</svg>')
 svg.close()
 
-output = open(OUTPUT_DEST, 'w+')
+output = open(output_xml, 'w+')
 root.write(output, 0)
+
+print("\nWrote ['{0}', '{1}']".format(output_svg, output_xml))

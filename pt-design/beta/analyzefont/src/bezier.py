@@ -11,7 +11,7 @@ def cubic_bezier_sample(start, control1, control2, end):
     ])
     partial = cubic_bezier_matrix.dot(inputs)
 
-    # Return a function of t to get points along line
+    # Return a function of distance t to get points along line
     return (lambda t: np.array([t**3, t**2, t, 1]).dot(partial))
 
 # == control points ==

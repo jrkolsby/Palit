@@ -17,11 +17,11 @@ class Window:
 
     def contains(self, p):
         return p.x >= self.min_x and \
-            p.x <= self.max_x and \
+            p.x < self.max_x and \
             p.y >= self.min_y and \
-            p.y <= self.max_y and \
+            p.y < self.max_y and \
             p.z >= self.min_z and \
-            p.z <= self.max_z
+            p.z < self.max_z
 
     def intersects(self, win):
         return self.max_x > win.min_x and \

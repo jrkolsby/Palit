@@ -8,3 +8,4 @@ edition = "2018"
 
 [dependencies]
 xmltree = "0.8.0"
+ndarray = "0.13.1"
