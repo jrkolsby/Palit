@@ -5,7 +5,7 @@ use std::env;
 use std::io::Write;
 
 const SIZE: f32 = 512.0;
-const BEZIER_LEN: u8 = 10;
+const BEZIER_LEN: u8 = 5;
 
 // TODO: Does our font database need to contain floats?
 
@@ -33,7 +33,22 @@ fn transform_point(p: (f32, f32), t: Vec<Transform>) -> (f32, f32) {
     for transform in t.iter() {
         let (_x, _y) = match transform {
             Transform::Translate(dx, dy) => (x + dx, y + dy),
-            _ => (x, y)
+            Transform::Rotate(theta, ox, oy) => {
+                // https://stackoverflow.com/questions/2259476/rotating-a-point-about-another-point-2d
+                let s = theta.to_radians().sin();
+                let c = theta.to_radians().cos();
+              
+                // translate point back to origin:
+                let x_t = x - ox;
+                let y_t = y - oy;
+              
+                // rotate point
+                let x_r = x_t * c - y_t * s;
+                let y_r = x_t * s + y_t * c;
+              
+                // translate point back:
+                (x_r + ox, y_r + oy)
+            },
         };
         x = _x;
         y = _y;
@@ -52,7 +67,7 @@ impl Line {
         let mid_x = _x1 + (dx / 2.0);
         let mid_y = _y1 + (dy / 2.0);
         let length = (dx.powf(2.0) + dy.powf(2.0)).sqrt();
-        let theta = if dx == 0.0 { 90. } else { 180. * (dy / dx).atan() / std::f32::consts::PI };
+        let theta = if dx == 0.0 { 90. } else { (dy / dx).atan().to_degrees() };
         let theta_norm = SIZE * (theta + 90.0) / 180.0;
 
         Line {
@@ -325,17 +340,39 @@ fn parse_path(path: &str, transforms: Vec<Transform>) -> Vec<Line> {
     return lines;
 }
 
-fn parse_transforms(transforms: &str) -> Vec<Transform> {
+fn take_transform(transforms: &str) -> Option<(&str, Transform)> {
+
+    if let Some(args_begin) = transforms.find('(') {
+        let args_end = args_begin + transforms[args_begin..].find(')').unwrap();
+        let args: Vec<&str> = transforms[args_begin+1..args_end].split(',').map(|a| a.trim()).collect();
+
+        match &transforms[..args_begin] {
+            "translate" => {
+                let t_x: f32 = if let Some(arg) = args.get(0) { arg.parse::<f32>().unwrap() } else { 0.0 };
+                let t_y: f32 = if let Some(arg) = args.get(1) { arg.parse::<f32>().unwrap() } else { 0.0 };
+
+                return Some((&transforms[args_end+1..].trim(), Transform::Translate(t_x, t_y)))
+            },
+            "rotate" => {
+                let theta: f32 = if let Some(arg) = args.get(0) { arg.parse::<f32>().unwrap() } else { 0.0 };
+                let o_x: f32 = if let Some(arg) = args.get(1) { arg.parse::<f32>().unwrap() } else { 0.0 };
+                let o_y: f32 = if let Some(arg) = args.get(2) { arg.parse::<f32>().unwrap() } else { 0.0 };
+
+                return Some((&transforms[args_end+1..].trim(), Transform::Rotate(theta, o_x, o_y)))
+            }
+            a @ _ => { eprintln!("Unknown Transform {}", a); }
+        }
+    }
+
+    return None;
+}
+
+fn parse_transforms(mut transforms: &str) -> Vec<Transform> {
     let mut result: Vec<Transform> = vec![];
 
-    if let Some(token_index) = transforms.find("translate") {
-        let args_offset = token_index + "translate".len() + 1;
-        let args_end = args_offset + transforms[args_offset..].find(')').unwrap();
-        let args: Vec<&str> = transforms[args_offset..args_end].split(',').map(|a| a.trim()).collect();
-
-        let t_x: f32 = if let Some(arg) = args.get(0) { arg.parse::<f32>().unwrap() } else { 0.0 };
-        let t_y: f32 = if let Some(arg) = args.get(1) { arg.parse::<f32>().unwrap() } else { 0.0 };
-        result.push(Transform::Translate(t_x, t_y))
+    while let Some((new_transforms, transform)) = take_transform(transforms) {
+        transforms = new_transforms;
+        result.insert(0, transform);
     }
 
     return result;
@@ -405,8 +442,6 @@ fn main() -> std::io::Result<()> {
     let nearest = root.search(&search_area);
 
     let chars: Vec<String> = nearest.iter().map(|l| l.character.clone()).collect();
-
-    println!("{:?}", chars);
 
     //  Score the similarity of the lines by angle (z), length, then distance
 
