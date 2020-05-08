@@ -22,24 +22,44 @@ struct Line {
     length: u16,
 }
 
+#[derive(Clone, Debug)]
 enum Transform {
     Rotate(f32, f32, f32),
     Translate(f32, f32),
 }
 
-impl Line {
-    fn new(x1: f32, y1: f32, x2: f32, y2: f32) -> Self {
-        let dx = x2 - x1;
-        let dy = y2 - y1;
+fn transform_point(p: (f32, f32), t: Vec<Transform>) -> (f32, f32) {
+    let (mut x, mut y) = p;
+    for transform in t.iter() {
+        let (_x, _y) = match transform {
+            Transform::Translate(dx, dy) => (x + dx, y + dy),
+            _ => (x, y)
+        };
+        x = _x;
+        y = _y;
+    }
+    return (x, y);
+}
 
-        let mid_x = x1 + (dx / 2.0);
-        let mid_y = y1 + (dy / 2.0);
+impl Line {
+    fn new(x1: f32, y1: f32, x2: f32, y2: f32, transforms: Vec<Transform>) -> Self {
+        let (_x1, _y1) = transform_point((x1, y1), transforms.clone());
+        let (_x2, _y2) = transform_point((x2, y2), transforms.clone());
+
+        let dx = _x2 - _x1;
+        let dy = _y2 - _y1;
+
+        let mid_x = _x1 + (dx / 2.0);
+        let mid_y = _y1 + (dy / 2.0);
         let length = (dx.powf(2.0) + dy.powf(2.0)).sqrt();
         let theta = if dx == 0.0 { 90. } else { 180. * (dy / dx).atan() / std::f32::consts::PI };
         let theta_norm = SIZE * (theta + 90.0) / 180.0;
 
         Line {
-            x1, y1, x2, y2,
+            x1: _x1, 
+            y1: _y1, 
+            x2: _x2, 
+            y2: _y2,
             x: mid_x as u16,
             y: mid_y as u16,
             z: theta_norm as u16,
@@ -173,7 +193,7 @@ impl OctNode {
 
 // Convert bezier curves to n lines 
 fn interpolate_curve(x1: f32, y1: f32, cx1: f32, cy1: f32, 
-    cx2: f32, cy2: f32, x2: f32, y2: f32, n: u8) -> Vec<Line> {
+    cx2: f32, cy2: f32, x2: f32, y2: f32, n: u8, transforms: Vec<Transform>) -> Vec<Line> {
 
     let mut lines: Vec<Line> = vec![];
 
@@ -199,7 +219,7 @@ fn interpolate_curve(x1: f32, y1: f32, cx1: f32, cy1: f32,
         let (_x1, _y1) = (point[[0,0]], point[[0,1]]);
 
         if let Some((_x2, _y2)) = cursor {
-            lines.push(Line::new(_x1, _y1, _x2, _y2));
+            lines.push(Line::new(_x1, _y1, _x2, _y2, transforms.clone()));
         }
 
         cursor = Some((_x1, _y1));
@@ -208,7 +228,7 @@ fn interpolate_curve(x1: f32, y1: f32, cx1: f32, cy1: f32,
 
     // Final point to end
     let (_xf, _yf) = cursor.unwrap();
-    lines.push(Line::new(_xf, _yf, x2, y2));
+    lines.push(Line::new(_xf, _yf, x2, y2, transforms.clone()));
 
     return lines;
 }
@@ -218,7 +238,7 @@ fn convert_polyline(points: &str) -> Vec<Line> {
 }
 
 // Parse an SVG path description to a Vec of Lines
-fn convert_path(path: &str) -> Vec<Line> {
+fn parse_path(path: &str, transforms: Vec<Transform>) -> Vec<Line> {
     let mut tokens: Vec<String> = vec![];
     let mut operand: Option<String> = None;
 
@@ -267,7 +287,7 @@ fn convert_path(path: &str) -> Vec<Line> {
                 let x2 = tokens.pop().unwrap().parse::<f32>().unwrap();
                 let y2 = tokens.pop().unwrap().parse::<f32>().unwrap();
 
-                lines.push(Line::new(x1, y1, x2, y2));
+                lines.push(Line::new(x1, y1, x2, y2, transforms.clone()));
 
                 cursor = (x2, y2);
             },
@@ -280,7 +300,10 @@ fn convert_path(path: &str) -> Vec<Line> {
                 let x2 = tokens.pop().unwrap().parse::<f32>().unwrap();
                 let y2 = tokens.pop().unwrap().parse::<f32>().unwrap();
 
-                lines = [lines, interpolate_curve(x1, y1, cx1, cy1, cx2, cy2, x2, y2, BEZIER_LEN)].concat();
+                lines = [
+                    lines, 
+                    interpolate_curve(x1, y1, cx1, cy1, cx2, cy2, x2, y2, BEZIER_LEN, transforms.clone())
+                ].concat();
 
                 cursor = (x2, y2);
             },
@@ -288,7 +311,7 @@ fn convert_path(path: &str) -> Vec<Line> {
                 let (x1, y1) = cursor;
                 let (x2, y2) = start.unwrap();
 
-                lines.push(Line::new(x1, y1, x2, y2));
+                lines.push(Line::new(x1, y1, x2, y2, transforms.clone()));
 
                 cursor = (x2, y2);
             },
@@ -302,16 +325,37 @@ fn convert_path(path: &str) -> Vec<Line> {
     return lines;
 }
 
-fn collect_lines(mut el: Element) -> Vec<Line> {
+fn parse_transforms(transforms: &str) -> Vec<Transform> {
+    let mut result: Vec<Transform> = vec![];
+
+    if let Some(token_index) = transforms.find("translate") {
+        let args_offset = token_index + "translate".len() + 1;
+        let args_end = args_offset + transforms[args_offset..].find(')').unwrap();
+        let args: Vec<&str> = transforms[args_offset..args_end].split(',').map(|a| a.trim()).collect();
+
+        let t_x: f32 = if let Some(arg) = args.get(0) { arg.parse::<f32>().unwrap() } else { 0.0 };
+        let t_y: f32 = if let Some(arg) = args.get(1) { arg.parse::<f32>().unwrap() } else { 0.0 };
+        result.push(Transform::Translate(t_x, t_y))
+    }
+
+    return result;
+}
+
+fn collect_lines(mut el: Element, transforms: Vec<Transform>) -> Vec<Line> {
     let mut lines: Vec<Line> = vec![];
 
     while let Some(path) = el.take_child("path") {
         let path = path.attributes.get("d").unwrap();
-        lines = [lines, convert_path(path)].concat();
+        lines = [lines, parse_path(path, transforms.clone())].concat();
     }
 
     while let Some(group) = el.take_child("g") {
-        lines = [lines, collect_lines(group)].concat();
+        let t = if let Some(transform_str) = group.attributes.get("transform") {
+            [transforms.clone(), parse_transforms(transform_str)].concat()
+        } else {
+            transforms.clone()
+        };
+        lines = [lines, collect_lines(group, t)].concat();
     }
 
     return lines;
@@ -341,7 +385,7 @@ fn main() -> std::io::Result<()> {
         // [] Shapes (ellipse, circle, rectangle)
         // [] Strip text
 
-    let lines = collect_lines(svg);
+    let lines = collect_lines(svg, vec![]);
 
     let mut line_test = File::create("frame_lines.svg").unwrap();
     write!(line_test, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"400px\" height=\"400px\" viewBox=\"0 0 400 400\">").unwrap();
