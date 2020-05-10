@@ -11,8 +11,8 @@ use xmltree::Element;
 use ndarray::arr2;
 
 const SIZE: f32 = 512.0;
-const SEARCH_DIM: u16 = 30;
-const BEZIER_LEN: u8 = 5;
+const SEARCH_DIM: u16 = 40;
+const BEZIER_LEN: u8 = 4;
 
 /* TODO: 
 - [ ] Convert all line coords to float
@@ -424,8 +424,13 @@ fn collect_lines(mut el: Element, transforms: Vec<Transform>) -> Vec<Line> {
     let mut lines: Vec<Line> = vec![];
 
     while let Some(path) = el.take_child("path") {
-        let path = path.attributes.get("d").unwrap();
-        lines = [lines, parse_path(path, transforms.clone())].concat();
+        let t = if let Some(transform_str) = path.attributes.get("transform") {
+            [transforms.clone(), parse_transforms(transform_str)].concat()
+        } else {
+            transforms.clone()
+        };
+        let path_str = path.attributes.get("d").unwrap();
+        lines = [lines, parse_path(path_str, t)].concat();
     }
 
     while let Some(group) = el.take_child("g") {
@@ -452,8 +457,8 @@ fn write_svg(filename: &str, lines: Vec<Line>) {
     write!(line_test, "</g></svg>").unwrap();
 }
 
-fn heuristic(line: &Line) -> u8 {
-    return (line.length + line.portion) as u8;
+fn heuristic(line: &Line) -> u16 {
+    return 3*line.length + line.portion;
 }
 
 fn main() -> std::io::Result<()> {
@@ -483,9 +488,7 @@ fn main() -> std::io::Result<()> {
 
     // Initialize character grid containing [(score: u8, char: String)] for each voxel
     let size: (u16, u16) = terminal_size().unwrap();
-    let mut canvas: Vec<Vec<Vec<(u8, String)>>> = vec![vec![vec![]; size.0 as usize]; size.1 as usize];
-    
-    eprintln!("SIZE {} {}", size.0, size.1);
+    let mut canvas: Vec<Vec<HashMap<String, u16>>> = vec![vec![HashMap::new(); size.0 as usize]; size.1 as usize];
 
     let voxel_w = 400.0 / size.0 as f32;
     let voxel_h = 400.0 / size.1 as f32;
@@ -512,12 +515,9 @@ fn main() -> std::io::Result<()> {
 
             let pos = (y as usize, x as usize);
 
-            eprintln!("{:?} {:?}", pos, size);
-
             if pos.0 >= size.1 as usize || pos.1 >= size.0 as usize {
                 continue
             }
-
 
             let origin = (
                 x as f32 * voxel_w,
@@ -564,33 +564,36 @@ fn main() -> std::io::Result<()> {
             let mut nearest_neighbors = root.search(&segment_window);
             nearest_neighbors.sort_by(|a, b| heuristic(b).partial_cmp(&heuristic(a)).unwrap());
 
-            let mut voxel_pointer: usize = 0;
-
             for line in nearest_neighbors.iter() {
                 // Insert in ascending order
                 let h = heuristic(&line);
-                let voxel: &Vec<(u8, String)> = &canvas[pos.0][pos.1];
+                let voxel: &mut HashMap<String, u16> = &mut canvas[pos.0][pos.1];
 
-                while voxel_pointer < voxel.len() && voxel[voxel_pointer].0 > h {
-                    voxel_pointer += 1;
+                // Get the sum of all 
+                if let Some(heuristic) = voxel.remove(&line.character) {
+                    voxel.insert(line.character.clone(), heuristic + h);
+                } else {
+                    voxel.insert(line.character.clone(), h);
                 }
-                canvas[pos.0][pos.1].insert(voxel_pointer, (h, line.character.clone()));
             }
         }
     }
 
-    for x in 0..size.0 {
-        for y in 0..size.1 {
-            // Take the highest scoring character
+    for x in 1..size.0 {
+        for y in 1..size.1 {
+
             let voxel = &canvas[y as usize][x as usize];
             if voxel.len() > 0 {
+                // Sort by heuristic value and print the largest
+                let mut characters = voxel.iter().map(|(a, b)| (a, *b)).collect::<Vec<(&String, u16)>>();
+                characters.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap());
+
                 write!(out, "{}{}", 
                     cursor::Goto(
                         x as u16, 
                         y as u16), 
-                    voxel[0].1
+                    characters[0].0,
                 ).unwrap();
-
             }
         }
     }
@@ -598,8 +601,6 @@ fn main() -> std::io::Result<()> {
     write!(out, "{}", cursor::Goto(1, size.1)).unwrap();
 
     write_svg("frame_lines.svg", lines); // For debugging line accuracy
-
-    // For each char in grid, print first element
 
     Ok(())
 }
