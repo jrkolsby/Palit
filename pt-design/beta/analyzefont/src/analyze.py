@@ -15,7 +15,8 @@ HOUGH_THRESH = 3
 HOUGH_MIN_LEN = 20
 HOUGH_MAX_GAP = 7
 OUTPUT_DIR = 'output'
-CHARSET = "人攴彡厂二工田冂冖丿艸匚爪巛州儿冫山彳乙丶QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm,<.>/?;:'\"~`1234567890-=!@#$%^&*()_+[]{}\\|▗▖▄▝▐▞▟▘▚▌▙▀▜▛█━┃┅┇┉┋┏┓┗┛┣┫┳┻╋╏"
+#CHARSET = "人攴彡ミワヮムトエイィ厂二工田冂冖丿ノ艸匚爪巛州儿冫山彳乙丶ᄽᄾᄿᅴᆚᅐᅀᄁᆺᆽᅕ〥〤〻〲〱々〆〇〰ᄼQWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm,<.>/?;:'\"~`1234567890-=!@#$%^&*()_+[]{}\\|▗▖▄▝▐▞▟▘▚▌▙▀▜▛█━┃┅┇┉┋┏┓┗┛┣┫┳┻╋╏"
+CHARSET = "QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm,<.>/?;:'\"~`1234567890-=!@#$%^&*()_+[]{}\\|▗▖▄▝▐▞▟▘▚▌▙▀▜▛█━┃┅┇┉┋┏┓┗┛┣┫┳┻╋╏"
 
 # Initialize unicode font
 
@@ -92,6 +93,8 @@ for char in CHARSET:
     if merged_line.geometryType() is not 'MultiLineString':
         continue
 
+    portion = int(50 / len(merged_line))
+
     for line in merged_line:
         [[x1, y1], [x2, y2]] = line.coords
 
@@ -109,7 +112,7 @@ for char in CHARSET:
         mid_y = int(mid_y)
 
         theta_norm = int(SIZE * (theta + 90) / 180)
-        root.insert(Line(mid_x, mid_y, theta_norm, length, char))
+        root.insert(Line(mid_x, mid_y, theta_norm, length, portion, char))
 
         svg.write('<path stroke="red" stroke-width="1" d="M {0} {1} {2} {3} "/>'
                 .format(int(x1), int(y1), int(x2), int(y2)))

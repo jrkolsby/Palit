@@ -35,11 +35,12 @@ class Window:
         return '{0},{1},{2} ({3})'.format(self.x, self.y, self.z, self.half_dim)
 
 class Line:
-    def __init__(self, x, y, z, length, char):
+    def __init__(self, x, y, z, length, portion, char):
         self.x = x
         self.y = y
         self.z = z
         self.length = length
+        self.portion = portion
         self.char = char
 
     def __str__(self):
@@ -154,8 +155,8 @@ class OctNode:
                         '<': '&gt;',
                         '&': '&amp;',
                     }.get(line.char, line.char)
-                    file.write('{0}<line x="{1}" y="{2}" z="{3}" len="{4}" char="{5}" />\n'
-                        .format('\t' * (depth + 1), line.x, line.y, line.z, line.length, escaped_char))
+                    file.write('{0}<line x="{1}" y="{2}" z="{3}" len="{4}" portion="{5}" char="{6}" />\n'
+                        .format('\t' * (depth + 1), line.x, line.y, line.z, line.length, line.portion, escaped_char))
                 break
             child.write(file, depth+1)
         file.write('{0}</node>\n'.format('\t' * depth))

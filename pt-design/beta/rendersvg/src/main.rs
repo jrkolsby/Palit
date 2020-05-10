@@ -1,17 +1,40 @@
-use xmltree::Element;
-use ndarray::arr2;
 use std::fs::{self, File};
 use std::env;
-use std::io::Write;
+use std::io::{Write};
+use std::os::unix::io::FromRawFd;
+use std::collections::HashMap;
+
+use bresenham::Bresenham;
+use termion::{clear, cursor, terminal_size};
+use termion::raw::IntoRawMode;
+use xmltree::Element;
+use ndarray::arr2;
 
 const SIZE: f32 = 512.0;
+const SEARCH_DIM: u16 = 30;
 const BEZIER_LEN: u8 = 5;
 
-// TODO: Does our font database need to contain floats?
+/* TODO: 
+- [ ] Convert all line coords to float
+- [X] Bezier curves 
+- [ ] Shapes (ellipse, circle, rectangle)
+- [ ] Strip text
+*/
+
+/*
+    HEURISTICS:
+    x_pos: 0-50
+    y_pos: 0-50
+    theta: 0-50
+
+    length: 0-50
+    portion: 0-50
+
+    SCORE: 0-250
+*/
 
 #[derive(Clone, Debug)]
 struct Line {
-    character: String,
     x: u16,
     y: u16,
     z: u16,
@@ -19,13 +42,17 @@ struct Line {
     y1: f32,
     x2: f32,
     y2: f32,
+    slope: f32,
     length: u16,
+    portion: u16,
+    character: String,
 }
 
 #[derive(Clone, Debug)]
 enum Transform {
     Rotate(f32, f32, f32),
     Translate(f32, f32),
+    Scale(f32, f32),
 }
 
 fn transform_point(p: (f32, f32), t: Vec<Transform>) -> (f32, f32) {
@@ -33,6 +60,7 @@ fn transform_point(p: (f32, f32), t: Vec<Transform>) -> (f32, f32) {
     for transform in t.iter() {
         let (_x, _y) = match transform {
             Transform::Translate(dx, dy) => (x + dx, y + dy),
+            Transform::Scale(sx, sy) => (x * sx, y * sy),
             Transform::Rotate(theta, ox, oy) => {
                 // https://stackoverflow.com/questions/2259476/rotating-a-point-about-another-point-2d
                 let s = theta.to_radians().sin();
@@ -64,10 +92,12 @@ impl Line {
         let dx = _x2 - _x1;
         let dy = _y2 - _y1;
 
+        let slope = dy / dx;
+
         let mid_x = _x1 + (dx / 2.0);
         let mid_y = _y1 + (dy / 2.0);
         let length = (dx.powf(2.0) + dy.powf(2.0)).sqrt();
-        let theta = if dx == 0.0 { 90. } else { (dy / dx).atan().to_degrees() };
+        let theta = if dx == 0.0 { 90. } else { slope.atan().to_degrees() };
         let theta_norm = SIZE * (theta + 90.0) / 180.0;
 
         Line {
@@ -78,7 +108,9 @@ impl Line {
             x: mid_x as u16,
             y: mid_y as u16,
             z: theta_norm as u16,
+            slope,
             length: length as u16,
+            portion: 0,
             character: "".to_string(),
         }
     }
@@ -96,11 +128,11 @@ struct Window {
 impl Window {
     fn new(x: u16, y: u16, z: u16, dim: u16) -> Self {
         Window {
-            min_x: x - dim,
+            min_x: if x > dim { x - dim } else { 0 },
             max_x: x + dim,
-            min_y: y - dim,
+            min_y: if y > dim { y - dim } else { 0 },
             max_y: y + dim,
-            min_z: z - dim,
+            min_z: if z > dim { z - dim } else { 0 },
             max_z: z + dim
         }
     }
@@ -146,6 +178,7 @@ impl OctNode {
             let line_y = line.attributes.get("y").unwrap().parse::<u16>().unwrap();
             let line_z = line.attributes.get("z").unwrap().parse::<u16>().unwrap();
             let line_len = line.attributes.get("len").unwrap().parse::<u16>().unwrap();
+            let line_portion = line.attributes.get("portion").unwrap().parse::<u16>().unwrap();
             let line_char = line.attributes.get("char").unwrap();
 
             let unescaped_char: String = match line_char.as_str() {
@@ -158,14 +191,17 @@ impl OctNode {
             };
 
             lines.push(Line {
+                // UNUSED
                 x1: 0.0,
                 y1: 0.0,
                 x2: 0.0,
                 y2: 0.0,
+                slope: 0.0,
                 x: line_x,
                 y: line_y,
                 z: line_z,
                 length: line_len,
+                portion: line_portion,
                 character: unescaped_char,
             });
         }
@@ -360,6 +396,12 @@ fn take_transform(transforms: &str) -> Option<(&str, Transform)> {
 
                 return Some((&transforms[args_end+1..].trim(), Transform::Rotate(theta, o_x, o_y)))
             }
+            "scale" => {
+                let s_x: f32 = if let Some(arg) = args.get(0) { arg.parse::<f32>().unwrap() } else { 0.0 };
+                let s_y: f32 = if let Some(arg) = args.get(1) { arg.parse::<f32>().unwrap() } else { 0.0 };
+
+                return Some((&transforms[args_end+1..].trim(), Transform::Scale(s_x, s_y)))
+            }
             a @ _ => { eprintln!("Unknown Transform {}", a); }
         }
     }
@@ -398,6 +440,22 @@ fn collect_lines(mut el: Element, transforms: Vec<Transform>) -> Vec<Line> {
     return lines;
 }
 
+fn write_svg(filename: &str, lines: Vec<Line>) {
+    let mut line_test = File::create(filename).unwrap();
+    write!(line_test, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"400px\" height=\"400px\" viewBox=\"0 0 400 400\">").unwrap();
+    write!(line_test, "<g stroke=\"#000000\" stroke-width=\"1\">").unwrap();
+
+    for line in lines.iter() {
+        write!(line_test, "<path d=\"M {} {} L {} {} \" />", line.x1, line.y1, line.x2, line.y2).unwrap();
+    }
+
+    write!(line_test, "</g></svg>").unwrap();
+}
+
+fn heuristic(line: &Line) -> u8 {
+    return (line.length + line.portion) as u8;
+}
+
 fn main() -> std::io::Result<()> {
     let argv: Vec<String> = env::args().collect();
     if argv.len() < 3 {
@@ -411,41 +469,135 @@ fn main() -> std::io::Result<()> {
     // Build octree from xml
     let root = OctNode::new(db);
 
-    // BEGIN RENDER
-    println!("START");
+    let mut out = unsafe {
+        File::from_raw_fd(1).into_raw_mode().unwrap()
+    };
 
+    write!(out, "{}", clear::All).unwrap();
+
+    // Convert SVG to lines and comute x,y,z and theta
     let svg_str: String = fs::read_to_string(&argv[2]).unwrap();
     let svg: Element = Element::parse(svg_str.as_bytes()).unwrap();
 
-    // Convert SVG to all straight lines and normalize angles
-        // [X] Bezier curves 
-        // [] Shapes (ellipse, circle, rectangle)
-        // [] Strip text
-
     let lines = collect_lines(svg, vec![]);
 
-    let mut line_test = File::create("frame_lines.svg").unwrap();
-    write!(line_test, "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"400px\" height=\"400px\" viewBox=\"0 0 400 400\">").unwrap();
-    write!(line_test, "<g stroke=\"#000000\" stroke-width=\"1\">").unwrap();
+    // Initialize character grid containing [(score: u8, char: String)] for each voxel
+    let size: (u16, u16) = terminal_size().unwrap();
+    let mut canvas: Vec<Vec<Vec<(u8, String)>>> = vec![vec![vec![]; size.0 as usize]; size.1 as usize];
+    
+    eprintln!("SIZE {} {}", size.0, size.1);
 
-    for line in lines.iter() {
-        write!(line_test, "<path d=\"M {} {} L {} {} \" />", line.x1, line.y1, line.x2, line.y2).unwrap();
-    }
-
-    write!(line_test, "</g></svg>").unwrap();
-
-    // Initialize character grid of size h * w * [(score: u16, char: String)]
+    let voxel_w = 400.0 / size.0 as f32;
+    let voxel_h = 400.0 / size.1 as f32;
+    let voxel_scale = SIZE / voxel_h;
 
     // For each line in svg, compute x, y, theta_norm and search root for nearest neighbors
+    for line in lines.iter() {
+        
+        // Compute voxel intersections and search line segments, modify 
+        // canvas while maintaining heuristic sort
 
-    let search_area = Window::new(256, 256, 512, 50);
-    let nearest = root.search(&search_area);
+        let voxel_start = (
+            (line.x1 / voxel_w) as isize,
+            (line.y1 / voxel_h) as isize
+        );
 
-    let chars: Vec<String> = nearest.iter().map(|l| l.character.clone()).collect();
+        let voxel_end = (
+            (line.x2 / voxel_w) as isize,
+            (line.y2 / voxel_h) as isize
+        );
 
-    //  Score the similarity of the lines by angle (z), length, then distance
+        // Find voxels which intersect given line
+        for (x, y) in Bresenham::new(voxel_start, voxel_end) {
 
-    //  Accumulate the score for the overlapping character in the grid 
+            let pos = (y as usize, x as usize);
+
+            eprintln!("{:?} {:?}", pos, size);
+
+            if pos.0 >= size.1 as usize || pos.1 >= size.0 as usize {
+                continue
+            }
+
+
+            let origin = (
+                x as f32 * voxel_w,
+                y as f32 * voxel_h
+            );
+
+            // Six possible endpoints for the line segment contained in this voxel
+            let endpoints: Vec<(f32, f32)> = vec![
+                (line.x1, line.y1),
+                (line.x2, line.y2),
+                // Intercepts left edge
+                (origin.0, line.slope * (origin.0 - line.x1) + line.y1),
+                // Intercepts right edge
+                (origin.0 + voxel_w, line.slope * (origin.0 + voxel_w - line.x1) + line.y1),
+                // Intercepts top edge
+                (((origin.1 - line.y1) / line.slope) + line.x1, origin.1),
+                // Intercepts bottom edge
+                (((origin.1 + voxel_h - line.y1) / line.slope) + line.x1, origin.1 + voxel_h),
+            ].into_iter().filter(|(x, y)| {
+                *x >= origin.0 && 
+                *x <= origin.0 + voxel_w &&
+                *y >= origin.1 &&
+                *y <= origin.1 + voxel_h
+            }).collect();
+
+            // Bresenham doesn't guarentee output voxels intersects line
+            if endpoints.len() < 2 {
+                continue
+            }
+
+            // Compute midpoint relative to voxel origin
+            let (segment_x, segment_y) = (
+                voxel_scale * (((endpoints[0].0 + endpoints[1].0) / 2.0) - origin.0),
+                voxel_scale * (((endpoints[0].1 + endpoints[1].1) / 2.0) - origin.1)
+            );
+
+            let segment_window = Window::new(
+                segment_x as u16,
+                segment_y as u16,
+                line.z, 
+                SEARCH_DIM,
+            );
+
+            let mut nearest_neighbors = root.search(&segment_window);
+            nearest_neighbors.sort_by(|a, b| heuristic(b).partial_cmp(&heuristic(a)).unwrap());
+
+            let mut voxel_pointer: usize = 0;
+
+            for line in nearest_neighbors.iter() {
+                // Insert in ascending order
+                let h = heuristic(&line);
+                let voxel: &Vec<(u8, String)> = &canvas[pos.0][pos.1];
+
+                while voxel_pointer < voxel.len() && voxel[voxel_pointer].0 > h {
+                    voxel_pointer += 1;
+                }
+                canvas[pos.0][pos.1].insert(voxel_pointer, (h, line.character.clone()));
+            }
+        }
+    }
+
+    for x in 0..size.0 {
+        for y in 0..size.1 {
+            // Take the highest scoring character
+            let voxel = &canvas[y as usize][x as usize];
+            if voxel.len() > 0 {
+                write!(out, "{}{}", 
+                    cursor::Goto(
+                        x as u16, 
+                        y as u16), 
+                    voxel[0].1
+                ).unwrap();
+
+            }
+        }
+    }
+
+    write!(out, "{}", cursor::Goto(1, size.1)).unwrap();
+
+    write_svg("frame_lines.svg", lines); // For debugging line accuracy
 
     // For each char in grid, print first element
 
