@@ -1,5 +1,5 @@
 *.png
 *.svg
 *.db
-output/
+./output/
 __pycache__/

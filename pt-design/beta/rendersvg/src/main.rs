@@ -484,14 +484,17 @@ fn main() -> std::io::Result<()> {
     let svg_str: String = fs::read_to_string(&argv[2]).unwrap();
     let svg: Element = Element::parse(svg_str.as_bytes()).unwrap();
 
+    let width = svg.attributes.get("width").unwrap().replace("px", "").parse::<f32>().unwrap();
+    let height = svg.attributes.get("height").unwrap().replace("px", "").parse::<f32>().unwrap();
+
     let lines = collect_lines(svg, vec![]);
 
     // Initialize character grid containing [(score: u8, char: String)] for each voxel
     let size: (u16, u16) = terminal_size().unwrap();
     let mut canvas: Vec<Vec<HashMap<String, u16>>> = vec![vec![HashMap::new(); size.0 as usize]; size.1 as usize];
 
-    let voxel_w = 400.0 / size.0 as f32;
-    let voxel_h = 400.0 / size.1 as f32;
+    let voxel_w = width / size.0 as f32;
+    let voxel_h = height / size.1 as f32;
     let voxel_scale = SIZE / voxel_h;
 
     // For each line in svg, compute x, y, theta_norm and search root for nearest neighbors
