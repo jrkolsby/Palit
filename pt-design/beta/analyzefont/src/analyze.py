@@ -15,8 +15,8 @@ HOUGH_THRESH = 3
 HOUGH_MIN_LEN = 20
 HOUGH_MAX_GAP = 7
 OUTPUT_DIR = 'output'
-# CHARSET = "人攴彡ミワヮムトエイィ厂二工田冂冖丿ノ艸匚爪巛州儿冫山彳乙丶ᄽᄾᄿᅴᆚᅐᅀᄁᆺᆽᅕ〥〤〻〲〱々〆〇〰ᄼQWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm,<.>/?;:'\"~`1234567890-=!@#$%^&*()_+[]{}\\|▗▖▄▝▐▞▟▘▚▌▙▀▜▛█━┃┅┇┉┋┏┓┗┛┣┫┳┻╋╏"
-# CHARSET = "QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm,<.>/?;:'\"~`1234567890-=!@#$%^&*()_+[]{}\\|▗▖▄▝▐▞▟▘▚▌▙▀▜▛█━┃┅┇┉┋┏┓┗┛┣┫┳┻╋╏"
+#CHARSET = "人攴彡ミワヮムトエイィ厂二工田冂冖丿ノ艸匚爪巛州儿冫山彳乙丶ᄽᄾᄿᅴᆚᅐᅀᄁᆺᆽᅕ〥〤〻〲〱々〆〇〰ᄼQWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm,<.>/?;:'\"~`1234567890-=!@#$%^&*()_+[]{}\\|▗▖▄▝▐▞▟▘▚▌▙▀▜▛█━┃┅┇┉┋┏┓┗┛┣┫┳┻╋╏"
+#CHARSET = "QWERTYUIOPASDFGHJKLZXCVBNMqwertyuiopasdfghjklzxcvbnm,<.>/?;:'\"~`1234567890-=!@#$%^&*()_+[]{}\\|▗▖▄▝▐▞▟▘▚▌▙▀▜▛█━┃┅┇┉┋┏┓┗┛┣┫┳┻╋╏"
 CHARSET = "\\/-=_)(.,^"
 
 

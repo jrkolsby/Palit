@@ -1,0 +1,1475 @@
+<node x="256" y="256" z="256" dim="256">
+	<node x="384" y="384" z="384" dim="128">
+	</node>
+	<node x="128" y="384" z="384" dim="128">
+		<node x="192" y="448" z="448" dim="64">
+		</node>
+		<node x="64" y="448" z="448" dim="64">
+			<node x="96" y="480" z="480" dim="32">
+			</node>
+			<node x="32" y="480" z="480" dim="32">
+			</node>
+			<node x="96" y="416" z="480" dim="32">
+			</node>
+			<node x="32" y="416" z="480" dim="32">
+			</node>
+			<node x="96" y="480" z="416" dim="32">
+			</node>
+			<node x="32" y="480" z="416" dim="32">
+			</node>
+			<node x="96" y="416" z="416" dim="32">
+				<node x="112" y="432" z="432" dim="16">
+				</node>
+				<node x="80" y="432" z="432" dim="16">
+				</node>
+				<node x="112" y="400" z="432" dim="16">
+					<node x="120" y="408" z="440" dim="8">
+					</node>
+					<node x="104" y="408" z="440" dim="8">
+					</node>
+					<node x="120" y="392" z="440" dim="8">
+					</node>
+					<node x="104" y="392" z="440" dim="8">
+					</node>
+					<node x="120" y="408" z="424" dim="8">
+						<node x="124" y="412" z="428" dim="4">
+						</node>
+						<node x="116" y="412" z="428" dim="4">
+							<line x="119" y="414" z="429" len="33" portion="2" char="(" />
+						</node>
+						<node x="124" y="404" z="428" dim="4">
+						</node>
+						<node x="116" y="404" z="428" dim="4">
+						</node>
+						<node x="124" y="412" z="420" dim="4">
+							<line x="121" y="415" z="423" len="65" portion="2" char="(" />
+						</node>
+						<node x="116" y="412" z="420" dim="4">
+						</node>
+						<node x="124" y="404" z="420" dim="4">
+						</node>
+						<node x="116" y="404" z="420" dim="4">
+						</node>
+					</node>
+					<node x="104" y="408" z="424" dim="8">
+					</node>
+					<node x="120" y="392" z="424" dim="8">
+					</node>
+					<node x="104" y="392" z="424" dim="8">
+					</node>
+				</node>
+				<node x="80" y="400" z="432" dim="16">
+				</node>
+				<node x="112" y="432" z="400" dim="16">
+				</node>
+				<node x="80" y="432" z="400" dim="16">
+				</node>
+				<node x="112" y="400" z="400" dim="16">
+				</node>
+				<node x="80" y="400" z="400" dim="16">
+				</node>
+			</node>
+			<node x="32" y="416" z="416" dim="32">
+			</node>
+		</node>
+		<node x="192" y="320" z="448" dim="64">
+			<line x="134" y="279" z="440" len="317" portion="16" char="\" />
+		</node>
+		<node x="64" y="320" z="448" dim="64">
+			<node x="96" y="352" z="480" dim="32">
+				<node x="112" y="368" z="496" dim="16">
+				</node>
+				<node x="80" y="368" z="496" dim="16">
+				</node>
+				<node x="112" y="336" z="496" dim="16">
+				</node>
+				<node x="80" y="336" z="496" dim="16">
+				</node>
+				<node x="112" y="368" z="464" dim="16">
+				</node>
+				<node x="80" y="368" z="464" dim="16">
+				</node>
+				<node x="112" y="336" z="464" dim="16">
+				</node>
+				<node x="80" y="336" z="464" dim="16">
+					<node x="88" y="344" z="472" dim="8">
+						<node x="92" y="348" z="476" dim="4">
+							<line x="94" y="349" z="475" len="45" portion="2" char="(" />
+						</node>
+						<node x="84" y="348" z="476" dim="4">
+						</node>
+						<node x="92" y="340" z="476" dim="4">
+							<line x="92" y="336" z="472" len="25" portion="2" char="(" />
+						</node>
+						<node x="84" y="340" z="476" dim="4">
+						</node>
+						<node x="92" y="348" z="468" dim="4">
+						</node>
+						<node x="84" y="348" z="468" dim="4">
+						</node>
+						<node x="92" y="340" z="468" dim="4">
+						</node>
+						<node x="84" y="340" z="468" dim="4">
+						</node>
+					</node>
+					<node x="72" y="344" z="472" dim="8">
+					</node>
+					<node x="88" y="328" z="472" dim="8">
+						<line x="92" y="333" z="475" len="42" portion="2" char="(" />
+					</node>
+					<node x="72" y="328" z="472" dim="8">
+					</node>
+					<node x="88" y="344" z="456" dim="8">
+					</node>
+					<node x="72" y="344" z="456" dim="8">
+					</node>
+					<node x="88" y="328" z="456" dim="8">
+					</node>
+					<node x="72" y="328" z="456" dim="8">
+					</node>
+				</node>
+			</node>
+			<node x="32" y="352" z="480" dim="32">
+			</node>
+			<node x="96" y="288" z="480" dim="32">
+			</node>
+			<node x="32" y="288" z="480" dim="32">
+			</node>
+			<node x="96" y="352" z="416" dim="32">
+			</node>
+			<node x="32" y="352" z="416" dim="32">
+			</node>
+			<node x="96" y="288" z="416" dim="32">
+				<line x="126" y="267" z="440" len="344" portion="16" char="\" />
+			</node>
+			<node x="32" y="288" z="416" dim="32">
+			</node>
+		</node>
+		<node x="192" y="448" z="320" dim="64">
+			<node x="224" y="480" z="352" dim="32">
+			</node>
+			<node x="160" y="480" z="352" dim="32">
+				<node x="176" y="496" z="368" dim="16">
+					<line x="183" y="487" z="361" len="37" portion="2" char="(" />
+				</node>
+				<node x="144" y="496" z="368" dim="16">
+				</node>
+				<node x="176" y="464" z="368" dim="16">
+					<line x="168" y="472" z="372" len="75" portion="2" char="(" />
+				</node>
+				<node x="144" y="464" z="368" dim="16">
+				</node>
+				<node x="176" y="496" z="336" dim="16">
+				</node>
+				<node x="144" y="496" z="336" dim="16">
+				</node>
+				<node x="176" y="464" z="336" dim="16">
+				</node>
+				<node x="144" y="464" z="336" dim="16">
+				</node>
+			</node>
+			<node x="224" y="416" z="352" dim="32">
+			</node>
+			<node x="160" y="416" z="352" dim="32">
+			</node>
+			<node x="224" y="480" z="288" dim="32">
+				<line x="206" y="454" z="256" len="28" portion="12" char="_" />
+			</node>
+			<node x="160" y="480" z="288" dim="32">
+				<node x="176" y="496" z="304" dim="16">
+				</node>
+				<node x="144" y="496" z="304" dim="16">
+				</node>
+				<node x="176" y="464" z="304" dim="16">
+				</node>
+				<node x="144" y="464" z="304" dim="16">
+				</node>
+				<node x="176" y="496" z="272" dim="16">
+				</node>
+				<node x="144" y="496" z="272" dim="16">
+				</node>
+				<node x="176" y="464" z="272" dim="16">
+					<line x="177" y="454" z="256" len="28" portion="12" char="_" />
+				</node>
+				<node x="144" y="464" z="272" dim="16">
+					<line x="128" y="452" z="256" len="184" portion="12" char="_" />
+				</node>
+			</node>
+			<node x="224" y="416" z="288" dim="32">
+			</node>
+			<node x="160" y="416" z="288" dim="32">
+			</node>
+		</node>
+		<node x="64" y="448" z="320" dim="64">
+			<line x="89" y="454" z="256" len="56" portion="12" char="_" />
+		</node>
+		<node x="192" y="320" z="320" dim="64">
+		</node>
+		<node x="64" y="320" z="320" dim="64">
+			<node x="96" y="352" z="352" dim="32">
+			</node>
+			<node x="32" y="352" z="352" dim="32">
+			</node>
+			<node x="96" y="288" z="352" dim="32">
+			</node>
+			<node x="32" y="288" z="352" dim="32">
+			</node>
+			<node x="96" y="352" z="288" dim="32">
+				<node x="112" y="368" z="304" dim="16">
+				</node>
+				<node x="80" y="368" z="304" dim="16">
+				</node>
+				<node x="112" y="336" z="304" dim="16">
+				</node>
+				<node x="80" y="336" z="304" dim="16">
+				</node>
+				<node x="112" y="368" z="272" dim="16">
+				</node>
+				<node x="80" y="368" z="272" dim="16">
+				</node>
+				<node x="112" y="336" z="272" dim="16">
+					<node x="120" y="344" z="280" dim="8">
+					</node>
+					<node x="104" y="344" z="280" dim="8">
+					</node>
+					<node x="120" y="328" z="280" dim="8">
+					</node>
+					<node x="104" y="328" z="280" dim="8">
+					</node>
+					<node x="120" y="344" z="264" dim="8">
+					</node>
+					<node x="104" y="344" z="264" dim="8">
+					</node>
+					<node x="120" y="328" z="264" dim="8">
+						<node x="124" y="332" z="268" dim="4">
+						</node>
+						<node x="116" y="332" z="268" dim="4">
+						</node>
+						<node x="124" y="324" z="268" dim="4">
+						</node>
+						<node x="116" y="324" z="268" dim="4">
+						</node>
+						<node x="124" y="332" z="260" dim="4">
+						</node>
+						<node x="116" y="332" z="260" dim="4">
+						</node>
+						<node x="124" y="324" z="260" dim="4">
+							<node x="126" y="326" z="262" dim="2">
+							</node>
+							<node x="122" y="326" z="262" dim="2">
+							</node>
+							<node x="126" y="322" z="262" dim="2">
+							</node>
+							<node x="122" y="322" z="262" dim="2">
+							</node>
+							<node x="126" y="326" z="258" dim="2">
+								<node x="127" y="327" z="259" dim="1">
+								</node>
+								<node x="125" y="327" z="259" dim="1">
+								</node>
+								<node x="127" y="325" z="259" dim="1">
+								</node>
+								<node x="125" y="325" z="259" dim="1">
+								</node>
+								<node x="127" y="327" z="257" dim="1">
+									<line x="127" y="326" z="256" len="177" portion="10" char="=" />
+								</node>
+								<node x="125" y="327" z="257" dim="1">
+								</node>
+								<node x="127" y="325" z="257" dim="1">
+									<line x="127" y="324" z="256" len="177" portion="10" char="=" />
+								</node>
+								<node x="125" y="325" z="257" dim="1">
+								</node>
+							</node>
+							<node x="122" y="326" z="258" dim="2">
+							</node>
+							<node x="126" y="322" z="258" dim="2">
+							</node>
+							<node x="122" y="322" z="258" dim="2">
+							</node>
+						</node>
+						<node x="116" y="324" z="260" dim="4">
+						</node>
+					</node>
+					<node x="104" y="328" z="264" dim="8">
+					</node>
+				</node>
+				<node x="80" y="336" z="272" dim="16">
+				</node>
+			</node>
+			<node x="32" y="352" z="288" dim="32">
+			</node>
+			<node x="96" y="288" z="288" dim="32">
+				<node x="112" y="304" z="304" dim="16">
+				</node>
+				<node x="80" y="304" z="304" dim="16">
+				</node>
+				<node x="112" y="272" z="304" dim="16">
+				</node>
+				<node x="80" y="272" z="304" dim="16">
+				</node>
+				<node x="112" y="304" z="272" dim="16">
+				</node>
+				<node x="80" y="304" z="272" dim="16">
+				</node>
+				<node x="112" y="272" z="272" dim="16">
+					<node x="120" y="280" z="280" dim="8">
+					</node>
+					<node x="104" y="280" z="280" dim="8">
+					</node>
+					<node x="120" y="264" z="280" dim="8">
+					</node>
+					<node x="104" y="264" z="280" dim="8">
+					</node>
+					<node x="120" y="280" z="264" dim="8">
+					</node>
+					<node x="104" y="280" z="264" dim="8">
+					</node>
+					<node x="120" y="264" z="264" dim="8">
+						<node x="124" y="268" z="268" dim="4">
+						</node>
+						<node x="116" y="268" z="268" dim="4">
+						</node>
+						<node x="124" y="260" z="268" dim="4">
+						</node>
+						<node x="116" y="260" z="268" dim="4">
+						</node>
+						<node x="124" y="268" z="260" dim="4">
+							<node x="126" y="270" z="262" dim="2">
+							</node>
+							<node x="122" y="270" z="262" dim="2">
+							</node>
+							<node x="126" y="266" z="262" dim="2">
+							</node>
+							<node x="122" y="266" z="262" dim="2">
+							</node>
+							<node x="126" y="270" z="258" dim="2">
+							</node>
+							<node x="122" y="270" z="258" dim="2">
+							</node>
+							<node x="126" y="266" z="258" dim="2">
+								<node x="127" y="267" z="259" dim="1">
+								</node>
+								<node x="125" y="267" z="259" dim="1">
+								</node>
+								<node x="127" y="265" z="259" dim="1">
+								</node>
+								<node x="125" y="265" z="259" dim="1">
+								</node>
+								<node x="127" y="267" z="257" dim="1">
+									<line x="126" y="267" z="256" len="141" portion="25" char="-" />
+								</node>
+								<node x="125" y="267" z="257" dim="1">
+								</node>
+								<node x="127" y="265" z="257" dim="1">
+									<line x="127" y="265" z="256" len="139" portion="25" char="-" />
+								</node>
+								<node x="125" y="265" z="257" dim="1">
+								</node>
+							</node>
+							<node x="122" y="266" z="258" dim="2">
+							</node>
+						</node>
+						<node x="116" y="268" z="260" dim="4">
+						</node>
+						<node x="124" y="260" z="260" dim="4">
+						</node>
+						<node x="116" y="260" z="260" dim="4">
+						</node>
+					</node>
+					<node x="104" y="264" z="264" dim="8">
+					</node>
+				</node>
+				<node x="80" y="272" z="272" dim="16">
+				</node>
+			</node>
+			<node x="32" y="288" z="288" dim="32">
+			</node>
+		</node>
+	</node>
+	<node x="384" y="128" z="384" dim="128">
+	</node>
+	<node x="128" y="128" z="384" dim="128">
+		<node x="192" y="192" z="448" dim="64">
+			<node x="224" y="224" z="480" dim="32">
+			</node>
+			<node x="160" y="224" z="480" dim="32">
+				<node x="176" y="240" z="496" dim="16">
+				</node>
+				<node x="144" y="240" z="496" dim="16">
+				</node>
+				<node x="176" y="208" z="496" dim="16">
+				</node>
+				<node x="144" y="208" z="496" dim="16">
+				</node>
+				<node x="176" y="240" z="464" dim="16">
+				</node>
+				<node x="144" y="240" z="464" dim="16">
+				</node>
+				<node x="176" y="208" z="464" dim="16">
+				</node>
+				<node x="144" y="208" z="464" dim="16">
+					<node x="152" y="216" z="472" dim="8">
+					</node>
+					<node x="136" y="216" z="472" dim="8">
+					</node>
+					<node x="152" y="200" z="472" dim="8">
+					</node>
+					<node x="136" y="200" z="472" dim="8">
+					</node>
+					<node x="152" y="216" z="456" dim="8">
+						<node x="156" y="220" z="460" dim="4">
+						</node>
+						<node x="148" y="220" z="460" dim="4">
+						</node>
+						<node x="156" y="212" z="460" dim="4">
+						</node>
+						<node x="148" y="212" z="460" dim="4">
+						</node>
+						<node x="156" y="220" z="452" dim="4">
+							<node x="158" y="222" z="454" dim="2">
+							</node>
+							<node x="154" y="222" z="454" dim="2">
+								<node x="155" y="223" z="455" dim="1">
+								</node>
+								<node x="153" y="223" z="455" dim="1">
+									<line x="152" y="223" z="455" len="26" portion="2" char=")" />
+								</node>
+								<node x="155" y="221" z="455" dim="1">
+								</node>
+								<node x="153" y="221" z="455" dim="1">
+								</node>
+								<node x="155" y="223" z="453" dim="1">
+								</node>
+								<node x="153" y="223" z="453" dim="1">
+									<line x="153" y="222" z="452" len="31" portion="2" char=")" />
+								</node>
+								<node x="155" y="221" z="453" dim="1">
+								</node>
+								<node x="153" y="221" z="453" dim="1">
+								</node>
+							</node>
+							<node x="158" y="218" z="454" dim="2">
+							</node>
+							<node x="154" y="218" z="454" dim="2">
+							</node>
+							<node x="158" y="222" z="450" dim="2">
+							</node>
+							<node x="154" y="222" z="450" dim="2">
+							</node>
+							<node x="158" y="218" z="450" dim="2">
+							</node>
+							<node x="154" y="218" z="450" dim="2">
+							</node>
+						</node>
+						<node x="148" y="220" z="452" dim="4">
+							<line x="149" y="216" z="455" len="58" portion="2" char=")" />
+						</node>
+						<node x="156" y="212" z="452" dim="4">
+						</node>
+						<node x="148" y="212" z="452" dim="4">
+						</node>
+					</node>
+					<node x="136" y="216" z="456" dim="8">
+					</node>
+					<node x="152" y="200" z="456" dim="8">
+					</node>
+					<node x="136" y="200" z="456" dim="8">
+					</node>
+				</node>
+			</node>
+			<node x="224" y="160" z="480" dim="32">
+			</node>
+			<node x="160" y="160" z="480" dim="32">
+			</node>
+			<node x="224" y="224" z="416" dim="32">
+			</node>
+			<node x="160" y="224" z="416" dim="32">
+				<node x="176" y="240" z="432" dim="16">
+				</node>
+				<node x="144" y="240" z="432" dim="16">
+				</node>
+				<node x="176" y="208" z="432" dim="16">
+					<node x="184" y="216" z="440" dim="8">
+					</node>
+					<node x="168" y="216" z="440" dim="8">
+					</node>
+					<node x="184" y="200" z="440" dim="8">
+					</node>
+					<node x="168" y="200" z="440" dim="8">
+					</node>
+					<node x="184" y="216" z="424" dim="8">
+					</node>
+					<node x="168" y="216" z="424" dim="8">
+						<node x="172" y="220" z="428" dim="4">
+						</node>
+						<node x="164" y="220" z="428" dim="4">
+						</node>
+						<node x="172" y="212" z="428" dim="4">
+						</node>
+						<node x="164" y="212" z="428" dim="4">
+						</node>
+						<node x="172" y="220" z="420" dim="4">
+						</node>
+						<node x="164" y="220" z="420" dim="4">
+						</node>
+						<node x="172" y="212" z="420" dim="4">
+							<node x="174" y="214" z="422" dim="2">
+								<line x="174" y="213" z="423" len="33" portion="4" char="^" />
+							</node>
+							<node x="170" y="214" z="422" dim="2">
+							</node>
+							<node x="174" y="210" z="422" dim="2">
+								<line x="175" y="210" z="423" len="35" portion="4" char="^" />
+							</node>
+							<node x="170" y="210" z="422" dim="2">
+							</node>
+							<node x="174" y="214" z="418" dim="2">
+							</node>
+							<node x="170" y="214" z="418" dim="2">
+							</node>
+							<node x="174" y="210" z="418" dim="2">
+							</node>
+							<node x="170" y="210" z="418" dim="2">
+							</node>
+						</node>
+						<node x="164" y="212" z="420" dim="4">
+						</node>
+					</node>
+					<node x="184" y="200" z="424" dim="8">
+					</node>
+					<node x="168" y="200" z="424" dim="8">
+						<line x="164" y="195" z="420" len="79" portion="4" char="^" />
+					</node>
+				</node>
+				<node x="144" y="208" z="432" dim="16">
+				</node>
+				<node x="176" y="240" z="400" dim="16">
+				</node>
+				<node x="144" y="240" z="400" dim="16">
+				</node>
+				<node x="176" y="208" z="400" dim="16">
+				</node>
+				<node x="144" y="208" z="400" dim="16">
+				</node>
+			</node>
+			<node x="224" y="160" z="416" dim="32">
+			</node>
+			<node x="160" y="160" z="416" dim="32">
+				<node x="176" y="176" z="432" dim="16">
+					<line x="163" y="189" z="426" len="26" portion="4" char="^" />
+				</node>
+				<node x="144" y="176" z="432" dim="16">
+				</node>
+				<node x="176" y="144" z="432" dim="16">
+				</node>
+				<node x="144" y="144" z="432" dim="16">
+				</node>
+				<node x="176" y="176" z="400" dim="16">
+				</node>
+				<node x="144" y="176" z="400" dim="16">
+					<node x="152" y="184" z="408" dim="8">
+					</node>
+					<node x="136" y="184" z="408" dim="8">
+						<node x="140" y="188" z="412" dim="4">
+							<line x="138" y="191" z="412" len="28" portion="2" char=")" />
+						</node>
+						<node x="132" y="188" z="412" dim="4">
+						</node>
+						<node x="140" y="180" z="412" dim="4">
+						</node>
+						<node x="132" y="180" z="412" dim="4">
+						</node>
+						<node x="140" y="188" z="404" dim="4">
+						</node>
+						<node x="132" y="188" z="404" dim="4">
+							<line x="134" y="185" z="406" len="25" portion="2" char=")" />
+						</node>
+						<node x="140" y="180" z="404" dim="4">
+						</node>
+						<node x="132" y="180" z="404" dim="4">
+						</node>
+					</node>
+					<node x="152" y="168" z="408" dim="8">
+					</node>
+					<node x="136" y="168" z="408" dim="8">
+					</node>
+					<node x="152" y="184" z="392" dim="8">
+					</node>
+					<node x="136" y="184" z="392" dim="8">
+					</node>
+					<node x="152" y="168" z="392" dim="8">
+					</node>
+					<node x="136" y="168" z="392" dim="8">
+					</node>
+				</node>
+				<node x="176" y="144" z="400" dim="16">
+				</node>
+				<node x="144" y="144" z="400" dim="16">
+				</node>
+			</node>
+		</node>
+		<node x="64" y="192" z="448" dim="64">
+			<node x="96" y="224" z="480" dim="32">
+			</node>
+			<node x="32" y="224" z="480" dim="32">
+			</node>
+			<node x="96" y="160" z="480" dim="32">
+			</node>
+			<node x="32" y="160" z="480" dim="32">
+			</node>
+			<node x="96" y="224" z="416" dim="32">
+			</node>
+			<node x="32" y="224" z="416" dim="32">
+			</node>
+			<node x="96" y="160" z="416" dim="32">
+				<node x="112" y="176" z="432" dim="16">
+				</node>
+				<node x="80" y="176" z="432" dim="16">
+				</node>
+				<node x="112" y="144" z="432" dim="16">
+				</node>
+				<node x="80" y="144" z="432" dim="16">
+					<line x="67" y="134" z="435" len="26" portion="16" char="\" />
+				</node>
+				<node x="112" y="176" z="400" dim="16">
+					<line x="124" y="169" z="392" len="33" portion="2" char=")" />
+				</node>
+				<node x="80" y="176" z="400" dim="16">
+				</node>
+				<node x="112" y="144" z="400" dim="16">
+				</node>
+				<node x="80" y="144" z="400" dim="16">
+				</node>
+			</node>
+			<node x="32" y="160" z="416" dim="32">
+			</node>
+		</node>
+		<node x="192" y="64" z="448" dim="64">
+		</node>
+		<node x="64" y="64" z="448" dim="64">
+		</node>
+		<node x="192" y="192" z="320" dim="64">
+			<line x="157" y="218" z="256" len="118" portion="10" char="=" />
+		</node>
+		<node x="64" y="192" z="320" dim="64">
+			<node x="96" y="224" z="352" dim="32">
+			</node>
+			<node x="32" y="224" z="352" dim="32">
+			</node>
+			<node x="96" y="160" z="352" dim="32">
+				<node x="112" y="176" z="368" dim="16">
+				</node>
+				<node x="80" y="176" z="368" dim="16">
+				</node>
+				<node x="112" y="144" z="368" dim="16">
+					<line x="98" y="138" z="378" len="31" portion="2" char=")" />
+				</node>
+				<node x="80" y="144" z="368" dim="16">
+					<line x="94" y="137" z="378" len="68" portion="2" char=")" />
+				</node>
+				<node x="112" y="176" z="336" dim="16">
+				</node>
+				<node x="80" y="176" z="336" dim="16">
+				</node>
+				<node x="112" y="144" z="336" dim="16">
+				</node>
+				<node x="80" y="144" z="336" dim="16">
+				</node>
+			</node>
+			<node x="32" y="160" z="352" dim="32">
+			</node>
+			<node x="96" y="224" z="288" dim="32">
+				<node x="112" y="240" z="304" dim="16">
+				</node>
+				<node x="80" y="240" z="304" dim="16">
+				</node>
+				<node x="112" y="208" z="304" dim="16">
+				</node>
+				<node x="80" y="208" z="304" dim="16">
+				</node>
+				<node x="112" y="240" z="272" dim="16">
+				</node>
+				<node x="80" y="240" z="272" dim="16">
+				</node>
+				<node x="112" y="208" z="272" dim="16">
+					<line x="127" y="220" z="256" len="177" portion="10" char="=" />
+				</node>
+				<node x="80" y="208" z="272" dim="16">
+					<line x="66" y="218" z="256" len="32" portion="10" char="=" />
+				</node>
+			</node>
+			<node x="32" y="224" z="288" dim="32">
+			</node>
+			<node x="96" y="160" z="288" dim="32">
+			</node>
+			<node x="32" y="160" z="288" dim="32">
+			</node>
+		</node>
+		<node x="192" y="64" z="320" dim="64">
+		</node>
+		<node x="64" y="64" z="320" dim="64">
+			<line x="70" y="117" z="372" len="30" portion="2" char=")" />
+		</node>
+	</node>
+	<node x="384" y="384" z="128" dim="128">
+	</node>
+	<node x="128" y="384" z="128" dim="128">
+		<node x="192" y="448" z="192" dim="64">
+		</node>
+		<node x="64" y="448" z="192" dim="64">
+			<node x="96" y="480" z="224" dim="32">
+			</node>
+			<node x="32" y="480" z="224" dim="32">
+			</node>
+			<node x="96" y="416" z="224" dim="32">
+			</node>
+			<node x="32" y="416" z="224" dim="32">
+			</node>
+			<node x="96" y="480" z="160" dim="32">
+				<node x="112" y="496" z="176" dim="16">
+				</node>
+				<node x="80" y="496" z="176" dim="16">
+				</node>
+				<node x="112" y="464" z="176" dim="16">
+				</node>
+				<node x="80" y="464" z="176" dim="16">
+				</node>
+				<node x="112" y="496" z="144" dim="16">
+				</node>
+				<node x="80" y="496" z="144" dim="16">
+					<node x="88" y="504" z="152" dim="8">
+					</node>
+					<node x="72" y="504" z="152" dim="8">
+					</node>
+					<node x="88" y="488" z="152" dim="8">
+					</node>
+					<node x="72" y="488" z="152" dim="8">
+						<node x="76" y="492" z="156" dim="4">
+						</node>
+						<node x="68" y="492" z="156" dim="4">
+						</node>
+						<node x="76" y="484" z="156" dim="4">
+						</node>
+						<node x="68" y="484" z="156" dim="4">
+							<line x="71" y="481" z="156" len="30" portion="2" char=")" />
+						</node>
+						<node x="76" y="492" z="148" dim="4">
+						</node>
+						<node x="68" y="492" z="148" dim="4">
+						</node>
+						<node x="76" y="484" z="148" dim="4">
+							<line x="72" y="483" z="147" len="54" portion="2" char=")" />
+						</node>
+						<node x="68" y="484" z="148" dim="4">
+						</node>
+					</node>
+					<node x="88" y="504" z="136" dim="8">
+					</node>
+					<node x="72" y="504" z="136" dim="8">
+					</node>
+					<node x="88" y="488" z="136" dim="8">
+					</node>
+					<node x="72" y="488" z="136" dim="8">
+					</node>
+				</node>
+				<node x="112" y="464" z="144" dim="16">
+				</node>
+				<node x="80" y="464" z="144" dim="16">
+					<line x="78" y="477" z="145" len="61" portion="2" char=")" />
+				</node>
+			</node>
+			<node x="32" y="480" z="160" dim="32">
+			</node>
+			<node x="96" y="416" z="160" dim="32">
+			</node>
+			<node x="32" y="416" z="160" dim="32">
+			</node>
+		</node>
+		<node x="192" y="320" z="192" dim="64">
+		</node>
+		<node x="64" y="320" z="192" dim="64">
+		</node>
+		<node x="192" y="448" z="64" dim="64">
+			<line x="129" y="421" z="82" len="37" portion="2" char=")" />
+		</node>
+		<node x="64" y="448" z="64" dim="64">
+			<node x="96" y="480" z="96" dim="32">
+				<node x="112" y="496" z="112" dim="16">
+					<line x="104" y="493" z="116" len="44" portion="16" char="," />
+				</node>
+				<node x="80" y="496" z="112" dim="16">
+				</node>
+				<node x="112" y="464" z="112" dim="16">
+					<line x="102" y="453" z="122" len="36" portion="2" char=")" />
+				</node>
+				<node x="80" y="464" z="112" dim="16">
+				</node>
+				<node x="112" y="496" z="80" dim="16">
+				</node>
+				<node x="80" y="496" z="80" dim="16">
+				</node>
+				<node x="112" y="464" z="80" dim="16">
+					<line x="121" y="465" z="68" len="45" portion="16" char="," />
+				</node>
+				<node x="80" y="464" z="80" dim="16">
+				</node>
+			</node>
+			<node x="32" y="480" z="96" dim="32">
+			</node>
+			<node x="96" y="416" z="96" dim="32">
+				<node x="112" y="432" z="112" dim="16">
+					<line x="126" y="426" z="96" len="51" portion="2" char=")" />
+				</node>
+				<node x="80" y="432" z="112" dim="16">
+				</node>
+				<node x="112" y="400" z="112" dim="16">
+				</node>
+				<node x="80" y="400" z="112" dim="16">
+				</node>
+				<node x="112" y="432" z="80" dim="16">
+				</node>
+				<node x="80" y="432" z="80" dim="16">
+				</node>
+				<node x="112" y="400" z="80" dim="16">
+				</node>
+				<node x="80" y="400" z="80" dim="16">
+					<line x="67" y="395" z="71" len="53" portion="5" char="/" />
+				</node>
+			</node>
+			<node x="32" y="416" z="96" dim="32">
+			</node>
+			<node x="96" y="480" z="32" dim="32">
+			</node>
+			<node x="32" y="480" z="32" dim="32">
+			</node>
+			<node x="96" y="416" z="32" dim="32">
+			</node>
+			<node x="32" y="416" z="32" dim="32">
+			</node>
+		</node>
+		<node x="192" y="320" z="64" dim="64">
+			<node x="224" y="352" z="96" dim="32">
+			</node>
+			<node x="160" y="352" z="96" dim="32">
+			</node>
+			<node x="224" y="288" z="96" dim="32">
+			</node>
+			<node x="160" y="288" z="96" dim="32">
+				<line x="129" y="265" z="71" len="339" portion="5" char="/" />
+			</node>
+			<node x="224" y="352" z="32" dim="32">
+			</node>
+			<node x="160" y="352" z="32" dim="32">
+				<node x="176" y="368" z="48" dim="16">
+				</node>
+				<node x="144" y="368" z="48" dim="16">
+					<node x="152" y="376" z="56" dim="8">
+					</node>
+					<node x="136" y="376" z="56" dim="8">
+					</node>
+					<node x="152" y="360" z="56" dim="8">
+						<node x="156" y="364" z="60" dim="4">
+						</node>
+						<node x="148" y="364" z="60" dim="4">
+						</node>
+						<node x="156" y="356" z="60" dim="4">
+						</node>
+						<node x="148" y="356" z="60" dim="4">
+						</node>
+						<node x="156" y="364" z="52" dim="4">
+							<node x="158" y="366" z="54" dim="2">
+							</node>
+							<node x="154" y="366" z="54" dim="2">
+							</node>
+							<node x="158" y="362" z="54" dim="2">
+							</node>
+							<node x="154" y="362" z="54" dim="2">
+							</node>
+							<node x="158" y="366" z="50" dim="2">
+							</node>
+							<node x="154" y="366" z="50" dim="2">
+							</node>
+							<node x="158" y="362" z="50" dim="2">
+								<node x="159" y="363" z="51" dim="1">
+								</node>
+								<node x="157" y="363" z="51" dim="1">
+								</node>
+								<node x="159" y="361" z="51" dim="1">
+								</node>
+								<node x="157" y="361" z="51" dim="1">
+								</node>
+								<node x="159" y="363" z="49" dim="1">
+									<line x="158" y="362" z="48" len="35" portion="2" char=")" />
+								</node>
+								<node x="157" y="363" z="49" dim="1">
+								</node>
+								<node x="159" y="361" z="49" dim="1">
+								</node>
+								<node x="157" y="361" z="49" dim="1">
+									<line x="156" y="360" z="48" len="68" portion="2" char=")" />
+								</node>
+							</node>
+							<node x="154" y="362" z="50" dim="2">
+							</node>
+						</node>
+						<node x="148" y="364" z="52" dim="4">
+						</node>
+						<node x="156" y="356" z="52" dim="4">
+						</node>
+						<node x="148" y="356" z="52" dim="4">
+						</node>
+					</node>
+					<node x="136" y="360" z="56" dim="8">
+					</node>
+					<node x="152" y="376" z="40" dim="8">
+					</node>
+					<node x="136" y="376" z="40" dim="8">
+					</node>
+					<node x="152" y="360" z="40" dim="8">
+					</node>
+					<node x="136" y="360" z="40" dim="8">
+					</node>
+				</node>
+				<node x="176" y="336" z="48" dim="16">
+				</node>
+				<node x="144" y="336" z="48" dim="16">
+				</node>
+				<node x="176" y="368" z="16" dim="16">
+				</node>
+				<node x="144" y="368" z="16" dim="16">
+				</node>
+				<node x="176" y="336" z="16" dim="16">
+				</node>
+				<node x="144" y="336" z="16" dim="16">
+				</node>
+			</node>
+			<node x="224" y="288" z="32" dim="32">
+			</node>
+			<node x="160" y="288" z="32" dim="32">
+			</node>
+		</node>
+		<node x="64" y="320" z="64" dim="64">
+			<node x="96" y="352" z="96" dim="32">
+				<line x="86" y="354" z="71" len="106" portion="5" char="/" />
+			</node>
+			<node x="32" y="352" z="96" dim="32">
+			</node>
+			<node x="96" y="288" z="96" dim="32">
+				<line x="125" y="269" z="76" len="24" portion="5" char="/" />
+			</node>
+			<node x="32" y="288" z="96" dim="32">
+			</node>
+			<node x="96" y="352" z="32" dim="32">
+			</node>
+			<node x="32" y="352" z="32" dim="32">
+			</node>
+			<node x="96" y="288" z="32" dim="32">
+			</node>
+			<node x="32" y="288" z="32" dim="32">
+			</node>
+		</node>
+	</node>
+	<node x="384" y="128" z="128" dim="128">
+	</node>
+	<node x="128" y="128" z="128" dim="128">
+		<node x="192" y="192" z="192" dim="64">
+		</node>
+		<node x="64" y="192" z="192" dim="64">
+			<line x="121" y="157" z="176" len="22" portion="4" char="^" />
+		</node>
+		<node x="192" y="64" z="192" dim="64">
+			<node x="224" y="96" z="224" dim="32">
+			</node>
+			<node x="160" y="96" z="224" dim="32">
+			</node>
+			<node x="224" y="32" z="224" dim="32">
+			</node>
+			<node x="160" y="32" z="224" dim="32">
+			</node>
+			<node x="224" y="96" z="160" dim="32">
+			</node>
+			<node x="160" y="96" z="160" dim="32">
+				<node x="176" y="112" z="176" dim="16">
+				</node>
+				<node x="144" y="112" z="176" dim="16">
+				</node>
+				<node x="176" y="80" z="176" dim="16">
+				</node>
+				<node x="144" y="80" z="176" dim="16">
+				</node>
+				<node x="176" y="112" z="144" dim="16">
+					<node x="184" y="120" z="152" dim="8">
+					</node>
+					<node x="168" y="120" z="152" dim="8">
+						<line x="175" y="119" z="145" len="28" portion="2" char="(" />
+					</node>
+					<node x="184" y="104" z="152" dim="8">
+					</node>
+					<node x="168" y="104" z="152" dim="8">
+					</node>
+					<node x="184" y="120" z="136" dim="8">
+					</node>
+					<node x="168" y="120" z="136" dim="8">
+						<line x="167" y="124" z="136" len="33" portion="2" char="(" />
+					</node>
+					<node x="184" y="104" z="136" dim="8">
+					</node>
+					<node x="168" y="104" z="136" dim="8">
+					</node>
+				</node>
+				<node x="144" y="112" z="144" dim="16">
+				</node>
+				<node x="176" y="80" z="144" dim="16">
+				</node>
+				<node x="144" y="80" z="144" dim="16">
+				</node>
+			</node>
+			<node x="224" y="32" z="160" dim="32">
+			</node>
+			<node x="160" y="32" z="160" dim="32">
+			</node>
+		</node>
+		<node x="64" y="64" z="192" dim="64">
+		</node>
+		<node x="192" y="192" z="64" dim="64">
+			<node x="224" y="224" z="96" dim="32">
+			</node>
+			<node x="160" y="224" z="96" dim="32">
+				<node x="176" y="240" z="112" dim="16">
+				</node>
+				<node x="144" y="240" z="112" dim="16">
+				</node>
+				<node x="176" y="208" z="112" dim="16">
+				</node>
+				<node x="144" y="208" z="112" dim="16">
+				</node>
+				<node x="176" y="240" z="80" dim="16">
+				</node>
+				<node x="144" y="240" z="80" dim="16">
+					<line x="144" y="230" z="82" len="27" portion="5" char="/" />
+				</node>
+				<node x="176" y="208" z="80" dim="16">
+				</node>
+				<node x="144" y="208" z="80" dim="16">
+					<node x="152" y="216" z="88" dim="8">
+					</node>
+					<node x="136" y="216" z="88" dim="8">
+					</node>
+					<node x="152" y="200" z="88" dim="8">
+						<line x="159" y="199" z="82" len="25" portion="5" char="/" />
+					</node>
+					<node x="136" y="200" z="88" dim="8">
+					</node>
+					<node x="152" y="216" z="72" dim="8">
+						<line x="150" y="217" z="79" len="36" portion="5" char="/" />
+					</node>
+					<node x="136" y="216" z="72" dim="8">
+					</node>
+					<node x="152" y="200" z="72" dim="8">
+					</node>
+					<node x="136" y="200" z="72" dim="8">
+					</node>
+				</node>
+			</node>
+			<node x="224" y="160" z="96" dim="32">
+			</node>
+			<node x="160" y="160" z="96" dim="32">
+				<node x="176" y="176" z="112" dim="16">
+				</node>
+				<node x="144" y="176" z="112" dim="16">
+					<line x="131" y="163" z="113" len="50" portion="2" char="(" />
+				</node>
+				<node x="176" y="144" z="112" dim="16">
+				</node>
+				<node x="144" y="144" z="112" dim="16">
+				</node>
+				<node x="176" y="176" z="80" dim="16">
+					<line x="163" y="187" z="71" len="30" portion="5" char="/" />
+				</node>
+				<node x="144" y="176" z="80" dim="16">
+				</node>
+				<node x="176" y="144" z="80" dim="16">
+					<node x="184" y="152" z="88" dim="8">
+					</node>
+					<node x="168" y="152" z="88" dim="8">
+					</node>
+					<node x="184" y="136" z="88" dim="8">
+					</node>
+					<node x="168" y="136" z="88" dim="8">
+					</node>
+					<node x="184" y="152" z="72" dim="8">
+						<node x="188" y="156" z="76" dim="4">
+						</node>
+						<node x="180" y="156" z="76" dim="4">
+						</node>
+						<node x="188" y="148" z="76" dim="4">
+						</node>
+						<node x="180" y="148" z="76" dim="4">
+							<line x="183" y="149" z="73" len="46" portion="5" char="/" />
+						</node>
+						<node x="188" y="156" z="68" dim="4">
+						</node>
+						<node x="180" y="156" z="68" dim="4">
+						</node>
+						<node x="188" y="148" z="68" dim="4">
+						</node>
+						<node x="180" y="148" z="68" dim="4">
+							<line x="180" y="151" z="71" len="86" portion="5" char="/" />
+						</node>
+					</node>
+					<node x="168" y="152" z="72" dim="8">
+					</node>
+					<node x="184" y="136" z="72" dim="8">
+					</node>
+					<node x="168" y="136" z="72" dim="8">
+					</node>
+				</node>
+				<node x="144" y="144" z="80" dim="16">
+				</node>
+			</node>
+			<node x="224" y="224" z="32" dim="32">
+			</node>
+			<node x="160" y="224" z="32" dim="32">
+			</node>
+			<node x="224" y="160" z="32" dim="32">
+			</node>
+			<node x="160" y="160" z="32" dim="32">
+				<node x="176" y="176" z="48" dim="16">
+				</node>
+				<node x="144" y="176" z="48" dim="16">
+				</node>
+				<node x="176" y="144" z="48" dim="16">
+				</node>
+				<node x="144" y="144" z="48" dim="16">
+				</node>
+				<node x="176" y="176" z="16" dim="16">
+				</node>
+				<node x="144" y="176" z="16" dim="16">
+				</node>
+				<node x="176" y="144" z="16" dim="16">
+				</node>
+				<node x="144" y="144" z="16" dim="16">
+					<node x="152" y="152" z="24" dim="8">
+					</node>
+					<node x="136" y="152" z="24" dim="8">
+					</node>
+					<node x="152" y="136" z="24" dim="8">
+					</node>
+					<node x="136" y="136" z="24" dim="8">
+					</node>
+					<node x="152" y="152" z="8" dim="8">
+					</node>
+					<node x="136" y="152" z="8" dim="8">
+					</node>
+					<node x="152" y="136" z="8" dim="8">
+					</node>
+					<node x="136" y="136" z="8" dim="8">
+						<node x="140" y="140" z="12" dim="4">
+						</node>
+						<node x="132" y="140" z="12" dim="4">
+							<node x="134" y="142" z="14" dim="2">
+							</node>
+							<node x="130" y="142" z="14" dim="2">
+								<node x="131" y="143" z="15" dim="1">
+									<node x="131" y="143" z="15" dim="0">
+									</node>
+									<node x="131" y="143" z="15" dim="0">
+									</node>
+									<node x="131" y="143" z="15" dim="0">
+									</node>
+									<node x="131" y="143" z="15" dim="0">
+									</node>
+									<node x="131" y="143" z="15" dim="0">
+									</node>
+									<node x="131" y="143" z="15" dim="0">
+									</node>
+									<node x="131" y="143" z="15" dim="0">
+									</node>
+									<node x="131" y="143" z="15" dim="0">
+									</node>
+								</node>
+								<node x="129" y="143" z="15" dim="1">
+								</node>
+								<node x="131" y="141" z="15" dim="1">
+								</node>
+								<node x="129" y="141" z="15" dim="1">
+								</node>
+								<node x="131" y="143" z="13" dim="1">
+								</node>
+								<node x="129" y="143" z="13" dim="1">
+								</node>
+								<node x="131" y="141" z="13" dim="1">
+								</node>
+								<node x="129" y="141" z="13" dim="1">
+								</node>
+							</node>
+							<node x="134" y="138" z="14" dim="2">
+							</node>
+							<node x="130" y="138" z="14" dim="2">
+							</node>
+							<node x="134" y="142" z="10" dim="2">
+							</node>
+							<node x="130" y="142" z="10" dim="2">
+							</node>
+							<node x="134" y="138" z="10" dim="2">
+							</node>
+							<node x="130" y="138" z="10" dim="2">
+							</node>
+						</node>
+						<node x="140" y="132" z="12" dim="4">
+						</node>
+						<node x="132" y="132" z="12" dim="4">
+						</node>
+						<node x="140" y="140" z="4" dim="4">
+						</node>
+						<node x="132" y="140" z="4" dim="4">
+						</node>
+						<node x="140" y="132" z="4" dim="4">
+						</node>
+						<node x="132" y="132" z="4" dim="4">
+						</node>
+					</node>
+				</node>
+			</node>
+		</node>
+		<node x="64" y="192" z="64" dim="64">
+			<node x="96" y="224" z="96" dim="32">
+				<node x="112" y="240" z="112" dim="16">
+				</node>
+				<node x="80" y="240" z="112" dim="16">
+				</node>
+				<node x="112" y="208" z="112" dim="16">
+				</node>
+				<node x="80" y="208" z="112" dim="16">
+				</node>
+				<node x="112" y="240" z="80" dim="16">
+				</node>
+				<node x="80" y="240" z="80" dim="16">
+				</node>
+				<node x="112" y="208" z="80" dim="16">
+				</node>
+				<node x="80" y="208" z="80" dim="16">
+					<node x="88" y="216" z="88" dim="8">
+					</node>
+					<node x="72" y="216" z="88" dim="8">
+					</node>
+					<node x="88" y="200" z="88" dim="8">
+						<node x="92" y="204" z="92" dim="4">
+							<line x="88" y="201" z="88" len="46" portion="4" char="^" />
+						</node>
+						<node x="84" y="204" z="92" dim="4">
+						</node>
+						<node x="92" y="196" z="92" dim="4">
+							<line x="89" y="197" z="91" len="79" portion="4" char="^" />
+						</node>
+						<node x="84" y="196" z="92" dim="4">
+							<node x="86" y="198" z="94" dim="2">
+								<node x="87" y="199" z="95" dim="1">
+								</node>
+								<node x="85" y="199" z="95" dim="1">
+								</node>
+								<node x="87" y="197" z="95" dim="1">
+								</node>
+								<node x="85" y="197" z="95" dim="1">
+								</node>
+								<node x="87" y="199" z="93" dim="1">
+									<node x="87" y="199" z="93" dim="0">
+									</node>
+									<node x="87" y="199" z="93" dim="0">
+									</node>
+									<node x="87" y="199" z="93" dim="0">
+									</node>
+									<node x="87" y="199" z="93" dim="0">
+									</node>
+									<node x="87" y="199" z="93" dim="0">
+									</node>
+									<node x="87" y="199" z="93" dim="0">
+									</node>
+									<node x="87" y="199" z="93" dim="0">
+									</node>
+									<node x="87" y="199" z="93" dim="0">
+									</node>
+								</node>
+								<node x="85" y="199" z="93" dim="1">
+								</node>
+								<node x="87" y="197" z="93" dim="1">
+								</node>
+								<node x="85" y="197" z="93" dim="1">
+								</node>
+							</node>
+							<node x="82" y="198" z="94" dim="2">
+							</node>
+							<node x="86" y="194" z="94" dim="2">
+							</node>
+							<node x="82" y="194" z="94" dim="2">
+							</node>
+							<node x="86" y="198" z="90" dim="2">
+							</node>
+							<node x="82" y="198" z="90" dim="2">
+							</node>
+							<node x="86" y="194" z="90" dim="2">
+							</node>
+							<node x="82" y="194" z="90" dim="2">
+							</node>
+						</node>
+						<node x="92" y="204" z="84" dim="4">
+						</node>
+						<node x="84" y="204" z="84" dim="4">
+						</node>
+						<node x="92" y="196" z="84" dim="4">
+						</node>
+						<node x="84" y="196" z="84" dim="4">
+						</node>
+					</node>
+					<node x="72" y="200" z="88" dim="8">
+					</node>
+					<node x="88" y="216" z="72" dim="8">
+					</node>
+					<node x="72" y="216" z="72" dim="8">
+					</node>
+					<node x="88" y="200" z="72" dim="8">
+					</node>
+					<node x="72" y="200" z="72" dim="8">
+					</node>
+				</node>
+			</node>
+			<node x="32" y="224" z="96" dim="32">
+			</node>
+			<node x="96" y="160" z="96" dim="32">
+				<node x="112" y="176" z="112" dim="16">
+				</node>
+				<node x="80" y="176" z="112" dim="16">
+				</node>
+				<node x="112" y="144" z="112" dim="16">
+				</node>
+				<node x="80" y="144" z="112" dim="16">
+				</node>
+				<node x="112" y="176" z="80" dim="16">
+					<node x="120" y="184" z="88" dim="8">
+						<node x="124" y="188" z="92" dim="4">
+						</node>
+						<node x="116" y="188" z="92" dim="4">
+						</node>
+						<node x="124" y="180" z="92" dim="4">
+						</node>
+						<node x="116" y="180" z="92" dim="4">
+						</node>
+						<node x="124" y="188" z="84" dim="4">
+						</node>
+						<node x="116" y="188" z="84" dim="4">
+							<node x="118" y="190" z="86" dim="2">
+							</node>
+							<node x="114" y="190" z="86" dim="2">
+							</node>
+							<node x="118" y="186" z="86" dim="2">
+							</node>
+							<node x="114" y="186" z="86" dim="2">
+							</node>
+							<node x="118" y="190" z="82" dim="2">
+							</node>
+							<node x="114" y="190" z="82" dim="2">
+								<line x="115" y="188" z="82" len="65" portion="2" char="(" />
+							</node>
+							<node x="118" y="186" z="82" dim="2">
+							</node>
+							<node x="114" y="186" z="82" dim="2">
+								<line x="115" y="185" z="82" len="34" portion="2" char="(" />
+							</node>
+						</node>
+						<node x="124" y="180" z="84" dim="4">
+						</node>
+						<node x="116" y="180" z="84" dim="4">
+						</node>
+					</node>
+					<node x="104" y="184" z="88" dim="8">
+					</node>
+					<node x="120" y="168" z="88" dim="8">
+					</node>
+					<node x="104" y="168" z="88" dim="8">
+					</node>
+					<node x="120" y="184" z="72" dim="8">
+					</node>
+					<node x="104" y="184" z="72" dim="8">
+					</node>
+					<node x="120" y="168" z="72" dim="8">
+					</node>
+					<node x="104" y="168" z="72" dim="8">
+					</node>
+				</node>
+				<node x="80" y="176" z="80" dim="16">
+				</node>
+				<node x="112" y="144" z="80" dim="16">
+				</node>
+				<node x="80" y="144" z="80" dim="16">
+				</node>
+			</node>
+			<node x="32" y="160" z="96" dim="32">
+			</node>
+			<node x="96" y="224" z="32" dim="32">
+				<node x="112" y="240" z="48" dim="16">
+				</node>
+				<node x="80" y="240" z="48" dim="16">
+					<node x="88" y="248" z="56" dim="8">
+					</node>
+					<node x="72" y="248" z="56" dim="8">
+					</node>
+					<node x="88" y="232" z="56" dim="8">
+					</node>
+					<node x="72" y="232" z="56" dim="8">
+					</node>
+					<node x="88" y="248" z="40" dim="8">
+						<node x="92" y="252" z="44" dim="4">
+						</node>
+						<node x="84" y="252" z="44" dim="4">
+						</node>
+						<node x="92" y="244" z="44" dim="4">
+							<line x="95" y="240" z="45" len="47" portion="2" char="(" />
+						</node>
+						<node x="84" y="244" z="44" dim="4">
+						</node>
+						<node x="92" y="252" z="36" dim="4">
+						</node>
+						<node x="84" y="252" z="36" dim="4">
+						</node>
+						<node x="92" y="244" z="36" dim="4">
+							<line x="92" y="247" z="34" len="36" portion="2" char="(" />
+						</node>
+						<node x="84" y="244" z="36" dim="4">
+						</node>
+					</node>
+					<node x="72" y="248" z="40" dim="8">
+					</node>
+					<node x="88" y="232" z="40" dim="8">
+					</node>
+					<node x="72" y="232" z="40" dim="8">
+					</node>
+				</node>
+				<node x="112" y="208" z="48" dim="16">
+				</node>
+				<node x="80" y="208" z="48" dim="16">
+				</node>
+				<node x="112" y="240" z="16" dim="16">
+				</node>
+				<node x="80" y="240" z="16" dim="16">
+					<line x="93" y="255" z="28" len="25" portion="2" char="(" />
+				</node>
+				<node x="112" y="208" z="16" dim="16">
+				</node>
+				<node x="80" y="208" z="16" dim="16">
+				</node>
+			</node>
+			<node x="32" y="224" z="32" dim="32">
+			</node>
+			<node x="96" y="160" z="32" dim="32">
+			</node>
+			<node x="32" y="160" z="32" dim="32">
+			</node>
+		</node>
+		<node x="192" y="64" z="64" dim="64">
+		</node>
+		<node x="64" y="64" z="64" dim="64">
+		</node>
+	</node>
+</node>

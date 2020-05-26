@@ -11,8 +11,10 @@ use xmltree::Element;
 use ndarray::arr2;
 
 const SIZE: f32 = 512.0;
-const SEARCH_DIM: u16 = 40;
-const BEZIER_LEN: u8 = 4;
+const OCTREE_DIM_X: u16 = 50;
+const OCTREE_DIM_Y: u16 = 50;
+const OCTREE_DIM_THETA: u16 = 5;
+const BEZIER_LEN: u8 = 10;
 
 /* TODO: 
 - [ ] Convert all line coords to float
@@ -126,14 +128,14 @@ struct Window {
 }
 
 impl Window {
-    fn new(x: u16, y: u16, z: u16, dim: u16) -> Self {
+    fn new(x: u16, y: u16, z: u16, dim_x: u16, dim_y: u16, dim_z: u16) -> Self {
         Window {
-            min_x: if x > dim { x - dim } else { 0 },
-            max_x: x + dim,
-            min_y: if y > dim { y - dim } else { 0 },
-            max_y: y + dim,
-            min_z: if z > dim { z - dim } else { 0 },
-            max_z: z + dim
+            min_x: if x > dim_x { x - dim_x } else { 0 },
+            max_x: x + dim_x,
+            min_y: if y > dim_y { y - dim_y } else { 0 },
+            max_y: y + dim_y,
+            min_z: if z > dim_z { z - dim_z } else { 0 },
+            max_z: z + dim_z
         }
     }
 
@@ -213,7 +215,7 @@ impl OctNode {
         OctNode {
             children,
             data: lines,
-            window: Window::new(x, y, z, dim)
+            window: Window::new(x, y, z, dim, dim, dim)
         }
     }
 
@@ -498,10 +500,14 @@ fn main() -> std::io::Result<()> {
     let voxel_scale = SIZE / voxel_h;
 
     // For each line in svg, compute x, y, theta_norm and search root for nearest neighbors
+    let mut counter = 0;
     for line in lines.iter() {
         
         // Compute voxel intersections and search line segments, modify 
-        // canvas while maintaining heuristic sort
+        // ... canvas while maintaining heuristic sort
+
+        // ERROR : flooring by converting to isize might not
+        // ensure intersection of line and bounding box:
 
         let voxel_start = (
             (line.x1 / voxel_w) as isize,
@@ -518,6 +524,8 @@ fn main() -> std::io::Result<()> {
 
             let pos = (y as usize, x as usize);
 
+            counter += 1;
+
             if pos.0 >= size.1 as usize || pos.1 >= size.0 as usize {
                 continue
             }
@@ -526,6 +534,21 @@ fn main() -> std::io::Result<()> {
                 x as f32 * voxel_w,
                 y as f32 * voxel_h
             );
+
+            write!(out, "{}*", cursor::Goto(x as u16, y as u16)).unwrap();
+
+            /*
+            write_svg(&format!("debug-{}.svg", counter), vec![
+                line.clone(),
+                // Bresenham input
+                Line::new(voxel_start.0 as f32, voxel_start.1 as f32, voxel_end.0 as f32, voxel_end.1 as f32, vec![Transform::Scale(voxel_w, voxel_h)]),
+                // Voxel bounds
+                Line::new(origin.0, origin.1, origin.0 + voxel_w, origin.1, vec![]),
+                Line::new(origin.0, origin.1, origin.0, origin.1 + voxel_h, vec![]),
+                Line::new(origin.0 + voxel_w, origin.1, origin.0 + voxel_w, origin.1 + voxel_h, vec![]),
+                Line::new(origin.0, origin.1 + voxel_h, origin.0 + voxel_w, origin.1 + voxel_h, vec![]),
+            ]);
+            */
 
             // Six possible endpoints for the line segment contained in this voxel
             let endpoints: Vec<(f32, f32)> = vec![
@@ -548,20 +571,24 @@ fn main() -> std::io::Result<()> {
 
             // Bresenham doesn't guarentee output voxels intersects line
             if endpoints.len() < 2 {
+                //write!(out, "{}.", cursor::Goto(x as u16, y as u16)).unwrap();
                 continue
             }
 
-            // Compute midpoint relative to voxel origin
+            // Take first two valid intersections and midpoint relative to voxel origin
             let (segment_x, segment_y) = (
                 voxel_scale * (((endpoints[0].0 + endpoints[1].0) / 2.0) - origin.0),
                 voxel_scale * (((endpoints[0].1 + endpoints[1].1) / 2.0) - origin.1)
             );
 
+            // Create Octree search window
             let segment_window = Window::new(
                 segment_x as u16,
                 segment_y as u16,
                 line.z, 
-                SEARCH_DIM,
+                OCTREE_DIM_X,
+                OCTREE_DIM_Y,
+                SIZE as u16 * (OCTREE_DIM_THETA + 90) / 180,
             );
 
             let mut nearest_neighbors = root.search(&segment_window);
